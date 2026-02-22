@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Send, Sparkles, AlertCircle, TrendingUp, Package, Mic, MicOff } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { MessageSquare, X, Send, Sparkles, AlertCircle, TrendingUp, Package, Mic, MicOff, BarChart3, Navigation, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,16 +31,43 @@ export function AIAssistant() {
         {
             role: "ai",
             content: (
-                <div>
-                    გამარჯობა! მე ვარ თქვენი <b>Malema Pro AI</b> ასისტენტი.
-                    <br /><br />
-                    შეგიძლიათ მესაუბროთ ხმით (დააჭირეთ 🎤) ან მომწეროთ. მე უკვე შემიძლია დაჭრის სქემების დათვლაც!
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-primary">
+                        <Sparkles className="h-4 w-4" />
+                        <b>სისტემა მზად არის (Level 5)</b>
+                    </div>
+                    გამარჯობა! მე ვარ თქვენი <b>Malema Pro Advisor</b>.
+                    <br />
+                    შემიძლია ვმართო აპლიკაცია, დავთვალო მოგება და მოგცეთ ბიზნეს რჩევები.
                 </div>
             ),
         },
     ]);
     const store = useWarehouseStore();
+    const router = useRouter();
+    const pathname = usePathname();
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Context helper
+    const getPageName = () => {
+        if (pathname === "/") return "მთავარ დეშბორდზე";
+        if (pathname === "/warehouse") return "საწყობში";
+        if (pathname === "/sales") return "გაყიდვების გვერდზე";
+        if (pathname === "/purchase") return "შესყიდვების გვერდზე";
+        if (pathname === "/analytics") return "ანალიტიკაში";
+        return "პროექტში";
+    };
+
+    // Navigation Detection logic
+    const handleNavigation = (text: string): boolean => {
+        const t = text.toLowerCase();
+        if (t.includes("საწყობ") || t.includes("მარაგ")) { router.push("/warehouse"); return true; }
+        if (t.includes("გაყიდვ") || t.includes("sales")) { router.push("/sales"); return true; }
+        if (t.includes("შესყიდვ") || t.includes("purchase")) { router.push("/purchase"); return true; }
+        if (t.includes("ანალიტიკ") || t.includes("გრაფიკ")) { router.push("/analytics"); return true; }
+        if (t.includes("მთავარ") || t.includes("დეშბორდ")) { router.push("/"); return true; }
+        return false;
+    };
 
     // Speech Recognition Setup
     const startListening = () => {
@@ -80,7 +108,66 @@ export function AIAssistant() {
     const generateAIResponse = (userText: string): React.ReactNode => {
         const text = userText.toLowerCase().trim();
 
-        // 1. Cutting Optimizer Logic
+        // 1. Navigation Controller (Level 5)
+        if (text.includes("გადადი") || text.includes("გახსენი") || text.includes("მაჩვენე") || text.includes("წადი")) {
+            const success = handleNavigation(text);
+            if (success) {
+                return (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 text-green-500">
+                            <Navigation className="h-4 w-4" />
+                            <b>ნავიგაცია შესრულდა</b>
+                        </div>
+                        თქვენ ახლა იმყოფებით <b>{getPageName()}</b>. რით შემიძლია დაგეხმაროთ აქ?
+                    </div>
+                );
+            }
+        }
+
+        // 2. Dead Stock & Inventory BI (Level 5)
+        if (text.includes("მკვდარი") || text.includes("არ იყიდება") || text.includes("ნელი")) {
+            const deadProducts = store.products.filter(p => !store.sales.some(s => s.productId === p.id)).slice(0, 3);
+            if (deadProducts.length > 0) {
+                return (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 text-orange-500">
+                            <AlertCircle className="h-4 w-4" />
+                            <b>მკვდარი მარაგების ანალიზი</b>
+                        </div>
+                        შემდეგი პროდუქტები არ გაყიდულა ბოლო პერიოდში:
+                        {deadProducts.map(p => (
+                            <div key={p.id} className="text-sm border rounded p-2 bg-muted/50">
+                                • {p.name} ({p.quantity} ერთ. ნაშთი)
+                            </div>
+                        ))}
+                        <p className="text-xs italic text-muted-foreground">რჩევა: განიხილეთ ფასდაკლება ან აქცია ამ პროდუქტებზე, რათა გამოათავისუფლოთ საბრუნავი თანხა.</p>
+                    </div>
+                );
+            }
+            return "ყველა პროდუქტი დინამიურად იყიდება! საწყობის ბრუნვა იდეალურია.";
+        }
+
+        // 3. Profit & Price Optimization (Level 5)
+        if (text.includes("ფასი") || text.includes("ოპტიმიზაცია") || text.includes("მომგებიან") || text.includes("ზრდა")) {
+            const top = store.topProducts[0];
+            return (
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-primary">
+                        <TrendingUp className="h-4 w-4" />
+                        <b>ბიზნესის ზრდის ანალიზი</b>
+                    </div>
+                    ყველაზე მოთხოვნადი პროდუქტია <b>{top?.name || "არაა"}</b>.
+                    <br />
+                    ჩემი რჩევით, ამ პროდუქტზე შეგიძლიათ ფასი 5%-ით გაზარდოთ მოგების მარჟის გასაზრდელად.
+                    <br />
+                    <Button variant="link" className="p-0 h-auto text-xs justify-start" onClick={() => router.push("/analytics")}>
+                        იხილეთ სრული ანალიტიკა →
+                    </Button>
+                </div>
+            );
+        }
+
+        // 4. Cutting Optimizer Logic
         const partMatch = text.match(/(\d+)\s*(ცალი|დეტალი)?\s*(\d+)\s*[x*x]\s*(\d+)/g);
         if (partMatch || text.includes("დაჭრა") || text.includes("ოპტიმიზაცია")) {
             if (partMatch) {
@@ -116,7 +203,7 @@ export function AIAssistant() {
             return "მომწერეთ დეტალების ზომები, მაგ: '5 ცალი 600x400 და 2 ცალი 1000x500'.";
         }
 
-        // 2. Calculator Logic
+        // 5. Calculator Logic
         const sqMeterMatch = text.match(/(\d+)\s*(კვადრატ|კვ|sq|m2)/);
         if (sqMeterMatch || text.includes("კალკულატორი")) {
             if (sqMeterMatch) {
@@ -134,7 +221,7 @@ export function AIAssistant() {
             return "შეგიძლიათ მომწეროთ ფართობი, მაგალითად: '20 კვადრატულზე რამდენი ლისტი მინდა?'";
         }
 
-        // 3. Product Search
+        // 6. Product Search
         if (text.includes("გვაქვს") || text.includes("არის") || text.includes("მაქვს") || text.includes("ნახე")) {
             const searchTerms = text.replace(/(გვაქვს|არის|მაქვს|თუ|ნახე|\?) /g, "").trim();
             const found = store.products.filter(p =>
@@ -156,7 +243,7 @@ export function AIAssistant() {
             }
         }
 
-        // 4. Sales Processing (Level 3)
+        // 7. Sales Processing (Level 3)
         const sellMatch = text.match(/(გაყიდე|გაყიდვა|sales?)\s*(.+)?\s*(\d+)\s*(ლისტი|ცალი|ერთეული)?/i) ||
             text.match(/(\d+)\s*(ლისტი|ცალი|ერთეული)?\s*(გაყიდე|გაყიდვა|sales?)\s*(.+)?/i);
 
@@ -212,7 +299,7 @@ export function AIAssistant() {
             return "მიუთითეთ პროდუქტი და რაოდენობა, მაგ: 'გაყიდე საფირმეშე 10 ლისტი'.";
         }
 
-        // 5. Analytics & History
+        // 8. Analytics & History
         if (text.includes("მარაგი") || text.includes("რა გვაქვს") || text.includes("ნაშთი")) {
             return (
                 <div>
