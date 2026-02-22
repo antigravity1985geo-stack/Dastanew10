@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, X, Send, Sparkles, AlertCircle, TrendingUp, Package } from "lucide-react";
+import { MessageSquare, X, Send, Sparkles, AlertCircle, TrendingUp, Package, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWarehouseStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Message {
     role: "user" | "ai";
@@ -15,29 +16,56 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-    { label: "📦 მარაგის შემოწმება", value: "რა მარაგი გვაქვს?" },
+    { label: "📦 მარაგი", value: "რა მარაგი გვაქვს?" },
     { label: "🧮 კალკულატორი", value: "კალკულატორი" },
+    { label: "📐 დაჭრა", value: "დაჭრის დათვლა" },
     { label: "🏆 ტოპ გაყიდვადი", value: "რა არის ტოპ გაყიდვადი?" },
-    { label: "💡 რჩევა", value: "მომეცი რჩევა" },
 ];
 
 export function AIAssistant() {
     const [isOpen, setIsOpen] = useState(false);
+    const [isListening, setIsListening] = useState(false);
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState<Message[]>([
         {
             role: "ai",
             content: (
                 <div>
-                    გამარჯობა! მე ვარ თქვენი <b>Malema AI</b> ასისტენტი.
+                    გამარჯობა! მე ვარ თქვენი <b>Malema Pro AI</b> ასისტენტი.
                     <br /><br />
-                    შემიძლია დაგეხმაროთ ლამინატის მარაგების ანალიზში, დაგითვალოთ საჭირო რაოდენობა ან გიპოვოთ კონკრეტული დეკორი.
+                    შეგიძლიათ მესაუბროთ ხმით (დააჭირეთ 🎤) ან მომწეროთ. მე უკვე შემიძლია დაჭრის სქემების დათვლაც!
                 </div>
             ),
         },
     ]);
     const store = useWarehouseStore();
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Speech Recognition Setup
+    const startListening = () => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            toast.error("თქვენს ბრაუზერს არ აქვს ხმის მხარდაჭერა");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "ka-GE";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setInput(transcript);
+            handleSend(transcript);
+        };
+
+        recognition.start();
+    };
 
     const scrollToBottom = () => {
         if (scrollRef.current) {
@@ -52,28 +80,63 @@ export function AIAssistant() {
     const generateAIResponse = (userText: string): React.ReactNode => {
         const text = userText.toLowerCase().trim();
 
-        // 1. Calculator Logic
+        // 1. Cutting Optimizer Logic
+        const partMatch = text.match(/(\d+)\s*(ცალი|დეტალი)?\s*(\d+)\s*[x*x]\s*(\d+)/g);
+        if (partMatch || text.includes("დაჭრა") || text.includes("ოპტიმიზაცია")) {
+            if (partMatch) {
+                let totalArea = 0;
+                const details: string[] = [];
+                partMatch.forEach(m => {
+                    const nums = m.match(/\d+/g);
+                    if (nums && nums.length >= 3) {
+                        const count = parseInt(nums[0]);
+                        const w = parseInt(nums[1]);
+                        const h = parseInt(nums[2]);
+                        totalArea += (w * h * count) / 1000000; // to m2
+                        details.push(`${count} ცალი ${w}x${h}`);
+                    }
+                });
+
+                const sheetArea = 5.796; // 2800x2070
+                const needed = Math.ceil(totalArea / (sheetArea * 0.85)); // 15% waste factor
+                const wastePercent = Math.round((1 - (totalArea / (needed * sheetArea))) * 100);
+
+                return (
+                    <div>
+                        📐 <b>დაჭრის გაანგარიშება:</b><br /><br />
+                        {details.map((d, i) => <div key={i}>• {d}</div>)}
+                        <br />
+                        • საჭირო ფართობი: <b>{totalArea.toFixed(2)} მ²</b><br />
+                        • საჭიროა: <b>{needed} ლისტი</b> (2800x2070)<br />
+                        • ნარჩენი (დაახლოებით): <b>{wastePercent}%</b><br /><br />
+                        <span className="text-xs text-muted-foreground italic">შენიშვნა: გათვლილია 15%-იანი დანაკარგით.</span>
+                    </div>
+                );
+            }
+            return "მომწერეთ დეტალების ზომები, მაგ: '5 ცალი 600x400 და 2 ცალი 1000x500'.";
+        }
+
+        // 2. Calculator Logic
         const sqMeterMatch = text.match(/(\d+)\s*(კვადრატ|კვ|sq|m2)/);
         if (sqMeterMatch || text.includes("კალკულატორი")) {
             if (sqMeterMatch) {
                 const sqMeters = parseInt(sqMeterMatch[1]);
-                const sheetSize = 5.8; // standard laminate sheet size m2
+                const sheetSize = 5.8;
                 const needed = Math.ceil(sqMeters / sheetSize);
                 return (
                     <div>
                         📍 <b>{sqMeters} კვ.მ</b> ფართობისთვის:<br /><br />
-                        • დაგჭირდებათ დაახლოებით <b>{needed} ლისტი</b> ლამინატი.<br />
-                        • გათვალისწინებულია სტანდარტული ლისტის ზომა (5.8 მ²).<br />
-                        • რეკომენდებულია 5-10% მარაგის დამატება დანაკარგებისთვის.
+                        • დაგჭირდებათ დაახლოებით <b>{needed} ლისტი</b>.<br />
+                        • რეკომენდებულია 10% მარაგის დამატება.
                     </div>
                 );
             }
-            return "შეგიძლიათ მომწეროთ ფართობი, მაგალითად: '20 კვადრატულზე რამდენი ლისტი მინდა?' და მე დაგითვლით.";
+            return "შეგიძლიათ მომწეროთ ფართობი, მაგალითად: '20 კვადრატულზე რამდენი ლისტი მინდა?'";
         }
 
-        // 2. Product Search
-        if (text.includes("გვაქვს") || text.includes("არის") || text.includes("მაქვს")) {
-            const searchTerms = text.replace(/(გვაქვს|არის|მაქვს|თუ|\?) /g, "").trim();
+        // 3. Product Search
+        if (text.includes("გვაქვს") || text.includes("არის") || text.includes("მაქვს") || text.includes("ნახე")) {
+            const searchTerms = text.replace(/(გვაქვს|არის|მაქვს|თუ|ნახე|\?) /g, "").trim();
             const found = store.products.filter(p =>
                 p.name.toLowerCase().includes(searchTerms) ||
                 (p.category && p.category.toLowerCase().includes(searchTerms))
@@ -88,79 +151,48 @@ export function AIAssistant() {
                                 • <b>{p.name}</b>: {p.quantity} ერთ. ({p.salePrice} GEL)
                             </div>
                         ))}
-                        {found.length > 3 && <div className="text-xs text-muted-foreground">...და კიდევ {found.length - 3} სხვა.</div>}
                     </div>
                 );
             }
         }
 
-        // 3. Stock Analytics
+        // 4. Analytics & History
         if (text.includes("მარაგი") || text.includes("რა გვაქვს") || text.includes("ნაშთი")) {
-            const lowStock = store.lowStockProducts;
             return (
                 <div>
-                    📊 <b>მარაგების სტატუსი:</b><br /><br />
-                    • სულ საწყობშია: <b>{store.totalStock} ლისტი</b><br />
-                    • კრიტიკული მარაგი: <b>{lowStock.length} სახეობა</b><br /><br />
-                    {lowStock.length > 0 && (
-                        <div className="text-destructive">
-                            ⚠️ ყურადღება მიაქციეთ: {lowStock.slice(0, 2).map(p => p.name).join(", ")}
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        // 4. Sales/Profit/Purchase Analytics
-        if (text.includes("მოგება") || text.includes("შემოსავალი") || text.includes("ტოპ") || text.includes("გაყიდვა")) {
-            const top = store.topProducts[0];
-            return (
-                <div>
-                    💰 <b>ფინანსური მიმოხილვა:</b><br /><br />
-                    • მთლიანი მოგება: <b>{store.totalProfit.toLocaleString()} GEL</b><br />
-                    • ყველაზე გაყიდვადი: <b>{top ? top.name : "მონაცემები არ არის"}</b><br />
-                    • შემოსავალი გაყიდვებიდან: <b>{store.totalRevenue.toLocaleString()} GEL</b>
+                    📊 <b>მარაგები:</b> სულ <b>{store.totalStock}</b> ლისტი.<br />
+                    ⚠️ <b>კრიტიკული:</b> {store.lowStockProducts.length} სახეობა.
                 </div>
             );
         }
 
         if (text.includes("შესყიდვა") || text.includes("ვიყიდეთ") || text.includes("შემოვიდა")) {
-            const lastPurchase = store.purchaseHistory[store.purchaseHistory.length - 1];
+            const last = store.purchaseHistory[store.purchaseHistory.length - 1];
             return (
                 <div>
-                    🛒 <b>ბოლო შესყიდვები:</b><br /><br />
-                    {lastPurchase ? (
-                        <div>
-                            • ბოლოს შემოვიდა: <b>{lastPurchase.productName}</b><br />
-                            • რაოდენობა: <b>{lastPurchase.quantity} ერთ.</b><br />
-                            • თარიღი: <b>{new Date(lastPurchase.createdAt).toLocaleDateString("ka-GE")}</b>
-                        </div>
-                    ) : (
-                        "შესყიდვების ისტორია ცარიელია."
-                    )}
+                    🛒 <b>ბოლო შესყიდვა:</b><br />
+                    {last ? `• ${last.productName} (${last.quantity} ერთ.)` : "ისტორია ცარიელია."}
                 </div>
             );
         }
 
-        // 5. Advice
-        if (text.includes("რჩევა") || text.includes("რა ვქნა") || text.includes("დახმარება") || text.includes("მირჩიე")) {
-            if (store.lowStockProducts.length > 0) {
-                return "💡 ჩემი რჩევაა, პირველ რიგში შეავსოთ **კრიტიკული მარაგები**, რათა არ დაკარგოთ კლიენტები დეკორის არქონის გამო.";
-            }
-            return "💡 ყველაფერი კარგად მიდის. გირჩევთ აქცენტი გააკეთოთ **ტოპ გაყიდვადი დეკორების** პოპულარიზაციაზე.";
+        if (text.includes("მოგება") || text.includes("შემოსავალი") || text.includes("ტოპ")) {
+            return (
+                <div>
+                    💰 <b>მოგება:</b> <b>{store.totalProfit.toLocaleString()} GEL</b><br />
+                    🏆 <b>ტოპ:</b> {store.topProducts[0]?.name || "არაა"}
+                </div>
+            );
         }
 
         return (
             <div>
                 უკაცრავად, ამ კითხვაზე ზუსტი პასუხი არ მაქვს.
                 <br /><br />
-                <b>შეგიძლიათ მკითხოთ:</b>
-                <br />
-                • მარაგების შესახებ (მაგ: "რა მარაგი გვაქვს?")
-                <br />
-                • შესყიდვების შესახებ (მაგ: "რა ვიყიდეთ ბოლოს?")
-                <br />
-                • კალკულატორი (მაგ: "20 კვადრატულზე რამდენი ლისტი მინდა?")
+                <b>ჰკითხეთ AI-ს:</b><br />
+                • "10 ცალი 600x400 დაჭრა"<br />
+                • "რა მარაგი გვაქვს?"<br />
+                • "რა ვიყიდეთ ბოლოს?"
             </div>
         );
     };
@@ -174,11 +206,7 @@ export function AIAssistant() {
         setInput("");
 
         setTimeout(() => {
-            const aiMsg: Message = {
-                role: "ai",
-                content: generateAIResponse(rawInput)
-            };
-            setMessages((prev) => [...prev, aiMsg]);
+            setMessages((prev) => [...prev, { role: "ai", content: generateAIResponse(rawInput) }]);
         }, 600);
     };
 
@@ -189,14 +217,8 @@ export function AIAssistant() {
                     <CardHeader className="p-4 border-b bg-primary/5">
                         <CardTitle className="flex items-center justify-between text-base">
                             <div className="flex items-center gap-2">
-                                <div className="relative">
-                                    <Sparkles className="h-5 w-5 text-primary" />
-                                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                                    </span>
-                                </div>
-                                <span className="font-bold">Malema AI</span>
+                                <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                                <span className="font-bold">Malema Pro AI</span>
                             </div>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
                                 <X className="h-4 w-4" />
@@ -207,15 +229,8 @@ export function AIAssistant() {
                         <ScrollArea className="flex-1 p-4">
                             <div className="flex flex-col gap-4">
                                 {messages.map((msg, i) => (
-                                    <div
-                                        key={i}
-                                        className={cn(
-                                            "flex flex-col max-w-[90%] rounded-2xl p-3 text-sm transition-all",
-                                            msg.role === "ai"
-                                                ? "bg-muted self-start rounded-tl-none border border-border text-foreground"
-                                                : "bg-primary text-primary-foreground self-end rounded-tr-none shadow-sm"
-                                        )}
-                                    >
+                                    <div key={i} className={cn("flex flex-col max-w-[90%] rounded-2xl p-3 text-sm",
+                                        msg.role === "ai" ? "bg-muted self-start rounded-tl-none border" : "bg-primary text-primary-foreground self-end rounded-tr-none")}>
                                         {msg.content}
                                     </div>
                                 ))}
@@ -223,17 +238,10 @@ export function AIAssistant() {
                             </div>
                         </ScrollArea>
 
-                        {/* Quick Actions */}
                         <div className="p-3 border-t bg-muted/30">
                             <div className="flex flex-wrap gap-2">
                                 {QUICK_ACTIONS.map((action) => (
-                                    <Button
-                                        key={action.value}
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-[10px] h-7 bg-background hover:bg-primary/5 hover:text-primary transition-colors"
-                                        onClick={() => handleSend(action.value)}
-                                    >
+                                    <Button key={action.value} variant="outline" size="sm" className="text-[10px] h-7 bg-background" onClick={() => handleSend(action.value)}>
                                         {action.label}
                                     </Button>
                                 ))}
@@ -241,14 +249,17 @@ export function AIAssistant() {
                         </div>
                     </CardContent>
                     <CardFooter className="p-4 border-t gap-2 bg-background">
+                        <Button size="icon" variant={isListening ? "destructive" : "outline"} onClick={startListening} className="rounded-full shrink-0">
+                            {isListening ? <MicOff className="h-4 w-4 animate-pulse" /> : <Mic className="h-4 w-4" />}
+                        </Button>
                         <Input
                             placeholder="ჰკითხეთ AI-ს..."
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                            className="flex-1 rounded-full px-4"
+                            className="flex-1 rounded-full"
                         />
-                        <Button size="icon" onClick={() => handleSend()} disabled={!input.trim()} className="rounded-full">
+                        <Button size="icon" onClick={() => handleSend()} disabled={!input.trim()} className="rounded-full shrink-0">
                             <Send className="h-4 w-4" />
                         </Button>
                     </CardFooter>
@@ -257,7 +268,7 @@ export function AIAssistant() {
 
             <Button
                 size="lg"
-                className="rounded-full h-14 w-14 shadow-xl hover:scale-105 transition-transform duration-200 bg-primary hover:bg-primary/90"
+                className="rounded-full h-14 w-14 shadow-xl hover:scale-110 transition-transform duration-200 bg-primary"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
