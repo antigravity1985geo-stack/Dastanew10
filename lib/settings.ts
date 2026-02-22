@@ -4,6 +4,10 @@ export interface Settings {
   companyName: string;
   currency: string;
   language: string;
+  phone?: string;
+  email?: string;
+  bankAccount?: string;
+  address?: string;
 }
 
 type SettingsListener = () => void;
@@ -14,6 +18,10 @@ const DEFAULT_SETTINGS: Settings = {
   companyName: "საწყობი",
   currency: "₾",
   language: "ქართული",
+  phone: "",
+  email: "",
+  bankAccount: "",
+  address: "",
 };
 
 class SettingsStore {

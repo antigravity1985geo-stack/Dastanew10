@@ -357,46 +357,96 @@ interface SettingsTabProps {
 function SettingsTab({ settings }: SettingsTabProps) {
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [currency, setCurrency] = useState(settings.currency);
+  const [phone, setPhone] = useState(settings.phone || "");
+  const [email, setEmail] = useState(settings.email || "");
+  const [bankAccount, setBankAccount] = useState(settings.bankAccount || "");
+  const [address, setAddress] = useState(settings.address || "");
 
   const handleSave = () => {
     settings.updateSettings({
       companyName: companyName.trim() || "საწყობი",
       currency: currency.trim() || "₾",
+      phone: phone.trim(),
+      email: email.trim(),
+      bankAccount: bankAccount.trim(),
+      address: address.trim(),
     });
     toast.success("პარამეტრები შეინახა");
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-6 max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">სისტემის პარამეტრები</CardTitle>
           <CardDescription>
-            კომპანიის სახელი, ვალუტა და სხვა პარამეტრები
+            კომპანიის სახელი, ვალუტა და საკონტაქტო ინფორმაცია (ინვოისისთვის)
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="company-name">კომპანიის სახელი</Label>
-            <Input
-              id="company-name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="საწყობი"
-            />
-            <p className="text-xs text-muted-foreground">
-              გამოჩნდება საიდბარში და ბეჭდვის დროს
-            </p>
+        <CardContent className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="company-name">კომპანიის სახელი</Label>
+              <Input
+                id="company-name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="საწყობი"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="currency">ვალუტა</Label>
+              <Input
+                id="currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                placeholder="₾"
+              />
+            </div>
+          </div>
+
+          <div className="h-px bg-border my-2" />
+          <h3 className="text-sm font-semibold">საკონტაქტო ინფორმაცია (ინვოისისთვის)</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="phone">ტელეფონის ნომერი</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+995 ..."
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">ელ-ფოსტა</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="info@..."
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="currency">ვალუტა</Label>
+            <Label htmlFor="bank">საბანკო ანგარიში (IBAN)</Label>
             <Input
-              id="currency"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              placeholder="₾"
-              className="max-w-24"
+              id="bank"
+              value={bankAccount}
+              onChange={(e) => setBankAccount(e.target.value)}
+              placeholder="GE00TB0000000000000000"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="address">მისამართი</Label>
+            <Input
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="ქუჩა, ქალაქი..."
             />
           </div>
 

@@ -19,13 +19,16 @@ export function printPage(title: string) {
       <title>${title}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body { 
+          background: #fff;
+          color: #0f172a;
+          overflow-x: hidden;
+        }
         body {
           font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
           padding: 40px;
-          color: #0f172a;
           font-size: 11px;
           line-height: 1.5;
-          background: #fff;
         }
         .print-wrapper { max-width: 1000px; margin: 0 auto; }
         
@@ -33,7 +36,7 @@ export function printPage(title: string) {
         h1 { font-size: 24px; font-weight: 800; color: #1e293b; letter-spacing: -0.025em; }
         h2 { font-size: 12px; color: #64748b; font-weight: 500; margin-top: 4px; }
         
-        /* Layout Utilities - mimic Tailwind */
+        /* Layout Utilities */
         .flex { display: flex !important; }
         .flex-col { flex-direction: column !important; }
         .justify-between { justify-content: space-between !important; }
@@ -48,13 +51,6 @@ export function printPage(title: string) {
         .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
         .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
         
-        /* Grid responsive fallbacks for print (usually A4 size) */
-        @media print {
-          .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-          .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-          .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        }
-
         .mb-2 { margin-bottom: 8px !important; }
         .mb-4 { margin-bottom: 16px !important; }
         .mb-6 { margin-bottom: 24px !important; }
@@ -81,9 +77,9 @@ export function printPage(title: string) {
         .uppercase { text-transform: uppercase !important; }
         .tracking-wider { letter-spacing: 0.05em !important; }
         .text-muted-foreground { color: #64748b !important; }
-        .text-chart-2 { color: #10b981 !important; } /* Green */
-        .text-chart-3 { color: #f59e0b !important; } /* Amber */
-        .text-destructive { color: #ef4444 !important; } /* Red */
+        .text-chart-2 { color: #10b981 !important; }
+        .text-chart-3 { color: #f59e0b !important; }
+        .text-destructive { color: #ef4444 !important; }
         .text-foreground { color: #0f172a !important; }
         .text-card-foreground { color: #0f172a !important; }
         
@@ -117,10 +113,18 @@ export function printPage(title: string) {
         .print-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-end;
+          align-items: flex-start;
           border-bottom: 2px solid #0f172a;
           padding-bottom: 20px;
           margin-bottom: 30px;
+        }
+        .company-info {
+          font-size: 10px;
+          color: #475569;
+          margin-top: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
         .print-meta {
           text-align: right;
@@ -139,16 +143,18 @@ export function printPage(title: string) {
         
         @media print {
           body { 
-            padding: 0; 
+            padding: 20px; 
             margin: 0;
           }
-          .no-print, button, nav, .pagination, [role="navigation"] { display: none !important; }
+          /* Hide actions and common UI elements */
+          .no-print, button, nav, .pagination, [role="navigation"], 
+          th:last-child, td:last-child, .sr-only { 
+            display: none !important; 
+          }
           .page-break { page-break-after: always; }
-          table { page-break-inside: auto; }
+          table { page-break-inside: auto; border: 1px solid #e2e8f0 !important; }
           tr { page-break-inside: avoid; page-break-after: auto; }
-          
-          /* Ensure cards don't break in middle */
-          .card, .rounded-xl { page-break-inside: avoid; margin-bottom: 20px; }
+          .card, .rounded-xl { page-break-inside: avoid; border: 1px solid #e2e8f0 !important; margin-bottom: 20px; }
         }
       </style>
     </head>
@@ -158,6 +164,12 @@ export function printPage(title: string) {
           <div>
             <h1>${title}</h1>
             <h2>${companyName} - მართვის სისტემა</h2>
+            <div class="company-info">
+              ${settings.address ? `<span>📍 ${settings.address}</span>` : ""}
+              ${settings.phone ? `<span>📞 ${settings.phone}</span>` : ""}
+              ${settings.email ? `<span>✉️ ${settings.email}</span>` : ""}
+              ${settings.bankAccount ? `<span style="margin-top: 4px; font-weight: 600;">🏦 IBAN: ${settings.bankAccount}</span>` : ""}
+            </div>
           </div>
           <div class="print-meta">
             თარიღი: ${now.toLocaleDateString("ka-GE")}<br>
@@ -171,9 +183,17 @@ export function printPage(title: string) {
           <span>დაბეჭდილია: ${now.toLocaleString("ka-GE")}</span>
         </div>
       </div>
+      <script>
+        window.onload = function() {
+          window.print();
+          // Delay closing to ensure print dialog doesn't block it in some browsers
+          setTimeout(() => {
+            window.close();
+          }, 500);
+        };
+      </script>
     </body>
     </html>
   `);
   printWindow.document.close();
-  printWindow.print();
 }
