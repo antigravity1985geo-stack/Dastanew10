@@ -11,8 +11,15 @@ import { cn } from "@/lib/utils";
 
 interface Message {
     role: "user" | "ai";
-    content: string;
+    content: string | React.ReactNode;
 }
+
+const QUICK_ACTIONS = [
+    { label: "📦 მარაგის შემოწმება", value: "რა მარაგი გვაქვს?" },
+    { label: "🧮 კალკულატორი", value: "კალკულატორი" },
+    { label: "🏆 ტოპ გაყიდვადი", value: "რა არის ტოპ გაყიდვადი?" },
+    { label: "💡 რჩევა", value: "მომეცი რჩევა" },
+];
 
 export function AIAssistant() {
     const [isOpen, setIsOpen] = useState(false);
@@ -20,7 +27,13 @@ export function AIAssistant() {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: "ai",
-            content: "გამარჯობა! მე ვარ თქვენი AI ასისტენტი. რით შემიძლია დაგეხმაროთ ლამინატის მარაგების მართვაში?",
+            content: (
+                <div>
+                    გამარჯობა! მე ვარ თქვენი <b>Malema AI</b> ასისტენტი.
+                    <br /><br />
+                    შემიძლია დაგეხმაროთ ლამინატის მარაგების ანალიზში, დაგითვალოთ საჭირო რაოდენობა ან გიპოვოთ კონკრეტული დეკორი.
+                </div>
+            ),
         },
     ]);
     const store = useWarehouseStore();
@@ -32,44 +45,104 @@ export function AIAssistant() {
         }
     }, [messages]);
 
-    const generateAIResponse = (userText: string) => {
-        const text = userText.toLowerCase();
+    const generateAIResponse = (userText: string): React.ReactNode => {
+        const text = userText.toLowerCase().trim();
 
-        // Simple logic-based responses for demonstration/prototype
-        if (text.includes("მარაგი") || text.includes("რა გვაქვს") || text.includes("ლისტი")) {
-            const lowStock = store.lowStockProducts.length;
-            if (lowStock > 0) {
-                return `ამჟამად ${lowStock} სახეობის ლამინატის ლისტი კრიტიკულ ზღვარზეა. გირჩევთ გადახედოთ დეშბორდს.`;
+        // 1. Calculator Logic
+        const sqMeterMatch = text.match(/(\d+)\s*(კვადრატ|კვ|sq|m2)/);
+        if (sqMeterMatch || text.includes("კალკულატორი")) {
+            if (sqMeterMatch) {
+                const sqMeters = parseInt(sqMeterMatch[1]);
+                const sheetSize = 5.8; // standard laminate sheet size m2
+                const needed = Math.ceil(sqMeters / sheetSize);
+                return (
+                    <div>
+                        📍 <b>{sqMeters} კვ.მ</b> ფართობისთვის:<br /><br />
+                        • დაგჭირდებათ დაახლოებით <b>{needed} ლისტი</b> ლამინატი.<br />
+                        • გათვალისწინებულია სტანდარტული ლისტის ზომა (5.8 მ²).<br />
+                        • რეკომენდებულია 5-10% მარაგის დამატება დანაკარგებისთვის.
+                    </div>
+                );
             }
-            return `მარაგები წესრიგშია. სულ გვაქვს ${store.totalStock} ლისტი საწყობში.`;
+            return "შეგიძლიათ მომწეროთ ფართობი, მაგალითად: '20 კვადრატულზე რამდენი ლისტი მინდა?' და მე დაგითვლით.";
         }
 
-        if (text.includes("მოგება") || text.includes("შემოსავალი")) {
-            return `თქვენი მთლიანი მოგება შეადგენს ${store.totalProfit.toLocaleString()} GEL-ს. ყველაზე მომგებიანია ${store.topProducts[0]?.name || "ჯერ არაფერი"}.`;
+        // 2. Product Search
+        if (text.includes("გვაქვს") || text.includes("არის") || text.includes("მაქვს")) {
+            const searchTerms = text.replace(/(გვაქვს|არის|მაქვს|თუ|?) /g, "").trim();
+            const found = store.products.filter(p =>
+                p.name.toLowerCase().includes(searchTerms) ||
+                (p.category && p.category.toLowerCase().includes(searchTerms))
+            );
+
+            if (found.length > 0 && searchTerms.length > 2) {
+                return (
+                    <div>
+                        🔍 მოიძებნა შემდეგი პროდუქცია:<br /><br />
+                        {found.slice(0, 3).map(p => (
+                            <div key={p.id} className="mb-2 border-b pb-1">
+                                • <b>{p.name}</b>: {p.quantity} ერთ. ({p.salePrice} GEL)
+                            </div>
+                        ))}
+                        {found.length > 3 && <div className="text-xs text-muted-foreground">...და კიდევ {found.length - 3} სხვა.</div>}
+                    </div>
+                );
+            }
         }
 
-        if (text.includes("რჩევა") || text.includes("რა ვქნა")) {
+        // 3. Stock Analytics
+        if (text.includes("მარაგი") || text.includes("რა გვაქვს") || text.includes("ნაშთი")) {
+            const lowStock = store.lowStockProducts;
+            return (
+                <div>
+                    📊 <b>მარაგების სტატუსი:</b><br /><br />
+                    • სულ საწყობშია: <b>{store.totalStock} ლისტი</b><br />
+                    • კრიტიკული მარაგი: <b>{lowStock.length} სახეობა</b><br /><br />
+                    {lowStock.length > 0 && (
+                        <div className="text-destructive">
+                            ⚠️ ყურადღება მიაქციეთ: {lowStock.slice(0, 2).map(p => p.name).join(", ")}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // 4. Sales/Profit Analytics
+        if (text.includes("მოგება") || text.includes("შემოსავალი") || text.includes("ტოპ")) {
+            const top = store.topProducts[0];
+            return (
+                <div>
+                    💰 <b>ფინანსური მიმოხილვა:</b><br /><br />
+                    • მთლიანი მოგება: <b>{store.totalProfit.toLocaleString()} GEL</b><br />
+                    • ყველაზე გაყიდვადი: <b>{top ? top.name : "მონაცემები არ არის"}</b><br />
+                    • შემოსავალი გაყიდვებიდან: <b>{store.totalRevenue.toLocaleString()} GEL</b>
+                </div>
+            );
+        }
+
+        // 5. Advice
+        if (text.includes("რჩევა") || text.includes("რა ვქნა") || text.includes("დახმარება")) {
             if (store.lowStockProducts.length > 0) {
-                return `გირჩევთ სასწრაფოდ შეავსოთ ${store.lowStockProducts[0].name}-ის მარაგი, რადგან მასზე მოთხოვნა მაღალია.`;
+                return "💡 ჩემი რჩევაა, პირველ რიგში შეავსოთ **კრიტიკული მარაგები**, რათა არ დაკარგოთ კლიენტები დეკორის არქონის გამო.";
             }
-            return "ყველაფერი სტაბილურია. გირჩევთ ყურადღება მიაქციოთ ყველაზე გაყიდვადი დეკორების მარაგს.";
+            return "💡 ყველაფერი კარგად მიდის. გირჩევთ აქცენტი გააკეთოთ **ტოპ გაყიდვადი დეკორების** პოპულარიზაციაზე.";
         }
 
-        return "უკაცრავად, ვერ გავიგე. შეგიძლიათ მკითხოთ მარაგების, მოგების ან რჩევების შესახებ ლამინატთან დაკავშირებით.";
+        return "უკაცრავად, ამ კითხვაზე ზუსტი პასუხი არ მაქვს. შეგიძლიათ მკითხოთ მარაგების, მოგების ან საჭირო ლისტების რაოდენობის შესახებ.";
     };
 
-    const handleSend = () => {
-        if (!input.trim()) return;
+    const handleSend = (textOverride?: string) => {
+        const rawInput = textOverride || input;
+        if (!rawInput.trim()) return;
 
-        const userMsg: Message = { role: "user", content: input };
+        const userMsg: Message = { role: "user", content: rawInput };
         setMessages((prev) => [...prev, userMsg]);
         setInput("");
 
-        // Simulate AI thinking
         setTimeout(() => {
             const aiMsg: Message = {
                 role: "ai",
-                content: generateAIResponse(input)
+                content: generateAIResponse(rawInput)
             };
             setMessages((prev) => [...prev, aiMsg]);
         }, 600);
@@ -78,29 +151,35 @@ export function AIAssistant() {
     return (
         <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
             {isOpen && (
-                <Card className="w-[350px] sm:w-[400px] h-[500px] shadow-2xl flex flex-col border-primary/20 bg-background animate-in slide-in-from-bottom-5 duration-300">
+                <Card className="w-[350px] sm:w-[400px] h-[550px] shadow-2xl flex flex-col border-primary/20 bg-background animate-in slide-in-from-bottom-5 duration-300">
                     <CardHeader className="p-4 border-b bg-primary/5">
                         <CardTitle className="flex items-center justify-between text-base">
                             <div className="flex items-center gap-2">
-                                <Sparkles className="h-5 w-5 text-primary" />
-                                <span>AI ასისტენტი</span>
+                                <div className="relative">
+                                    <Sparkles className="h-5 w-5 text-primary" />
+                                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                    </span>
+                                </div>
+                                <span className="font-bold">Malema AI</span>
                             </div>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
                                 <X className="h-4 w-4" />
                             </Button>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden p-0">
-                        <ScrollArea className="h-full p-4" ref={scrollRef}>
+                    <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
+                        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
                             <div className="flex flex-col gap-4">
                                 {messages.map((msg, i) => (
                                     <div
                                         key={i}
                                         className={cn(
-                                            "flex flex-col max-w-[85%] rounded-lg p-3 text-sm",
+                                            "flex flex-col max-w-[90%] rounded-2xl p-3 text-sm transition-all",
                                             msg.role === "ai"
-                                                ? "bg-muted self-start"
-                                                : "bg-primary text-primary-foreground self-end"
+                                                ? "bg-muted self-start rounded-tl-none border border-border"
+                                                : "bg-primary text-primary-foreground self-end rounded-tr-none"
                                         )}
                                     >
                                         {msg.content}
@@ -108,16 +187,33 @@ export function AIAssistant() {
                                 ))}
                             </div>
                         </ScrollArea>
+
+                        {/* Quick Actions */}
+                        <div className="p-3 border-t bg-muted/30">
+                            <div className="flex flex-wrap gap-2">
+                                {QUICK_ACTIONS.map((action) => (
+                                    <Button
+                                        key={action.value}
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-[10px] h-7 bg-background hover:bg-primary/5 hover:text-primary transition-colors"
+                                        onClick={() => handleSend(action.value)}
+                                    >
+                                        {action.label}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
                     </CardContent>
-                    <CardFooter className="p-4 border-t gap-2">
+                    <CardFooter className="p-4 border-t gap-2 bg-background">
                         <Input
                             placeholder="ჰკითხეთ AI-ს..."
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                            className="flex-1"
+                            className="flex-1 rounded-full px-4"
                         />
-                        <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
+                        <Button size="icon" onClick={() => handleSend()} disabled={!input.trim()} className="rounded-full">
                             <Send className="h-4 w-4" />
                         </Button>
                     </CardFooter>
@@ -126,10 +222,10 @@ export function AIAssistant() {
 
             <Button
                 size="lg"
-                className="rounded-full h-14 w-14 shadow-xl hover:scale-105 transition-transform duration-200"
+                className="rounded-full h-14 w-14 shadow-xl hover:scale-105 transition-transform duration-200 bg-primary hover:bg-primary/90"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                {isOpen ? <X /> : <MessageSquare className="h-6 w-6" />}
+                {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
             </Button>
         </div>
     );
