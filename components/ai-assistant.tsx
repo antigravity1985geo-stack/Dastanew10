@@ -156,7 +156,63 @@ export function AIAssistant() {
             }
         }
 
-        // 4. Analytics & History
+        // 4. Sales Processing (Level 3)
+        const sellMatch = text.match(/(გაყიდე|გაყიდვა|sales?)\s*(.+)?\s*(\d+)\s*(ლისტი|ცალი|ერთეული)?/i) ||
+            text.match(/(\d+)\s*(ლისტი|ცალი|ერთეული)?\s*(გაყიდე|გაყიდვა|sales?)\s*(.+)?/i);
+
+        if (sellMatch || text.includes("გაყიდე") || text.includes("გაყიდვა")) {
+            let productNameSnippet = "";
+            let quantity = 0;
+
+            if (sellMatch) {
+                const nums = text.match(/\d+/);
+                quantity = nums ? parseInt(nums[0]) : 0;
+                productNameSnippet = text.replace(/(გაყიდე|გაყიდვა|ლისტი|ცალი|ერთეული| )/g, "").replace(/\d+/g, "").trim();
+            }
+
+            if (quantity > 0 && productNameSnippet.length > 1) {
+                const product = store.products.find(p => p.name.toLowerCase().includes(productNameSnippet));
+
+                if (product) {
+                    return (
+                        <div className="flex flex-col gap-2">
+                            <div>
+                                🛒 გსურთ გაყიდოთ <b>{quantity} ლისტი</b> პროდუქცია: <b>{product.name}</b>?
+                                <br />
+                                ჯამური ფასი: <b>{(product.salePrice * quantity).toLocaleString()} GEL</b>
+                            </div>
+                            <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white w-fit gap-2"
+                                onClick={async () => {
+                                    try {
+                                        await store.addSale({
+                                            productId: product.id,
+                                            productName: product.name,
+                                            category: product.category,
+                                            quantity: quantity,
+                                            salePrice: product.salePrice,
+                                            client: "AI Sales"
+                                        });
+                                        setMessages(prev => [...prev, { role: "ai", content: `✅ გაყიდვა წარმატებით შესრულდა: ${product.name} (${quantity} ერთ.)` }]);
+                                        toast.success("გაყიდვა შესრულდა");
+                                    } catch (e: any) {
+                                        setMessages(prev => [...prev, { role: "ai", content: `❌ შეცდომა: ${e.message}` }]);
+                                        toast.error(e.message);
+                                    }
+                                }}
+                            >
+                                <TrendingUp className="h-4 w-4" /> დიახ, გაყიდე
+                            </Button>
+                        </div>
+                    );
+                }
+                return `🔍 პროდუქტი "${productNameSnippet}" ვერ მოვიძებნა. დააზუსტეთ სახელი.`;
+            }
+            return "მიუთითეთ პროდუქტი და რაოდენობა, მაგ: 'გაყიდე საფირმეშე 10 ლისტი'.";
+        }
+
+        // 5. Analytics & History
         if (text.includes("მარაგი") || text.includes("რა გვაქვს") || text.includes("ნაშთი")) {
             return (
                 <div>
