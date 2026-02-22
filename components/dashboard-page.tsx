@@ -24,6 +24,7 @@ import {
 } from "recharts";
 import { useWarehouseStore } from "@/hooks/use-store";
 import { PageHeader } from "@/components/page-header";
+import { AIInsightsCard } from "@/components/ai-assistant";
 
 const CHART_COLORS = [
   "oklch(0.45 0.18 250)",
@@ -90,6 +91,7 @@ export function DashboardPage() {
       />
 
       <div id="print-area">
+        <AIInsightsCard />
         {/* Stats Grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
           {stats.map((stat) => (

@@ -2,6 +2,7 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AIAssistant } from "@/components/ai-assistant";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </SidebarInset>
+        <AIAssistant />
       </div>
     </SidebarProvider>
   );
