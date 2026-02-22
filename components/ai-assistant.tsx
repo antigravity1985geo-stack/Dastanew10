@@ -39,11 +39,15 @@ export function AIAssistant() {
     const store = useWarehouseStore();
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
+    const scrollToBottom = () => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            scrollRef.current.scrollIntoView({ behavior: "smooth" });
         }
-    }, [messages]);
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, isOpen]);
 
     const generateAIResponse = (userText: string): React.ReactNode => {
         const text = userText.toLowerCase().trim();
@@ -199,8 +203,8 @@ export function AIAssistant() {
                             </Button>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
-                        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+                    <CardContent className="flex-1 overflow-hidden p-0 flex flex-col h-0">
+                        <ScrollArea className="flex-1 p-4">
                             <div className="flex flex-col gap-4">
                                 {messages.map((msg, i) => (
                                     <div
@@ -208,13 +212,14 @@ export function AIAssistant() {
                                         className={cn(
                                             "flex flex-col max-w-[90%] rounded-2xl p-3 text-sm transition-all",
                                             msg.role === "ai"
-                                                ? "bg-muted self-start rounded-tl-none border border-border"
-                                                : "bg-primary text-primary-foreground self-end rounded-tr-none"
+                                                ? "bg-muted self-start rounded-tl-none border border-border text-foreground"
+                                                : "bg-primary text-primary-foreground self-end rounded-tr-none shadow-sm"
                                         )}
                                     >
                                         {msg.content}
                                     </div>
                                 ))}
+                                <div ref={scrollRef} />
                             </div>
                         </ScrollArea>
 
