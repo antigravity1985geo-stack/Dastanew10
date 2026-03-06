@@ -345,7 +345,7 @@ export function AIInsightsCard() {
         {
             title: "მარაგის ანალიზი",
             description: store.lowStockProducts.length > 0
-                ? `${store.lowStockProducts.length} სახეობის ლამინატი იწურება.`
+                ? `${store.lowStockProducts.length} სახეობის პროდუქტი იწურება.`
                 : "მარაგები ოპტიმალურ მდგომარეობაშია.",
             icon: AlertCircle,
             color: store.lowStockProducts.length > 0 ? "text-destructive" : "text-chart-2",
@@ -360,7 +360,7 @@ export function AIInsightsCard() {
         },
         {
             title: "ბიზნესის სტატუსი",
-            description: `საწყობში ამჟამად არის ${store.totalStock} ლისტი.`,
+            description: `საწყობში ამჟამად არის ${store.totalStock} ერთეული.`,
             icon: Package,
             color: "text-chart-3",
         }
