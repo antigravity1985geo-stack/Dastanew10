@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   Users,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   BarChart,
   Bar,
@@ -26,13 +26,14 @@ import {
 import { useWarehouseStore } from "@/hooks/use-store";
 import { PageHeader } from "@/components/page-header";
 import { AIInsightsCard } from "@/components/ai-assistant";
+import { cn } from "@/lib/utils";
 
 const CHART_COLORS = [
-  "oklch(0.45 0.18 250)",
-  "oklch(0.55 0.15 160)",
-  "oklch(0.65 0.2 40)",
-  "oklch(0.6 0.15 300)",
-  "oklch(0.7 0.15 80)",
+  "#0ea5e9",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#f43f5e",
 ];
 
 export function DashboardPage() {
@@ -43,55 +44,62 @@ export function DashboardPage() {
       label: "პროდუქციის ტიპი",
       value: store.totalProducts,
       icon: Package,
-      color: "text-chart-1",
-      bgColor: "bg-chart-1/10",
+      color: "text-sky-600",
+      bgColor: "bg-sky-50/50",
+      borderColor: "border-t-sky-500",
     },
     {
       label: "მთლიანი სტოკი",
       value: store.totalStock,
       icon: Boxes,
-      color: "text-chart-2",
-      bgColor: "bg-chart-2/10",
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-50/50",
+      borderColor: "border-t-emerald-500",
     },
     {
       label: "შესყიდვის ღირებულება",
-      value: `${store.totalPurchaseValue.toLocaleString()} GEL`,
+      value: `${store.totalPurchaseValue.toLocaleString()} ₾`,
       icon: ShoppingCart,
-      color: "text-chart-3",
-      bgColor: "bg-chart-3/10",
+      color: "text-amber-600",
+      bgColor: "bg-amber-50/50",
+      borderColor: "border-t-amber-500",
     },
     {
       label: "გაყიდვების შემოსავალი",
-      value: `${store.totalRevenue.toLocaleString()} GEL`,
+      value: `${store.totalRevenue.toLocaleString()} ₾`,
       icon: TrendingUp,
-      color: "text-chart-1",
-      bgColor: "bg-chart-1/10",
+      color: "text-blue-600",
+      bgColor: "bg-blue-50/50",
+      borderColor: "border-t-blue-500",
     },
     {
       label: "მოგება",
-      value: `${store.totalProfit.toLocaleString()} GEL`,
+      value: `${store.totalProfit.toLocaleString()} ₾`,
       icon: DollarSign,
-      color: "text-chart-2",
-      bgColor: "bg-chart-2/10",
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100/30",
+      borderColor: "border-t-emerald-600",
     },
     {
       label: "აქტივების ღირებულება",
-      value: `${store.totalSaleValue.toLocaleString()} GEL`,
+      value: `${store.totalSaleValue.toLocaleString()} ₾`,
       icon: ArrowUpRight,
-      color: "text-chart-3",
-      bgColor: "bg-chart-3/10",
+      color: "text-violet-600",
+      bgColor: "bg-violet-50/50",
+      borderColor: "border-t-violet-500",
     },
     {
       label: "თანამშრომლები",
       value: store.employees.length,
       icon: Users,
       color: "text-primary",
-      bgColor: "bg-primary/10",
+      bgColor: "bg-primary/5",
+      borderColor: "border-t-primary",
     },
   ];
 
   return (
-    <div>
+    <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
         title="დეშბორდი"
         description="ბიზნესის მთლიანი ანალიტიკა"
@@ -101,21 +109,21 @@ export function DashboardPage() {
       <div id="print-area">
         <AIInsightsCard />
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           {stats.map((stat) => (
-            <Card key={stat.label}>
+            <Card key={stat.label} className={cn("border-border/50 shadow-sm hover:shadow-md transition-all overflow-hidden relative group border-t-4", stat.bgColor, stat.borderColor)}>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                       {stat.label}
                     </p>
-                    <p className="text-2xl font-bold mt-2 text-card-foreground">
+                    <p className="text-2xl font-black mt-2 text-card-foreground">
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`rounded-lg p-2.5 ${stat.bgColor}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  <div className={cn("rounded-xl p-2.5", stat.bgColor)}>
+                    <stat.icon className={cn("h-5 w-5", stat.color)} />
                   </div>
                 </div>
               </CardContent>
@@ -126,61 +134,71 @@ export function DashboardPage() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Sales by Month */}
-          <Card>
+          <Card className="border-border/50 shadow-md rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-card-foreground">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
                 გაყიდვები თვეების მიხედვით
               </CardTitle>
+              <CardDescription>შემოსავლისა და მოგების ანალიზი</CardDescription>
             </CardHeader>
             <CardContent>
               {store.salesByMonth.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={store.salesByMonth}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.01 250)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis
                       dataKey="month"
-                      tick={{ fontSize: 12 }}
-                      stroke="oklch(0.5 0.02 250)"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }}
+                      dy={10}
                     />
                     <YAxis
-                      tick={{ fontSize: 12 }}
-                      stroke="oklch(0.5 0.02 250)"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748B', fontSize: 12 }}
+                      tickFormatter={(value) => `${value} ₾`}
                     />
                     <Tooltip
                       contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid oklch(0.9 0.01 250)",
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                         fontSize: "12px",
                       }}
                     />
                     <Bar
                       dataKey="revenue"
                       name="შემოსავალი"
-                      fill="oklch(0.45 0.18 250)"
-                      radius={[4, 4, 0, 0]}
+                      fill="#0ea5e9"
+                      radius={[6, 6, 0, 0]}
                     />
                     <Bar
                       dataKey="profit"
                       name="მოგება"
-                      fill="oklch(0.55 0.15 160)"
-                      radius={[4, 4, 0, 0]}
+                      fill="#10b981"
+                      radius={[6, 6, 0, 0]}
                     />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
-                  გაყიდვების მონაცემები არ არის
+                <div className="flex flex-col items-center justify-center h-[280px] text-muted-foreground">
+                  <TrendingUp className="h-10 w-10 opacity-10 mb-3" />
+                  <p className="text-sm font-medium">გაყიდვების მონაცემები არ არის</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Category Distribution */}
-          <Card>
+          <Card className="border-border/50 shadow-md rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-card-foreground">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
                 კატეგორიების განაწილება
               </CardTitle>
+              <CardDescription>პროდუქტების რაოდენობა კატეგორიების მიხედვით</CardDescription>
             </CardHeader>
             <CardContent>
               {store.categoryDistribution.length > 0 ? (
@@ -191,7 +209,9 @@ export function DashboardPage() {
                         data={store.categoryDistribution}
                         cx="50%"
                         cy="50%"
+                        innerRadius={60}
                         outerRadius={100}
+                        paddingAngle={4}
                         dataKey="count"
                         nameKey="category"
                       >
@@ -205,13 +225,13 @@ export function DashboardPage() {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2.5">
                     {store.categoryDistribution.map((cat, index) => (
                       <div
                         key={cat.category}
                         className="flex items-center justify-between text-sm"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <div
                             className="h-3 w-3 rounded-full"
                             style={{
@@ -219,16 +239,17 @@ export function DashboardPage() {
                                 CHART_COLORS[index % CHART_COLORS.length],
                             }}
                           />
-                          <span className="text-card-foreground">{cat.category}</span>
+                          <span className="text-card-foreground font-medium">{cat.category}</span>
                         </div>
-                        <span className="font-medium text-card-foreground">{cat.count}</span>
+                        <span className="font-black text-card-foreground">{cat.count}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[280px] text-muted-foreground text-sm">
-                  კატეგორიების მონაცემები არ არის
+                <div className="flex flex-col items-center justify-center h-[280px] text-muted-foreground">
+                  <Package className="h-10 w-10 opacity-10 mb-3" />
+                  <p className="text-sm font-medium">კატეგორიების მონაცემები არ არის</p>
                 </div>
               )}
             </CardContent>
@@ -236,13 +257,15 @@ export function DashboardPage() {
         </div>
 
         {/* Top Products & Recent Sales */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8">
           {/* Top Products */}
-          <Card>
+          <Card className="border-border/50 shadow-md rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-card-foreground">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
                 ტოპ პროდუქცია
               </CardTitle>
+              <CardDescription>ყველაზე გაყიდვადი პროდუქცია</CardDescription>
             </CardHeader>
             <CardContent>
               {store.topProducts.length > 0 ? (
@@ -250,41 +273,44 @@ export function DashboardPage() {
                   {store.topProducts.map((product, index) => (
                     <div
                       key={product.name}
-                      className="flex items-center justify-between rounded-lg border border-border p-3"
+                      className="flex items-center justify-between rounded-xl border border-border/50 p-3.5 hover:bg-muted/20 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-black text-primary">
                           {index + 1}
                         </span>
                         <div>
-                          <p className="text-sm font-medium text-card-foreground">
+                          <p className="text-sm font-bold text-card-foreground">
                             {product.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
                             გაყიდული: {product.sold} ერთ.
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-card-foreground">
-                        {product.revenue.toLocaleString()} GEL
+                      <span className="text-sm font-black text-emerald-600">
+                        {product.revenue.toLocaleString()} ₾
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
-                  გაყიდვების მონაცემები არ არის
+                <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+                  <TrendingUp className="h-10 w-10 opacity-10 mb-3" />
+                  <p className="text-sm font-medium">გაყიდვების მონაცემები არ არის</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Recent Inventory */}
-          <Card>
+          <Card className="border-border/50 shadow-md rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-card-foreground">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Boxes className="h-4 w-4 text-primary" />
                 საწყობის პროდუქცია
               </CardTitle>
+              <CardDescription>ბოლო 5 პროდუქტი</CardDescription>
             </CardHeader>
             <CardContent>
               {store.products.length > 0 ? (
@@ -292,30 +318,31 @@ export function DashboardPage() {
                   {store.products.slice(0, 5).map((product) => (
                     <div
                       key={product.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-3"
+                      className="flex items-center justify-between rounded-xl border border-border/50 p-3.5 hover:bg-muted/20 transition-colors"
                     >
                       <div>
-                        <p className="text-sm font-medium text-card-foreground">
+                        <p className="text-sm font-bold text-card-foreground">
                           {product.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
                           {product.category || "კატეგორიის გარეშე"}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-card-foreground">
+                        <p className="text-sm font-black text-card-foreground">
                           {product.quantity} ერთ.
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {product.salePrice.toLocaleString()} GEL
+                        <p className="text-[10px] font-bold text-muted-foreground">
+                          {product.salePrice.toLocaleString()} ₾
                         </p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
-                  პროდუქცია არ არის დამატებული
+                <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+                  <Package className="h-10 w-10 opacity-10 mb-3" />
+                  <p className="text-sm font-medium">პროდუქცია არ არის დამატებული</p>
                 </div>
               )}
             </CardContent>
@@ -324,33 +351,38 @@ export function DashboardPage() {
 
         {/* Low Stock Alerts */}
         {store.lowStockProducts.length > 0 && (
-          <Card className="mt-6 border-destructive/50 bg-destructive/5">
-            <CardHeader className="flex flex-row items-center gap-2 pb-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-sm font-semibold text-destructive">
-                მარაგი იწურება! ({store.lowStockProducts.length})
-              </CardTitle>
+          <Card className="mt-8 border-rose-200/50 bg-rose-50/30 shadow-md rounded-2xl overflow-hidden">
+            <CardHeader className="flex flex-row items-center gap-2 pb-3">
+              <div className="p-2 bg-rose-100 rounded-xl">
+                <AlertTriangle className="h-5 w-5 text-rose-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-rose-900">
+                  მარაგი იწურება! ({store.lowStockProducts.length})
+                </CardTitle>
+                <CardDescription className="text-rose-600/70">ეს პროდუქტები მალე ამოიწურება</CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {store.lowStockProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="flex items-center justify-between rounded-md border border-destructive/20 bg-background p-3"
+                    className="flex items-center justify-between rounded-xl border border-rose-200/40 bg-white/60 p-3.5 hover:bg-white transition-colors"
                   >
                     <div>
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-bold text-foreground">
                         {product.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
                         {product.category || "კატეგორიის გარეშე"}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-destructive">
+                      <p className="text-sm font-black text-rose-600">
                         {product.quantity} ერთ.
                       </p>
-                      <p className="text-[10px] text-muted-foreground uppercase">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-rose-400">
                         ნაშთი
                       </p>
                     </div>

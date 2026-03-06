@@ -92,7 +92,6 @@ export function EmployeesPage() {
             setIsAddDialogOpen(false);
             setFormData({ name: "", position: POSITIONS[0], phone: "", pinCode: "" });
         } catch (error) {
-            // Error is already handled/toasted in the store
             console.error("Add employee failed in UI:", error);
         }
     };
@@ -134,62 +133,65 @@ export function EmployeesPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-in fade-in duration-700">
             <PageHeader
                 title="თანამშრომლები"
                 description="პერსონალის მართვა და პოზიციები"
             />
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-2xl border border-border/50 shadow-sm">
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="ძებნა (სახელი, პოზიცია...)"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
+                        className="pl-10 h-10 border-none bg-muted/30 rounded-xl"
                     />
                 </div>
 
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button className="gap-2">
+                        <Button className="gap-2 shadow-lg shadow-primary/20">
                             <Plus className="h-4 w-4" />
                             დამატება
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[450px] rounded-2xl">
                         <form onSubmit={handleAdd}>
                             <DialogHeader>
-                                <DialogTitle>ახალი თანამშრომელი</DialogTitle>
+                                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                                    <Users className="h-5 w-5 text-primary" />
+                                    ახალი თანამშრომელი
+                                </DialogTitle>
                                 <DialogDescription>
                                     შეიყვანეთ თანამშრომლის მონაცემები
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">სახელი და გვარი</Label>
+                            <div className="grid gap-4 py-5">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">სახელი და გვარი *</Label>
                                     <Input
-                                        id="name"
                                         value={formData.name}
                                         onChange={(e) =>
                                             setFormData({ ...formData, name: e.target.value })
                                         }
                                         placeholder="მაგ: გიორგი ბერიძე"
+                                        className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                     />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="position">პოზიცია</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">პოზიცია</Label>
                                     <Select
                                         value={formData.position}
                                         onValueChange={(val) =>
                                             setFormData({ ...formData, position: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-medium">
                                             <SelectValue placeholder="აირჩიეთ პოზიცია" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="rounded-xl border-none shadow-xl">
                                             {POSITIONS.map((p) => (
                                                 <SelectItem key={p} value={p}>
                                                     {p}
@@ -198,69 +200,71 @@ export function EmployeesPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="phone">ტელეფონი</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ტელეფონი</Label>
                                     <Input
-                                        id="phone"
                                         value={formData.phone}
                                         onChange={(e) =>
                                             setFormData({ ...formData, phone: e.target.value })
                                         }
                                         placeholder="მაგ: 599 12 34 56"
+                                        className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                     />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="pinCode">PIN კოდი (იდენტიფიკაციისთვის)</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">PIN კოდი</Label>
                                     <Input
-                                        id="pinCode"
                                         value={formData.pinCode}
                                         onChange={(e) =>
                                             setFormData({ ...formData, pinCode: e.target.value })
                                         }
                                         placeholder="მაგ: 1234"
+                                        className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                     />
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="submit">შენახვა</Button>
+                                <Button type="submit" className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
+                                    შენახვა
+                                </Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
                 </Dialog>
             </div>
 
-            <Card>
+            <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
                 <CardContent className="p-0">
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="bg-muted/30">
                             <TableRow>
-                                <TableHead>თანამშრომელი</TableHead>
-                                <TableHead>პოზიცია</TableHead>
-                                <TableHead>ტელეფონი</TableHead>
-                                <TableHead>PIN</TableHead>
-                                <TableHead className="text-right">მოქმედება</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest">თანამშრომელი</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest">პოზიცია</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest">ტელეფონი</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest">PIN</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-right">მოქმედება</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredEmployees.length > 0 ? (
                                 filteredEmployees.map((employee) => (
-                                    <TableRow key={employee.id}>
+                                    <TableRow key={employee.id} className="hover:bg-muted/20 transition-colors">
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                     <User className="h-4 w-4 text-primary" />
                                                 </div>
-                                                <span className="font-medium">{employee.name}</span>
+                                                <span className="font-bold text-sm">{employee.name}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                                                <span>{employee.position}</span>
-                                            </div>
+                                            <span className="inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tight bg-sky-50 text-sky-700 gap-1">
+                                                <Briefcase className="h-3 w-3" />
+                                                {employee.position}
+                                            </span>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 text-sm">
                                                 <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                                                 <span>{employee.phone || "—"}</span>
                                             </div>
@@ -268,26 +272,26 @@ export function EmployeesPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                                                <span className="font-mono text-xs">{employee.pinCode || "—"}</span>
+                                                <span className="font-mono text-xs font-bold">{employee.pinCode || "—"}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => openEdit(employee)}>
-                                                        <Pencil className="h-4 w-4 mr-2" />
+                                                <DropdownMenuContent align="end" className="rounded-xl border-none shadow-xl">
+                                                    <DropdownMenuItem onClick={() => openEdit(employee)} className="gap-2">
+                                                        <Pencil className="h-4 w-4" />
                                                         რედაქტირება
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        className="text-destructive focus:text-destructive"
+                                                        className="text-destructive focus:text-destructive gap-2"
                                                         onClick={() => handleDelete(employee.id)}
                                                     >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        <Trash2 className="h-4 w-4" />
                                                         წაშლა
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -298,10 +302,11 @@ export function EmployeesPage() {
                             ) : (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={4}
-                                        className="h-24 text-center text-muted-foreground"
+                                        colSpan={5}
+                                        className="text-center py-20 text-muted-foreground"
                                     >
-                                        თანამშრომლები არ მოიძებნა
+                                        <Users className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                        <p className="font-medium">თანამშრომლები არ მოიძებნა</p>
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -312,37 +317,40 @@ export function EmployeesPage() {
 
             {/* Edit Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[450px] rounded-2xl">
                     <form onSubmit={handleUpdate}>
                         <DialogHeader>
-                            <DialogTitle>რედაქტირება</DialogTitle>
+                            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                                <Pencil className="h-5 w-5 text-primary" />
+                                რედაქტირება
+                            </DialogTitle>
                             <DialogDescription>
                                 შეცვალეთ თანამშრომლის მონაცემები
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-name">სახელი და გვარი</Label>
+                        <div className="grid gap-4 py-5">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">სახელი და გვარი</Label>
                                 <Input
-                                    id="edit-name"
                                     value={formData.name}
                                     onChange={(e) =>
                                         setFormData({ ...formData, name: e.target.value })
                                     }
+                                    className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                 />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-position">პოზიცია</Label>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">პოზიცია</Label>
                                 <Select
                                     value={formData.position}
                                     onValueChange={(val) =>
                                         setFormData({ ...formData, position: val })
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-medium">
                                         <SelectValue placeholder="აირჩიეთ პოზიცია" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="rounded-xl border-none shadow-xl">
                                         {POSITIONS.map((p) => (
                                             <SelectItem key={p} value={p}>
                                                 {p}
@@ -351,29 +359,31 @@ export function EmployeesPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-phone">ტელეფონი</Label>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ტელეფონი</Label>
                                 <Input
-                                    id="edit-phone"
                                     value={formData.phone}
                                     onChange={(e) =>
                                         setFormData({ ...formData, phone: e.target.value })
                                     }
+                                    className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                 />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-pinCode">PIN კოდი</Label>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">PIN კოდი</Label>
                                 <Input
-                                    id="edit-pinCode"
                                     value={formData.pinCode}
                                     onChange={(e) =>
                                         setFormData({ ...formData, pinCode: e.target.value })
                                     }
+                                    className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                 />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="submit">შენახვა</Button>
+                            <Button type="submit" className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
+                                შენახვა
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>

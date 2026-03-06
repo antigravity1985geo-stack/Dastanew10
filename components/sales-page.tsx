@@ -49,6 +49,7 @@ interface CartItem {
   quantity: number;
   salePrice: number;
   maxStock: number;
+  imageUrl?: string;
 }
 
 export function SalesPage() {
@@ -182,6 +183,7 @@ export function SalesPage() {
         quantity: 1,
         salePrice: product.salePrice,
         maxStock: product.quantity,
+        imageUrl: product.imageUrl,
       }];
     });
   }, []);
@@ -512,7 +514,7 @@ export function SalesPage() {
   if (!mounted) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-700">
       <PINLoginOverlay />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -611,11 +613,11 @@ export function SalesPage() {
                     onClick={() => !isOutOfStock && addToCart(product)}
                     disabled={isOutOfStock}
                     className={cn(
-                      "relative text-left rounded-xl border p-3 transition-all duration-200 group",
+                      "relative text-left rounded-2xl border p-3 transition-all duration-300 group overflow-hidden",
                       inCart
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
-                        : "border-border bg-card hover:border-primary/40 hover:shadow-md",
-                      isOutOfStock ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer active:scale-[0.96]"
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/10 shadow-lg"
+                        : "border-border/50 bg-card hover:border-primary/40 hover:shadow-xl hover:-translate-y-1",
+                      isOutOfStock ? "opacity-40 cursor-not-allowed grayscale" : "cursor-pointer active:scale-95"
                     )}
                   >
                     {/* Cart badge */}
@@ -626,29 +628,54 @@ export function SalesPage() {
                     )}
 
                     <div className="flex items-center gap-2 mb-3">
-                      <div className={cn(
-                        "h-10 w-10 rounded-lg flex items-center justify-center transition-colors shadow-sm",
-                        inCart ? "bg-primary text-primary-foreground" : "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                      )}>
-                        <Package className="h-5 w-5" />
-                      </div>
+                      {product.imageUrl ? (
+                        <div className={cn(
+                          "h-10 w-10 rounded-lg overflow-hidden shadow-sm border",
+                          inCart ? "border-primary" : "border-transparent"
+                        )}>
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className={cn(
+                          "h-10 w-10 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                          inCart ? "bg-primary text-primary-foreground" : "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                        )}>
+                          <Package className="h-5 w-5" />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm font-bold text-foreground truncate mb-0.5">
-                      {product.name}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight truncate mb-3">
-                      {product.category || "კატეგორიის გარეშე"}
-                    </p>
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                      <span className="text-sm font-black text-primary">
-                        {product.salePrice.toFixed(2)} ₾
-                      </span>
-                      <span className={cn(
-                        "text-[10px] font-bold px-1.5 py-0.5 rounded-md",
-                        product.quantity > 10 ? "bg-emerald-50 text-emerald-700" : product.quantity > 0 ? "bg-amber-50 text-amber-700" : "bg-destructive/10 text-destructive"
-                      )}>
-                        {product.quantity} ცალი
-                      </span>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                        {product.name}
+                      </h3>
+                      <div className="flex items-center justify-between gap-2 overflow-hidden">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded truncate">
+                          {product.category || "სხვა"}
+                        </span>
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-widest whitespace-nowrap",
+                          isOutOfStock ? "text-destructive" : "text-primary/60"
+                        )}>
+                          სტოკი: {product.quantity}
+                        </span>
+                      </div>
+                      <div className="pt-2 flex items-baseline justify-between border-t border-border/50 mt-2">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-black tracking-tighter text-foreground">
+                            {product.salePrice.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] font-black text-primary/80 uppercase tracking-widest">
+                            {settings.currency}
+                          </span>
+                        </div>
+                        {inCart && (
+                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
@@ -704,6 +731,20 @@ export function SalesPage() {
                         key={item.productId}
                         className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm group animate-in slide-in-from-right-2 duration-200"
                       >
+                        {/* Product thumbnail */}
+                        {item.imageUrl ? (
+                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-border/50 flex-shrink-0">
+                            <img
+                              src={item.imageUrl}
+                              alt={item.productName}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0">
+                            <Package className="h-5 w-5 text-primary/40" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-foreground leading-snug mb-1">
                             {item.productName}
@@ -807,11 +848,11 @@ export function SalesPage() {
                       <div
                         onClick={() => setSendToRSGE(!sendToRSGE)}
                         className={cn(
-                          "flex items-center justify-center gap-2 py-1.5 rounded-lg border-2 cursor-pointer transition-all",
-                          sendToRSGE ? "border-primary bg-primary/5 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted/50"
+                          "flex items-center justify-center gap-2 py-2 rounded-lg border-2 cursor-pointer transition-all",
+                          sendToRSGE ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm" : "border-border bg-card text-muted-foreground hover:bg-muted/50"
                         )}
                       >
-                        <span className="text-[9px] font-bold">RS.GE</span>
+                        <span className="text-[11px] font-black tracking-widest leading-none">RS.GE</span>
                       </div>
                       <div
                         onClick={() => setPrintFiscal(!printFiscal)}

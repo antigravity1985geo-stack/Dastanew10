@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Plus, Trash2, Download, Upload, FileSpreadsheet, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
+import { Plus, Trash2, Download, Upload, FileSpreadsheet, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Camera, ImageIcon, Package, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,7 @@ import {
   readFileAsText,
   downloadImportTemplate,
 } from "@/lib/excel";
+import { uploadProductImage } from "@/lib/image-upload";
 
 export function PurchasesPage() {
   const store = useWarehouseStore();
@@ -80,6 +81,15 @@ export function PurchasesPage() {
     quantity: "",
     client: "",
   });
+
+  // Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
 
   // Sorting and Pagination state
   const [sortColumn, setSortColumn] = useState<string>("createdAt");
@@ -184,33 +194,48 @@ export function PurchasesPage() {
       return;
     }
 
-    await store.addProduct({
-      name: form.name.trim(),
-      category: form.category.trim(),
-      barcode: form.barcode.trim(),
-      purchasePrice: parseFloat(form.purchasePrice),
-      salePrice: parseFloat(form.salePrice),
-      quantity: parseInt(form.quantity),
-      client: form.supplier.trim() || form.client.trim(), // Map supplier to client
-      supplier: form.supplier.trim() || form.client.trim(),
-      paidInCash: parseFloat(form.paidInCash || "0"),
-      paidInCard: parseFloat(form.paidInCard || "0"),
-    });
+    setUploading(true);
+    try {
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        imageUrl = await uploadProductImage(imageFile);
+      }
 
-    toast.success("პროდუქცია წარმატებით დაემატა");
-    setForm({
-      name: "",
-      category: "",
-      barcode: "",
-      purchasePrice: "",
-      salePrice: "",
-      quantity: "",
-      supplier: "",
-      client: "",
-      paidInCash: "",
-      paidInCard: "",
-    });
-    setOpen(false);
+      await store.addProduct({
+        name: form.name.trim(),
+        category: form.category.trim(),
+        barcode: form.barcode.trim(),
+        purchasePrice: parseFloat(form.purchasePrice),
+        salePrice: parseFloat(form.salePrice),
+        quantity: parseInt(form.quantity),
+        client: form.supplier.trim() || form.client.trim(),
+        supplier: form.supplier.trim() || form.client.trim(),
+        paidInCash: parseFloat(form.paidInCash || "0"),
+        paidInCard: parseFloat(form.paidInCard || "0"),
+        imageUrl,
+      });
+
+      toast.success("პროდუქცია წარმატებით დაემატა");
+      setForm({
+        name: "",
+        category: "",
+        barcode: "",
+        purchasePrice: "",
+        salePrice: "",
+        quantity: "",
+        supplier: "",
+        client: "",
+        paidInCash: "",
+        paidInCard: "",
+      });
+      setImageFile(null);
+      setImagePreview(null);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "შეცდომა");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -231,6 +256,8 @@ export function PurchasesPage() {
       quantity: String(product.quantity),
       client: product.client || "",
     });
+    setEditImagePreview(product.imageUrl || null);
+    setEditImageFile(null);
     setEditOpen(true);
   };
 
@@ -240,8 +267,14 @@ export function PurchasesPage() {
       toast.error("შეავსეთ სავალდებულო ველები");
       return;
     }
+    setUploading(true);
     try {
-      await store.updateProduct(editingId, {
+      let imageUrl: string | undefined;
+      if (editImageFile) {
+        imageUrl = await uploadProductImage(editImageFile);
+      }
+
+      const updates: any = {
         name: editForm.name.trim(),
         category: editForm.category.trim(),
         barcode: editForm.barcode.trim(),
@@ -249,12 +282,22 @@ export function PurchasesPage() {
         salePrice: parseFloat(editForm.salePrice),
         quantity: parseInt(editForm.quantity),
         client: editForm.client.trim(),
-      });
+      };
+
+      if (imageUrl) {
+        updates.imageUrl = imageUrl;
+      }
+
+      await store.updateProduct(editingId, updates);
       toast.success("პროდუქცია წარმატებით განახლდა");
       setEditOpen(false);
       setEditingId(null);
+      setEditImageFile(null);
+      setEditImagePreview(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "შეცდომა");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -409,6 +452,61 @@ export function PurchasesPage() {
                     required
                   />
                 </div>
+
+                {/* Image Upload */}
+                <div className="col-span-2">
+                  <Label className="text-foreground">პროდუქციის ფოტო</Label>
+                  <input
+                    type="file"
+                    ref={imageInputRef}
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setImageFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div
+                    className="mt-1.5 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    onClick={() => imageInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files[0];
+                      if (file && file.type.startsWith("image/")) {
+                        setImageFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  >
+                    {imagePreview ? (
+                      <div className="relative inline-block">
+                        <img src={imagePreview} alt="Preview" className="h-20 w-20 object-cover rounded-lg mx-auto" />
+                        <button
+                          type="button"
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                          onClick={(e) => { e.stopPropagation(); setImageFile(null); setImagePreview(null); }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                        <Camera className="h-8 w-8 opacity-30" />
+                        <span className="text-xs">ფოტოს ატვირთვა (არასავალდებულო)</span>
+                        <span className="text-[10px] opacity-60">JPEG, PNG, WebP — მაქს. 5MB</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <div>
                   <Label htmlFor="category" className="text-foreground">
                     კატეგორია
@@ -445,7 +543,10 @@ export function PurchasesPage() {
                             purchasePrice: String(existingProduct.purchasePrice),
                             salePrice: String(existingProduct.salePrice),
                             quantity: "", // Leave quantity empty for new purchase
-                            client: existingProduct.client,
+                            client: existingProduct.client || "",
+                            supplier: "",
+                            paidInCash: "",
+                            paidInCard: "",
                           });
                           toast.success(`პროდუქტი ამოცნობილია: ${existingProduct.name}`);
                         }
@@ -573,573 +674,667 @@ export function PurchasesPage() {
                 >
                   გაუქმება
                 </Button>
-                <Button type="submit">დამატება</Button>
+                <Button type="submit" disabled={uploading}>
+                  {uploading ? "იტვირთება..." : "დამატება"}
+                </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </PageHeader>
-      <Tabs defaultValue="stock" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="stock">მიმდინარე ნაშთი</TabsTrigger>
-          <TabsTrigger value="history">შესყიდვების ისტორია</TabsTrigger>
-        </TabsList>
+      <div className="animate-in fade-in duration-700">
+        <Tabs defaultValue="stock" className="space-y-8">
+          <TabsList className="bg-muted/40 p-1 rounded-2xl border border-border/50 mb-8 max-w-md">
+            <TabsTrigger value="stock" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">მიმდინარე ნაშთი</TabsTrigger>
+            <TabsTrigger value="history" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">შესყიდვების ისტორია</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="stock">
-          <div id="print-area">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    პროდუქციის ტიპი
-                  </p>
-                  <p className="text-xl font-bold mt-1 text-card-foreground">
-                    {store.totalProducts}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    მთლიანი სტოკი
-                  </p>
-                  <p className="text-xl font-bold mt-1 text-card-foreground">
-                    {store.totalStock} ერთეული
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                    მთლიანი შესყიდვის ღირებულება
-                  </p>
-                  <p className="text-xl font-bold mt-1 text-card-foreground">
-                    {store.totalPurchaseValue.toLocaleString()} GEL
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Search */}
-            <div className="mb-4 flex items-center gap-2">
-              <div className="relative flex-1 max-w-md">
-                <Input
-                  placeholder="ძიება პროდუქციის სახელით ან კატეგორიით..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pr-10"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setCurrentPage(1);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+          <TabsContent value="stock">
+            <div id="print-area">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
+                <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden group hover:shadow-lg transition-shadow bg-blue-50/30 border-t-4 border-t-blue-500">
+                  <CardContent className="p-5">
+                    <p className="text-[10px] font-black text-blue-600/70 uppercase tracking-widest border-b border-blue-100 pb-1 mb-2">
+                      პროდუქციის ტიპი
+                    </p>
+                    <p className="text-2xl font-black text-blue-950">
+                      {store.totalProducts}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden group hover:shadow-lg transition-shadow bg-emerald-50/30 border-t-4 border-t-emerald-500">
+                  <CardContent className="p-5">
+                    <p className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest border-b border-emerald-100 pb-1 mb-2">
+                      მთლიანი სტოკი
+                    </p>
+                    <p className="text-2xl font-black text-emerald-950">
+                      {store.totalStock} <span className="text-sm font-bold text-emerald-700/60">ერთ.</span>
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden group hover:shadow-lg transition-shadow bg-amber-50/30 border-t-4 border-t-amber-500">
+                  <CardContent className="p-5">
+                    <p className="text-[10px] font-black text-amber-600/70 uppercase tracking-widest border-b border-amber-100 pb-1 mb-2">
+                      მთლიანი შესყიდვის ღირებულება
+                    </p>
+                    <p className="text-2xl font-black text-amber-600">
+                      {store.totalPurchaseValue.toLocaleString()} ₾
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
 
-            {/* Products Table */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-card-foreground">
-                  შესყიდული პროდუქცია ({filteredProducts.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-foreground w-12">#</TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("name")}
-                      >
-                        <div className="flex items-center">
-                          პროდუქცია
-                          {getSortIcon("name")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("category")}
-                      >
-                        <div className="flex items-center">
-                          კატეგორია
-                          {getSortIcon("category")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("barcode")}
-                      >
-                        <div className="flex items-center">
-                          შტრიხკოდი
-                          {getSortIcon("barcode")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("purchasePrice")}
-                      >
-                        <div className="flex items-center">
-                          შესყიდვის ფასი
-                          {getSortIcon("purchasePrice")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("salePrice")}
-                      >
-                        <div className="flex items-center">
-                          გაყიდვის ფასი
-                          {getSortIcon("salePrice")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("quantity")}
-                      >
-                        <div className="flex items-center">
-                          ნაშთი (სტოკი)
-                          {getSortIcon("quantity")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("client")}
-                      >
-                        <div className="flex items-center">
-                          კლიენტი
-                          {getSortIcon("client")}
-                        </div>
-                      </TableHead>
-                      <TableHead
-                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleSort("createdAt")}
-                      >
-                        <div className="flex items-center">
-                          თარიღი
-                          {getSortIcon("createdAt")}
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-foreground w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedProducts.length === 0 ? (
+              {/* Actions Bar */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 bg-card p-4 rounded-2xl border border-border/50 shadow-sm">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    placeholder="ძებნა (სახელი, კატეგორია, შტრიხკოდი...)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-10 border-none bg-muted/30 rounded-xl font-medium focus-visible:ring-primary/20"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportExcel}
+                    className="gap-2 rounded-xl font-bold border-border/50 hover:bg-muted/50"
+                  >
+                    <Download className="h-4 w-4 text-emerald-600" />
+                    Excel-ში ექსპორტი
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2 rounded-xl font-bold border-border/50 hover:bg-muted/50"
+                  >
+                    <Upload className="h-4 w-4 text-sky-600" />
+                    Excel-დან იმპორტი
+                  </Button>
+                  <input
+                    type="file"
+                    className="hidden"
+                    ref={fileInputRef}
+                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                    onChange={handleImportExcel}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={downloadImportTemplate}
+                    className="gap-2 rounded-xl font-bold hover:bg-muted"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                    შაბლონი
+                  </Button>
+                </div>
+              </div>
+
+              <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
+                <CardHeader className="bg-muted/10 border-b border-border/50">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    შესყიდული პროდუქცია ({filteredProducts.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-muted/30">
                       <TableRow>
-                        <TableCell
-                          colSpan={9}
-                          className="text-center py-12 text-muted-foreground"
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest w-12">#</TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("name")}
                         >
-                          პროდუქცია არ არის დამატებული
-                        </TableCell>
+                          <div className="flex items-center">
+                            პროდუქცია
+                            {getSortIcon("name")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("category")}
+                        >
+                          <div className="flex items-center">
+                            კატეგორია
+                            {getSortIcon("category")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("barcode")}
+                        >
+                          <div className="flex items-center">
+                            შტრიხკოდი
+                            {getSortIcon("barcode")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                          onClick={() => handleSort("purchasePrice")}
+                        >
+                          <div className="flex items-center justify-end">
+                            შესყიდვის ფასი
+                            {getSortIcon("purchasePrice")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors text-right"
+                          onClick={() => handleSort("salePrice")}
+                        >
+                          <div className="flex items-center justify-end">
+                            გაყიდვის ფასი
+                            {getSortIcon("salePrice")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors text-center"
+                          onClick={() => handleSort("quantity")}
+                        >
+                          <div className="flex items-center justify-center">
+                            ნაშთი
+                            {getSortIcon("quantity")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("client")}
+                        >
+                          <div className="flex items-center">
+                            კლიენტი
+                            {getSortIcon("client")}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSort("createdAt")}
+                        >
+                          <div className="flex items-center">
+                            თარიღი
+                            {getSortIcon("createdAt")}
+                          </div>
+                        </TableHead>
+                        <TableHead className="w-10"></TableHead>
                       </TableRow>
-                    ) : (
-                      paginatedProducts.map((product: Product, index: number) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium text-foreground">
-                            {(currentPage - 1) * itemsPerPage + index + 1}
-                          </TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            {product.name}
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {product.category || (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {product.barcode || (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {product.purchasePrice.toLocaleString()} GEL
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {product.salePrice.toLocaleString()} GEL
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${product.quantity > 10
-                                ? "bg-chart-2/10 text-chart-2"
-                                : product.quantity > 0
-                                  ? "bg-chart-3/10 text-chart-3"
-                                  : "bg-destructive/10 text-destructive"
-                                }`}
-                            >
-                              {product.quantity} ერთ.
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {product.client || (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {new Date(product.createdAt).toLocaleDateString(
-                              "ka-GE"
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                onClick={() => handleEditOpen(product.id)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                                <span className="sr-only">რედაქტირება</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDelete(product.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">წაშლა</span>
-                              </Button>
-                            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedProducts.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={9}
+                            className="text-center py-12 text-muted-foreground"
+                          >
+                            პროდუქცია არ არის დამატებული
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                      ) : (
+                        paginatedProducts.map((product: Product, index: number) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium text-foreground">
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                {product.imageUrl ? (
+                                  <div className="h-8 w-8 rounded-md overflow-hidden border border-border/50 flex-shrink-0">
+                                    <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                                  </div>
+                                ) : (
+                                  <div className="h-8 w-8 rounded-md bg-primary/5 flex items-center justify-center flex-shrink-0">
+                                    <ImageIcon className="h-4 w-4 text-primary/30" />
+                                  </div>
+                                )}
+                                {product.name}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              {product.category || (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              {product.barcode || (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              {product.purchasePrice.toLocaleString()} GEL
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              {product.salePrice.toLocaleString()} GEL
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${product.quantity > 10
+                                  ? "bg-chart-2/10 text-chart-2"
+                                  : product.quantity > 0
+                                    ? "bg-chart-3/10 text-chart-3"
+                                    : "bg-destructive/10 text-destructive"
+                                  }`}
+                              >
+                                {product.quantity} ერთ.
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-foreground">
+                              {product.client || (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs">
+                              {new Date(product.createdAt).toLocaleDateString(
+                                "ka-GE"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  onClick={() => handleEditOpen(product.id)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  <span className="sr-only">რედაქტირება</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleDelete(product.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">წაშლა</span>
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
-            {/* Pagination UI */}
-            {totalPages > 1 && (
-              <div className="mt-6">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        className={
-                          currentPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
+              {/* Pagination UI */}
+              {totalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+
+                      {Array.from({ length: totalPages }).map((_, i: number) => {
+                        const page = i + 1;
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                isActive={currentPage === page}
+                                onClick={() => setCurrentPage(page)}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                          return (
+                            <PaginationItem key={page}>
+                              <span className="px-2">...</span>
+                            </PaginationItem>
+                          );
                         }
-                      />
-                    </PaginationItem>
+                        return null;
+                      })}
 
-                    {Array.from({ length: totalPages }).map((_, i: number) => {
-                      const page = i + 1;
-                      if (
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              isActive={currentPage === page}
-                              onClick={() => setCurrentPage(page)}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      } else if (page === currentPage - 2 || page === currentPage + 2) {
-                        return (
-                          <PaginationItem key={page}>
-                            <span className="px-2">...</span>
-                          </PaginationItem>
-                        );
-                      }
-                      return null;
-                    })}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </div>
+          </TabsContent>
 
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
-                        className={
-                          currentPage === totalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="history">
-          <div className="space-y-4">
-            {/* History Search */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 max-w-md">
-                <Input
-                  placeholder="ძიება ისტორიაში..."
-                  value={historySearchTerm}
-                  onChange={(e) => {
-                    setHistorySearchTerm(e.target.value);
-                    setHistoryCurrentPage(1);
-                  }}
-                  className="pr-10"
-                />
-                {historySearchTerm && (
-                  <button
-                    onClick={() => {
-                      setHistorySearchTerm("");
+          <TabsContent value="history">
+            <div className="space-y-4">
+              {/* History Search */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 max-w-md">
+                  <Input
+                    placeholder="ძიება ისტორიაში..."
+                    value={historySearchTerm}
+                    onChange={(e) => {
+                      setHistorySearchTerm(e.target.value);
                       setHistoryCurrentPage(1);
                     }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                    className="pr-10"
+                  />
+                  {historySearchTerm && (
+                    <button
+                      onClick={() => {
+                        setHistorySearchTerm("");
+                        setHistoryCurrentPage(1);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-card-foreground">
-                  შესყიდვების ლოგი ({filteredHistory.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-foreground w-12">#</TableHead>
-                      <TableHead className="text-foreground">პროდუქცია</TableHead>
-                      <TableHead className="text-foreground">რაოდენობა</TableHead>
-                      <TableHead className="text-foreground">შესყიდვის ფასი</TableHead>
-                      <TableHead className="text-foreground">გადახდილი</TableHead>
-                      <TableHead className="text-foreground">მომწოდებელი</TableHead>
-                      <TableHead className="text-foreground">თარიღი</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedHistory.length === 0 ? (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-card-foreground">
+                    შესყიდვების ლოგი ({filteredHistory.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                          ისტორია ცარიელია
-                        </TableCell>
+                        <TableHead className="text-foreground w-12">#</TableHead>
+                        <TableHead className="text-foreground">პროდუქცია</TableHead>
+                        <TableHead className="text-foreground">რაოდენობა</TableHead>
+                        <TableHead className="text-foreground">შესყიდვის ფასი</TableHead>
+                        <TableHead className="text-foreground">გადახდილი</TableHead>
+                        <TableHead className="text-foreground">მომწოდებელი</TableHead>
+                        <TableHead className="text-foreground">თარიღი</TableHead>
                       </TableRow>
-                    ) : (
-                      paginatedHistory.map((ph: PurchaseHistory, index: number) => (
-                        <TableRow key={ph.id}>
-                          <TableCell className="font-medium text-foreground">
-                            {(historyCurrentPage - 1) * historyItemsPerPage + index + 1}
-                          </TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            <div className="flex flex-col">
-                              <span>{ph.productName}</span>
-                              <span className="text-[10px] text-muted-foreground uppercase">{ph.category || "—"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-foreground font-semibold text-emerald-600">
-                            +{ph.quantity}
-                          </TableCell>
-                          <TableCell className="text-foreground font-bold">{ph.purchasePrice.toLocaleString()} GEL</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-black text-primary">{(ph.paidInCash + ph.paidInCard).toLocaleString()} ₾</span>
-                              {((ph.purchasePrice * ph.quantity) > (ph.paidInCash + ph.paidInCard)) && (
-                                <span className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">ვალი: {((ph.purchasePrice * ph.quantity) - (ph.paidInCash + ph.paidInCard)).toFixed(2)}</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-foreground text-sm font-medium">{ph.supplier || ph.client || "-"}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {new Date(ph.createdAt).toLocaleString("ka-GE")}
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedHistory.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                            ისტორია ცარიელია
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                      ) : (
+                        paginatedHistory.map((ph: PurchaseHistory, index: number) => (
+                          <TableRow key={ph.id}>
+                            <TableCell className="font-medium text-foreground">
+                              {(historyCurrentPage - 1) * historyItemsPerPage + index + 1}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">
+                              <div className="flex flex-col">
+                                <span>{ph.productName}</span>
+                                <span className="text-[10px] text-muted-foreground uppercase">{ph.category || "—"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-foreground font-semibold text-emerald-600">
+                              +{ph.quantity}
+                            </TableCell>
+                            <TableCell className="text-foreground font-bold">{ph.purchasePrice.toLocaleString()} GEL</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-black text-primary">{(ph.paidInCash + ph.paidInCard).toLocaleString()} ₾</span>
+                                {((ph.purchasePrice * ph.quantity) > (ph.paidInCash + ph.paidInCard)) && (
+                                  <span className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">ვალი: {((ph.purchasePrice * ph.quantity) - (ph.paidInCash + ph.paidInCard)).toFixed(2)}</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-foreground text-sm font-medium">{ph.supplier || ph.client || "-"}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs">
+                              {new Date(ph.createdAt).toLocaleString("ka-GE")}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
-            {/* History Pagination */}
-            {historyTotalPages > 1 && (
-              <div className="mt-4">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setHistoryCurrentPage((p) => Math.max(1, p - 1))}
-                        className={historyCurrentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                    {Array.from({ length: historyTotalPages }).map((_, i) => (
-                      <PaginationItem key={i}>
-                        <PaginationLink
-                          isActive={historyCurrentPage === i + 1}
-                          onClick={() => setHistoryCurrentPage(i + 1)}
-                          className="cursor-pointer"
-                        >
-                          {i + 1}
-                        </PaginationLink>
+              {/* History Pagination */}
+              {historyTotalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setHistoryCurrentPage((p) => Math.max(1, p - 1))}
+                          className={historyCurrentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
                       </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => setHistoryCurrentPage((p) => Math.min(historyTotalPages, p + 1))}
-                        className={historyCurrentPage === historyTotalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+                      {Array.from({ length: historyTotalPages }).map((_, i) => (
+                        <PaginationItem key={i}>
+                          <PaginationLink
+                            isActive={historyCurrentPage === i + 1}
+                            onClick={() => setHistoryCurrentPage(i + 1)}
+                            className="cursor-pointer"
+                          >
+                            {i + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setHistoryCurrentPage((p) => Math.min(historyTotalPages, p + 1))}
+                          className={historyCurrentPage === historyTotalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">
-              პროდუქციის რედაქტირება
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="editName" className="text-foreground">
-                  პროდუქციის სახელი *
-                </Label>
-                <Input
-                  id="editName"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, name: e.target.value })
-                  }
-                  className="mt-1.5"
-                  required
-                />
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">
+                პროდუქციის რედაქტირება
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="editName" className="text-foreground">
+                    პროდუქციის სახელი *
+                  </Label>
+                  <Input
+                    id="editName"
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, name: e.target.value })
+                    }
+                    className="mt-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editCategory" className="text-foreground">
+                    კატეგორია
+                  </Label>
+                  <Input
+                    id="editCategory"
+                    value={editForm.category}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, category: e.target.value })
+                    }
+                    placeholder="არასავალდებულო"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <Label htmlFor="editBarcode" className="text-foreground">
+                    შტრიხკოდი
+                  </Label>
+                  <Input
+                    id="editBarcode"
+                    value={editForm.barcode}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, barcode: e.target.value })
+                    }
+                    placeholder="დასასკანერებლად დააჭირეთ აქ"
+                    className="mt-1.5"
+                  />
+                </div>
+
+                {/* Edit Image Upload */}
+                <div className="col-span-2">
+                  <Label className="text-foreground">პროდუქციის ფოტო</Label>
+                  <input
+                    type="file"
+                    ref={editImageInputRef}
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setEditImageFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setEditImagePreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div
+                    className="mt-1.5 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    onClick={() => editImageInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files[0];
+                      if (file && file.type.startsWith("image/")) {
+                        setEditImageFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setEditImagePreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  >
+                    {editImagePreview ? (
+                      <div className="relative inline-block">
+                        <img src={editImagePreview} alt="Preview" className="h-20 w-20 object-cover rounded-lg mx-auto" />
+                        <button
+                          type="button"
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                          onClick={(e) => { e.stopPropagation(); setEditImageFile(null); setEditImagePreview(null); }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                        <Camera className="h-8 w-8 opacity-30" />
+                        <span className="text-xs">ფოტოს ატვირთვა (არასავალდებულო)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <Label htmlFor="editClient" className="text-foreground">
+                    კლიენტი / მომწოდებელი
+                  </Label>
+                  <Input
+                    id="editClient"
+                    value={editForm.client}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, client: e.target.value })
+                    }
+                    placeholder="არასავალდებულო"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editPurchasePrice" className="text-foreground">
+                    შესყიდვის ფასი (GEL) *
+                  </Label>
+                  <Input
+                    id="editPurchasePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.purchasePrice}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, purchasePrice: e.target.value })
+                    }
+                    className="mt-1.5"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editSalePrice" className="text-foreground">
+                    გაყიდვის ფასი (GEL) *
+                  </Label>
+                  <Input
+                    id="editSalePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.salePrice}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, salePrice: e.target.value })
+                    }
+                    className="mt-1.5"
+                    required
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="editQuantity" className="text-foreground">
+                    რაოდენობა *
+                  </Label>
+                  <Input
+                    id="editQuantity"
+                    type="number"
+                    min="0"
+                    value={editForm.quantity}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, quantity: e.target.value })
+                    }
+                    className="mt-1.5"
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="editCategory" className="text-foreground">
-                  კატეგორია
-                </Label>
-                <Input
-                  id="editCategory"
-                  value={editForm.category}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, category: e.target.value })
-                  }
-                  placeholder="არასავალდებულო"
-                  className="mt-1.5"
-                />
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                >
+                  გაუქმება
+                </Button>
+                <Button type="submit" disabled={uploading}>
+                  {uploading ? "იტვირთება..." : "შენახვა"}
+                </Button>
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                <Label htmlFor="editBarcode" className="text-foreground">
-                  შტრიხკოდი
-                </Label>
-                <Input
-                  id="editBarcode"
-                  value={editForm.barcode}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, barcode: e.target.value })
-                  }
-                  placeholder="დასასკანერებლად დააჭირეთ აქ"
-                  className="mt-1.5"
-                />
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <Label htmlFor="editClient" className="text-foreground">
-                  კლიენტი / მომწოდებელი
-                </Label>
-                <Input
-                  id="editClient"
-                  value={editForm.client}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, client: e.target.value })
-                  }
-                  placeholder="არასავალდებულო"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="editPurchasePrice" className="text-foreground">
-                  შესყიდვის ფასი (GEL) *
-                </Label>
-                <Input
-                  id="editPurchasePrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={editForm.purchasePrice}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, purchasePrice: e.target.value })
-                  }
-                  className="mt-1.5"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="editSalePrice" className="text-foreground">
-                  გაყიდვის ფასი (GEL) *
-                </Label>
-                <Input
-                  id="editSalePrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={editForm.salePrice}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, salePrice: e.target.value })
-                  }
-                  className="mt-1.5"
-                  required
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="editQuantity" className="text-foreground">
-                  რაოდენობა *
-                </Label>
-                <Input
-                  id="editQuantity"
-                  type="number"
-                  min="0"
-                  value={editForm.quantity}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, quantity: e.target.value })
-                  }
-                  className="mt-1.5"
-                  required
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditOpen(false)}
-              >
-                გაუქმება
-              </Button>
-              <Button type="submit">შენახვა</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

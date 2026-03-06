@@ -367,11 +367,21 @@ export function AIInsightsCard() {
     ];
 
     return (
-        <Card className="mb-6 border-primary/20 bg-primary/5">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2 text-primary">
-                    <Sparkles className="h-5 w-5" />
-                    POWERED BY JABSONA
+        <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-lg rounded-2xl overflow-hidden relative group border-2">
+            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <Sparkles className="h-32 w-32 text-primary rotate-12" />
+            </div>
+            <CardHeader className="pb-2 relative">
+                <div className="flex items-center gap-2 mb-1">
+                    <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+                        AI System Insights
+                    </span>
+                </div>
+                <CardTitle className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+                    POWERED BY <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 shadow-sm">JABSONA</span>
                 </CardTitle>
             </CardHeader>
             <CardContent>

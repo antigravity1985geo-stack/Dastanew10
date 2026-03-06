@@ -6,6 +6,7 @@ export interface Product {
   name: string;
   category: string;
   barcode?: string;
+  imageUrl?: string;
   purchasePrice: number;
   salePrice: number;
   quantity: number;
@@ -149,6 +150,7 @@ class WarehouseStore {
           name: p.name || "",
           category: p.category_name || "",
           barcode: p.barcode || "",
+          imageUrl: p.image_url || "",
           purchasePrice: Number(p.purchase_price) || 0,
           salePrice: Number(p.sale_price) || 0,
           quantity: p.quantity || 0,
@@ -237,6 +239,7 @@ class WarehouseStore {
       name: p.name || "",
       category: p.category_name || "",
       barcode: p.barcode || "",
+      imageUrl: p.image_url || "",
       purchasePrice: Number(p.purchase_price) || 0,
       salePrice: Number(p.sale_price) || 0,
       quantity: p.quantity || 0,
@@ -435,7 +438,7 @@ class WarehouseStore {
     return this.products.find((p) => p.barcode && p.barcode.trim() === trimmed);
   }
 
-  async addProduct(product: Omit<Product, "id" | "createdAt"> & { paidInCash?: number; paidInCard?: number; supplier?: string }) {
+  async addProduct(product: Omit<Product, "id" | "createdAt"> & { paidInCash?: number; paidInCard?: number; supplier?: string; imageUrl?: string }) {
     // Check if product with same name exists - update quantity
     const existing = this.products.find(
       (p) => p.name.toLowerCase() === product.name.toLowerCase()
@@ -454,6 +457,11 @@ class WarehouseStore {
       if (product.barcode) {
         updates.barcode = product.barcode;
         existing.barcode = product.barcode;
+      }
+
+      if (product.imageUrl) {
+        updates.image_url = product.imageUrl;
+        existing.imageUrl = product.imageUrl;
       }
 
       // Optimistic update
@@ -500,6 +508,7 @@ class WarehouseStore {
         sale_price: product.salePrice,
         quantity: product.quantity,
         client: product.client,
+        image_url: product.imageUrl || null,
         created_at: new Date().toISOString(),
       };
 
@@ -564,6 +573,7 @@ class WarehouseStore {
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.category !== undefined) dbUpdates.category_name = updates.category;
     if (updates.barcode !== undefined) dbUpdates.barcode = updates.barcode;
+    if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
     if (updates.salePrice !== undefined) dbUpdates.sale_price = updates.salePrice;
     if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
