@@ -27,6 +27,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useWarehouseStore } from "@/hooks/use-store";
 import { Product, PurchaseHistory } from "@/lib/store";
 import { PageHeader } from "@/components/page-header";
@@ -54,6 +62,7 @@ export function PurchasesPage() {
   const [form, setForm] = useState({
     name: "",
     category: "",
+    barcode: "",
     purchasePrice: "",
     salePrice: "",
     quantity: "",
@@ -62,6 +71,7 @@ export function PurchasesPage() {
   const [editForm, setEditForm] = useState({
     name: "",
     category: "",
+    barcode: "",
     purchasePrice: "",
     salePrice: "",
     quantity: "",
@@ -83,6 +93,7 @@ export function PurchasesPage() {
       store.products.map((p: Product) => ({
         name: p.name,
         category: p.category || "",
+        barcode: p.barcode || "",
         purchasePrice: p.purchasePrice,
         salePrice: p.salePrice,
         quantity: p.quantity,
@@ -92,6 +103,7 @@ export function PurchasesPage() {
       [
         { header: "პროდუქციის სახელი", key: "name" },
         { header: "კატეგორია", key: "category" },
+        { header: "შტრიხკოდი", key: "barcode" },
         { header: "შესყიდვის ფასი", key: "purchasePrice" },
         { header: "გაყიდვის ფასი", key: "salePrice" },
         { header: "რაოდენობა", key: "quantity" },
@@ -172,6 +184,7 @@ export function PurchasesPage() {
     await store.addProduct({
       name: form.name.trim(),
       category: form.category.trim(),
+      barcode: form.barcode.trim(),
       purchasePrice: parseFloat(form.purchasePrice),
       salePrice: parseFloat(form.salePrice),
       quantity: parseInt(form.quantity),
@@ -182,6 +195,7 @@ export function PurchasesPage() {
     setForm({
       name: "",
       category: "",
+      barcode: "",
       purchasePrice: "",
       salePrice: "",
       quantity: "",
@@ -202,6 +216,7 @@ export function PurchasesPage() {
     setEditForm({
       name: product.name,
       category: product.category,
+      barcode: product.barcode || "",
       purchasePrice: String(product.purchasePrice),
       salePrice: String(product.salePrice),
       quantity: String(product.quantity),
@@ -220,6 +235,7 @@ export function PurchasesPage() {
       await store.updateProduct(editingId, {
         name: editForm.name.trim(),
         category: editForm.category.trim(),
+        barcode: editForm.barcode.trim(),
         purchasePrice: parseFloat(editForm.purchasePrice),
         salePrice: parseFloat(editForm.salePrice),
         quantity: parseInt(editForm.quantity),
@@ -236,8 +252,8 @@ export function PurchasesPage() {
   const filteredProducts = useMemo(() => {
     return store.products.filter(
       (p: Product) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.category || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [store.products, searchTerm]);
 
@@ -290,8 +306,8 @@ export function PurchasesPage() {
   const filteredHistory = useMemo(() => {
     return (store.purchaseHistory || []).filter(
       (ph: PurchaseHistory) =>
-        ph.productName.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
-        ph.category.toLowerCase().includes(historySearchTerm.toLowerCase())
+        (ph.productName || "").toLowerCase().includes(historySearchTerm.toLowerCase()) ||
+        (ph.category || "").toLowerCase().includes(historySearchTerm.toLowerCase())
     );
   }, [store.purchaseHistory, historySearchTerm]);
 
@@ -398,7 +414,40 @@ export function PurchasesPage() {
                     className="mt-1.5"
                   />
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
+                  <Label htmlFor="barcode" className="text-foreground">
+                    შტრიხკოდი
+                  </Label>
+                  <Input
+                    id="barcode"
+                    value={form.barcode}
+                    onChange={(e) => {
+                      const newBarcode = e.target.value;
+                      setForm((prev) => ({ ...prev, barcode: newBarcode }));
+
+                      // Auto-fill logic
+                      if (newBarcode.trim().length >= 3) {
+                        const existingProduct = store.getProductByBarcode(newBarcode);
+                        if (existingProduct) {
+                          setForm({
+                            name: existingProduct.name,
+                            category: existingProduct.category,
+                            barcode: existingProduct.barcode || newBarcode,
+                            purchasePrice: String(existingProduct.purchasePrice),
+                            salePrice: String(existingProduct.salePrice),
+                            quantity: "", // Leave quantity empty for new purchase
+                            client: existingProduct.client,
+                          });
+                          toast.success(`პროდუქტი ამოცნობილია: ${existingProduct.name}`);
+                        }
+                      }
+                    }}
+                    placeholder="დასასკანერებლად დააჭირეთ აქ"
+                    className="mt-1.5"
+                    autoFocus
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1">
                   <Label htmlFor="client" className="text-foreground">
                     კლიენტი / მომწოდებელი
                   </Label>
@@ -580,6 +629,15 @@ export function PurchasesPage() {
                       </TableHead>
                       <TableHead
                         className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSort("barcode")}
+                      >
+                        <div className="flex items-center">
+                          შტრიხკოდი
+                          {getSortIcon("barcode")}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => handleSort("purchasePrice")}
                       >
                         <div className="flex items-center">
@@ -647,6 +705,11 @@ export function PurchasesPage() {
                           </TableCell>
                           <TableCell className="text-foreground">
                             {product.category || (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {product.barcode || (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
@@ -923,7 +986,21 @@ export function PurchasesPage() {
                   className="mt-1.5"
                 />
               </div>
-              <div>
+              <div className="col-span-2 sm:col-span-1">
+                <Label htmlFor="editBarcode" className="text-foreground">
+                  შტრიხკოდი
+                </Label>
+                <Input
+                  id="editBarcode"
+                  value={editForm.barcode}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, barcode: e.target.value })
+                  }
+                  placeholder="დასასკანერებლად დააჭირეთ აქ"
+                  className="mt-1.5"
+                />
+              </div>
+              <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor="editClient" className="text-foreground">
                   კლიენტი / მომწოდებელი
                 </Label>

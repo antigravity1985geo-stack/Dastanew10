@@ -361,6 +361,14 @@ function SettingsTab({ settings }: SettingsTabProps) {
   const [email, setEmail] = useState(settings.email || "");
   const [bankAccount, setBankAccount] = useState(settings.bankAccount || "");
   const [address, setAddress] = useState(settings.address || "");
+  // RS.GE
+  const [rsgeUsername, setRsgeUsername] = useState(settings.rsgeUsername || "");
+  const [rsgePassword, setRsgePassword] = useState(settings.rsgePassword || "");
+  const [rsgeAutoSend, setRsgeAutoSend] = useState(settings.rsgeAutoSend || false);
+  // Fiscal
+  const [fiscalType, setFiscalType] = useState<"none" | "digital" | "physical">(settings.fiscalType || "none");
+  const [fiscalAutoPrint, setFiscalAutoPrint] = useState(settings.fiscalAutoPrint || false);
+  const [deletePin, setDeletePin] = useState(settings.deletePin || "1234");
 
   const handleSave = () => {
     settings.updateSettings({
@@ -370,6 +378,12 @@ function SettingsTab({ settings }: SettingsTabProps) {
       email: email.trim(),
       bankAccount: bankAccount.trim(),
       address: address.trim(),
+      rsgeUsername: rsgeUsername.trim(),
+      rsgePassword: rsgePassword.trim(),
+      rsgeAutoSend,
+      fiscalType,
+      fiscalAutoPrint,
+      deletePin,
     });
     toast.success("პარამეტრები შეინახა");
   };
@@ -450,9 +464,92 @@ function SettingsTab({ settings }: SettingsTabProps) {
             />
           </div>
 
+          <div className="h-px bg-border my-2" />
+          <h3 className="text-sm font-semibold">RS.GE ინტეგრაცია (ზედნადებები)</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="rsge-user">მომხმარებელი (Username)</Label>
+              <Input
+                id="rsge-user"
+                value={rsgeUsername}
+                onChange={(e) => setRsgeUsername(e.target.value)}
+                placeholder="მომხმარებელი"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="rsge-pass">პაროლი</Label>
+              <Input
+                id="rsge-pass"
+                type="password"
+                value={rsgePassword}
+                onChange={(e) => setRsgePassword(e.target.value)}
+                placeholder="********"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="rsge-auto"
+              checked={rsgeAutoSend}
+              onChange={(e) => setRsgeAutoSend(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <Label htmlFor="rsge-auto" className="cursor-pointer">ზედნადების ავტომატური გაგზავნა გაყიდვისას</Label>
+          </div>
+
+          <div className="h-px bg-border my-2" />
+          <h3 className="text-sm font-semibold">საკასო აპარატი (ფიზიკური/ციფრული)</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="fiscal-type">აპარატის ტიპი</Label>
+              <select
+                id="fiscal-type"
+                value={fiscalType}
+                onChange={(e) => setFiscalType(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="none">გამორთული</option>
+                <option value="digital">ციფრული (Daisy)</option>
+                <option value="physical">ფიზიკური (USB/LAN)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="fiscal-auto"
+              checked={fiscalAutoPrint}
+              onChange={(e) => setFiscalAutoPrint(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <Label htmlFor="fiscal-auto" className="cursor-pointer">ჩეკის ავტომატური ამობეჭდვა გაყიდვისას</Label>
+          </div>
+
           <div className="flex flex-col gap-2">
             <Label>ენა</Label>
             <Input value="ქართული" disabled className="max-w-48" />
+          </div>
+
+          <div className="h-px bg-border my-2" />
+          <h3 className="text-sm font-semibold">უსაფრთხოება</h3>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="delete-pin">მონაცემთა წაშლის პინ-კოდი</Label>
+            <Input
+              id="delete-pin"
+              type="password"
+              maxLength={4}
+              value={deletePin}
+              onChange={(e) => setDeletePin(e.target.value)}
+              placeholder="1234"
+              className="max-w-48"
+            />
+            <p className="text-xs text-muted-foreground">გამოიყენება ყველა მონაცემის წაშლისას</p>
           </div>
 
           <Button onClick={handleSave} className="w-fit mt-2">
@@ -514,9 +611,19 @@ function DataTab({ store }: DataTabProps) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const [pinInput, setPinInput] = useState("");
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+
   const handleClearAll = async () => {
+    const settings = settingsStore.getSettings();
+    if (pinInput !== settings.deletePin) {
+      toast.error("პინ-კოდი არასწორია");
+      return;
+    }
     await warehouseStore.clearAll();
     toast.success("ყველა მონაცემი წაიშალა");
+    setPinInput("");
+    setIsAlertOpen(false);
   };
 
   const dataSize = (() => {
@@ -595,7 +702,7 @@ function DataTab({ store }: DataTabProps) {
           </div>
 
           <div className="border-t border-border pt-4 mt-2">
-            <AlertDialog>
+            <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
                   <AlertTriangle className="mr-2 h-4 w-4" />
@@ -613,8 +720,21 @@ function DataTab({ store }: DataTabProps) {
                     შეუქცევადია.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="py-4 flex flex-col gap-3">
+                  <Label htmlFor="pin-confirm">შეიყვანეთ პინ-კოდი დასადასტურებლად:</Label>
+                  <Input
+                    id="pin-confirm"
+                    type="password"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    placeholder="____"
+                    className="text-center text-2xl tracking-widest"
+                    autoFocus
+                  />
+                </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>გაუქმება</AlertDialogCancel>
+                  <AlertDialogCancel onClick={() => setPinInput("")}>გაუქმება</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleClearAll}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

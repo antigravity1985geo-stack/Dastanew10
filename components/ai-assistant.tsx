@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { MessageSquare, X, Send, Sparkles, AlertCircle, TrendingUp, Package, Mic, MicOff, BarChart3, Navigation, ShoppingBag } from "lucide-react";
+import { MessageSquare, X, Send, Sparkles, AlertCircle, TrendingUp, Package, Mic, MicOff, BarChart3, Navigation, ShoppingBag, ChevronDown, ChevronUp, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWarehouseStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import { model, tools } from "@/lib/gemini";
 
 interface Message {
     role: "user" | "ai";
@@ -17,17 +19,26 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-    { label: "📦 მარაგი", value: "რა მარაგი გვაქვს?" },
-    { label: "🧮 კალკულატორი", value: "კალკულატორი" },
-    { label: "📐 დაჭრა", value: "დაჭრის დათვლა" },
-    { label: "🏆 ტოპ გაყიდვადი", value: "რა არის ტოპ გაყიდვადი?" },
+    { label: "📦 მარაგი", value: "რა მარაგი გვაქვს?", primary: true },
+    { label: "💰 მოგება", value: "რა მოგება მაქვს?", primary: true },
+    { label: "💸 ნისიები", value: "ვის აქვს ვალი?", primary: true },
+    { label: "🔮 პროგნოზი", value: "მარაგის პროგნოზი", primary: true },
+    { label: "📊 კლიენტები", value: "ვინ არის საუკეთესო კლიენტი?", primary: false },
+    { label: "📐 დაჭრა", value: "დაჭრის დათვლა", primary: false },
+    { label: "📏 კალკულატორი", value: "კალკულატორი", primary: false },
+    { label: "📉 მკვდარი მარაგი", value: "მკვდარი მარაგი", primary: false },
+    { label: "🛒 ბოლო შესყიდვა", value: "რა ვიყიდეთ ბოლოს?", primary: false },
+    { label: "🏆 ტოპ გაყიდვადი", value: "რა არის ტოპ გაყიდვადი?", primary: false },
 ];
+
 
 export function AIAssistant() {
     const [isOpen, setIsOpen] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [input, setInput] = useState("");
     const [autoScroll, setAutoScroll] = useState(true);
+    const [showAllActions, setShowAllActions] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
             role: "ai",
@@ -35,11 +46,11 @@ export function AIAssistant() {
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 text-primary">
                         <Sparkles className="h-4 w-4" />
-                        <b>სისტემა მზად არის (Level 5)</b>
+                        <b>სისტემა მზად არის (Level 10)</b>
                     </div>
                     გამარჯობა! მე ვარ თქვენი <b>Malema Pro Advisor</b>.
                     <br />
-                    შემიძლია ვმართო აპლიკაცია, დავთვალო მოგება და მოგცეთ ბიზნეს რჩევები.
+                    შემიძლია ვმართო აპლიკაცია, დავთვალო მოგება და შევასრულო ოპერაციები.
                 </div>
             ),
         },
@@ -50,28 +61,18 @@ export function AIAssistant() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-    // Context helper
-    const getPageName = () => {
-        if (pathname === "/") return "მთავარ დეშბორდზე";
-        if (pathname === "/warehouse") return "საწყობში";
-        if (pathname === "/sales") return "გაყიდვების გვერდზე";
-        if (pathname === "/purchase") return "შესყიდვების გვერდზე";
-        if (pathname === "/analytics") return "ანალიტიკაში";
-        return "პროექტში";
-    };
+    // Chat session ref to maintain context
+    const chatSession = useRef<any>(null);
 
-    // Navigation Detection logic
-    const handleNavigation = (text: string): boolean => {
-        const t = text.toLowerCase();
-        if (t.includes("საწყობ") || t.includes("მარაგ")) { router.push("/warehouse"); return true; }
-        if (t.includes("გაყიდვ") || t.includes("sales")) { router.push("/sales"); return true; }
-        if (t.includes("შესყიდვ") || t.includes("purchase")) { router.push("/purchase"); return true; }
-        if (t.includes("ანალიტიკ") || t.includes("გრაფიკ")) { router.push("/analytics"); return true; }
-        if (t.includes("მთავარ") || t.includes("დეშბორდ")) { router.push("/"); return true; }
-        return false;
-    };
+    useEffect(() => {
+        if (!chatSession.current && process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+            chatSession.current = model.startChat({
+                tools: tools,
+                history: [],
+            });
+        }
+    }, []);
 
-    // Speech Recognition Setup
     const startListening = () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
@@ -122,254 +123,133 @@ export function AIAssistant() {
         if (isOpen) scrollToBottom(true);
     }, [isOpen]);
 
-    const generateAIResponse = (userText: string): React.ReactNode => {
-        const text = userText.toLowerCase().trim();
+    const executeTool = async (call: any) => {
 
-        // 1. Navigation Controller (Level 5)
-        if (text.includes("გადადი") || text.includes("გახსენი") || text.includes("მაჩვენე") || text.includes("წადი")) {
-            const success = handleNavigation(text);
-            if (success) {
-                return (
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-green-500">
-                            <Navigation className="h-4 w-4" />
-                            <b>ნავიგაცია შესრულდა</b>
-                        </div>
-                        თქვენ ახლა იმყოფებით <b>{getPageName()}</b>. რით შემიძლია დაგეხმაროთ აქ?
-                    </div>
+        const { name, args } = call;
+        console.log("Executing tool:", name, args);
+
+        switch (name) {
+            case "get_inventory":
+                return {
+                    totalStock: store.totalStock,
+                    lowStockCount: store.lowStockProducts.length,
+                    products: store.products.map(p => ({ name: p.name, quantity: p.quantity, price: p.salePrice })),
+                };
+
+            case "search_product":
+                const query = args.query.toLowerCase();
+                const found = store.products.filter(p =>
+                    p.name.toLowerCase().includes(query) ||
+                    p.category.toLowerCase().includes(query)
                 );
-            }
-        }
+                return { results: found.map(p => ({ id: p.id, name: p.name, quantity: p.quantity, price: p.salePrice })) };
 
-        // 2. Dead Stock & Inventory BI (Level 5)
-        if (text.includes("მკვდარი") || text.includes("არ იყიდება") || text.includes("ნელი")) {
-            const deadProducts = store.products.filter(p => !store.sales.some(s => s.productId === p.id)).slice(0, 3);
-            if (deadProducts.length > 0) {
-                return (
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-orange-500">
-                            <AlertCircle className="h-4 w-4" />
-                            <b>მკვდარი მარაგების ანალიზი</b>
-                        </div>
-                        შემდეგი პროდუქტები არ გაყიდულა ბოლო პერიოდში:
-                        {deadProducts.map(p => (
-                            <div key={p.id} className="text-sm border rounded p-2 bg-muted/50">
-                                • {p.name} ({p.quantity} ერთ. ნაშთი)
-                            </div>
-                        ))}
-                        <p className="text-xs italic text-muted-foreground">რჩევა: განიხილეთ ფასდაკლება ან აქცია ამ პროდუქტებზე, რათა გამოათავისუფლოთ საბრუნავი თანხა.</p>
-                    </div>
-                );
-            }
-            return "ყველა პროდუქტი დინამიურად იყიდება! საწყობის ბრუნვა იდეალურია.";
-        }
-
-        // 3. Profit & Price Optimization (Level 5)
-        if (text.includes("ფასი") || text.includes("ოპტიმიზაცია") || text.includes("მომგებიან") || text.includes("ზრდა")) {
-            const top = store.topProducts[0];
-            return (
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-primary">
-                        <TrendingUp className="h-4 w-4" />
-                        <b>ბიზნესის ზრდის ანალიზი</b>
-                    </div>
-                    ყველაზე მოთხოვნადი პროდუქტია <b>{top?.name || "არაა"}</b>.
-                    <br />
-                    ჩემი რჩევით, ამ პროდუქტზე შეგიძლიათ ფასი 5%-ით გაზარდოთ მოგების მარჟის გასაზრდელად.
-                    <br />
-                    <Button variant="link" className="p-0 h-auto text-xs justify-start" onClick={() => router.push("/analytics")}>
-                        იხილეთ სრული ანალიტიკა →
-                    </Button>
-                </div>
-            );
-        }
-
-        // 4. Cutting Optimizer Logic
-        const partMatch = text.match(/(\d+)\s*(ცალი|დეტალი)?\s*(\d+)\s*[x*x]\s*(\d+)/g);
-        if (partMatch || text.includes("დაჭრა") || text.includes("ოპტიმიზაცია")) {
-            if (partMatch) {
-                let totalArea = 0;
-                const details: string[] = [];
-                partMatch.forEach(m => {
-                    const nums = m.match(/\d+/g);
-                    if (nums && nums.length >= 3) {
-                        const count = parseInt(nums[0]);
-                        const w = parseInt(nums[1]);
-                        const h = parseInt(nums[2]);
-                        totalArea += (w * h * count) / 1000000; // to m2
-                        details.push(`${count} ცალი ${w}x${h}`);
-                    }
-                });
-
-                const sheetArea = 5.796; // 2800x2070
-                const needed = Math.ceil(totalArea / (sheetArea * 0.85)); // 15% waste factor
-                const wastePercent = Math.round((1 - (totalArea / (needed * sheetArea))) * 100);
-
-                return (
-                    <div>
-                        📐 <b>დაჭრის გაანგარიშება:</b><br /><br />
-                        {details.map((d, i) => <div key={i}>• {d}</div>)}
-                        <br />
-                        • საჭირო ფართობი: <b>{totalArea.toFixed(2)} მ²</b><br />
-                        • საჭიროა: <b>{needed} ლისტი</b> (2800x2070)<br />
-                        • ნარჩენი (დაახლოებით): <b>{wastePercent}%</b><br /><br />
-                        <span className="text-xs text-muted-foreground italic">შენიშვნა: გათვლილია 15%-იანი დანაკარგით.</span>
-                    </div>
-                );
-            }
-            return "მომწერეთ დეტალების ზომები, მაგ: '5 ცალი 600x400 და 2 ცალი 1000x500'.";
-        }
-
-        // 5. Calculator Logic
-        const sqMeterMatch = text.match(/(\d+)\s*(კვადრატ|კვ|sq|m2)/);
-        if (sqMeterMatch || text.includes("კალკულატორი")) {
-            if (sqMeterMatch) {
-                const sqMeters = parseInt(sqMeterMatch[1]);
-                const sheetSize = 5.8;
-                const needed = Math.ceil(sqMeters / sheetSize);
-                return (
-                    <div>
-                        📍 <b>{sqMeters} კვ.მ</b> ფართობისთვის:<br /><br />
-                        • დაგჭირდებათ დაახლოებით <b>{needed} ლისტი</b>.<br />
-                        • რეკომენდებულია 10% მარაგის დამატება.
-                    </div>
-                );
-            }
-            return "შეგიძლიათ მომწეროთ ფართობი, მაგალითად: '20 კვადრატულზე რამდენი ლისტი მინდა?'";
-        }
-
-        // 6. Product Search
-        if (text.includes("გვაქვს") || text.includes("არის") || text.includes("მაქვს") || text.includes("ნახე")) {
-            const searchTerms = text.replace(/(გვაქვს|არის|მაქვს|თუ|ნახე|\?) /g, "").trim();
-            const found = store.products.filter(p =>
-                p.name.toLowerCase().includes(searchTerms) ||
-                (p.category && p.category.toLowerCase().includes(searchTerms))
-            );
-
-            if (found.length > 0 && searchTerms.length > 2) {
-                return (
-                    <div>
-                        🔍 მოიძებნა შემდეგი პროდუქცია:<br /><br />
-                        {found.slice(0, 3).map(p => (
-                            <div key={p.id} className="mb-2 border-b pb-1">
-                                • <b>{p.name}</b>: {p.quantity} ერთ. ({p.salePrice} GEL)
-                            </div>
-                        ))}
-                    </div>
-                );
-            }
-        }
-
-        // 7. Sales Processing (Level 3)
-        const sellMatch = text.match(/(გაყიდე|გაყიდვა|sales?)\s*(.+)?\s*(\d+)\s*(ლისტი|ცალი|ერთეული)?/i) ||
-            text.match(/(\d+)\s*(ლისტი|ცალი|ერთეული)?\s*(გაყიდე|გაყიდვა|sales?)\s*(.+)?/i);
-
-        if (sellMatch || text.includes("გაყიდე") || text.includes("გაყიდვა")) {
-            let productNameSnippet = "";
-            let quantity = 0;
-
-            if (sellMatch) {
-                const nums = text.match(/\d+/);
-                quantity = nums ? parseInt(nums[0]) : 0;
-                productNameSnippet = text.replace(/(გაყიდე|გაყიდვა|ლისტი|ცალი|ერთეული| )/g, "").replace(/\d+/g, "").trim();
-            }
-
-            if (quantity > 0 && productNameSnippet.length > 1) {
-                const product = store.products.find(p => p.name.toLowerCase().includes(productNameSnippet));
-
-                if (product) {
-                    return (
-                        <div className="flex flex-col gap-2">
-                            <div>
-                                🛒 გსურთ გაყიდოთ <b>{quantity} ლისტი</b> პროდუქცია: <b>{product.name}</b>?
-                                <br />
-                                ჯამური ფასი: <b>{(product.salePrice * quantity).toLocaleString()} GEL</b>
-                            </div>
-                            <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white w-fit gap-2"
-                                onClick={async () => {
-                                    try {
-                                        await store.addSale({
-                                            productId: product.id,
-                                            productName: product.name,
-                                            category: product.category,
-                                            quantity: quantity,
-                                            salePrice: product.salePrice,
-                                            client: "AI Sales"
-                                        });
-                                        setMessages(prev => [...prev, { role: "ai", content: `✅ გაყიდვა წარმატებით შესრულდა: ${product.name} (${quantity} ერთ.)` }]);
-                                        toast.success("გაყიდვა შესრულდა");
-                                    } catch (e: any) {
-                                        setMessages(prev => [...prev, { role: "ai", content: `❌ შეცდომა: ${e.message}` }]);
-                                        toast.error(e.message);
-                                    }
-                                }}
-                            >
-                                <TrendingUp className="h-4 w-4" /> დიახ, გაყიდე
-                            </Button>
-                        </div>
-                    );
+            case "add_sale":
+                try {
+                    await store.addSale({
+                        productId: args.productId,
+                        productName: args.productName,
+                        category: args.category || "General",
+                        quantity: args.quantity,
+                        salePrice: args.salePrice,
+                        paidAmount: args.paidAmount || (args.salePrice * args.quantity),
+                        status: (args.status as any) || "paid",
+                        client: args.client || "AI Assistant"
+                    });
+                    toast.success("გაყიდვა დაფიქსირდა");
+                    return { success: true, message: "Sale added successfully" };
+                } catch (e: any) {
+                    toast.error(e.message);
+                    return { success: false, error: e.message };
                 }
-                return `🔍 პროდუქტი "${productNameSnippet}" ვერ მოვიძებნა. დააზუსტეთ სახელი.`;
-            }
-            return "მიუთითეთ პროდუქტი და რაოდენობა, მაგ: 'გაყიდე საფირმეშე 10 ლისტი'.";
-        }
 
-        // 8. Analytics & History
-        if (text.includes("მარაგი") || text.includes("რა გვაქვს") || text.includes("ნაშთი")) {
-            return (
-                <div>
-                    📊 <b>მარაგები:</b> სულ <b>{store.totalStock}</b> ლისტი.<br />
-                    ⚠️ <b>კრიტიკული:</b> {store.lowStockProducts.length} სახეობა.
-                </div>
-            );
-        }
+            case "add_expense":
+                try {
+                    await store.addExpense({
+                        amount: args.amount,
+                        category: args.category || "AI Logged",
+                        description: args.description,
+                        date: args.date || new Date().toISOString().split('T')[0]
+                    });
+                    toast.success("ხარჯი დაემატა");
+                    return { success: true };
+                } catch (e: any) {
+                    toast.error(e.message);
+                    return { success: false, error: e.message };
+                }
 
-        if (text.includes("შესყიდვა") || text.includes("ვიყიდეთ") || text.includes("შემოვიდა")) {
-            const last = store.purchaseHistory[store.purchaseHistory.length - 1];
-            return (
-                <div>
-                    🛒 <b>ბოლო შესყიდვა:</b><br />
-                    {last ? `• ${last.productName} (${last.quantity} ერთ.)` : "ისტორია ცარიელია."}
-                </div>
-            );
-        }
+            case "get_financial_report":
+                return {
+                    revenue: store.totalRevenue,
+                    profit: store.totalProfit,
+                    expenses: store.totalExpenses,
+                    netProfit: store.totalProfit - store.totalExpenses
+                };
 
-        if (text.includes("მოგება") || text.includes("შემოსავალი") || text.includes("ტოპ")) {
-            return (
-                <div>
-                    💰 <b>მოგება:</b> <b>{store.totalProfit.toLocaleString()} GEL</b><br />
-                    🏆 <b>ტოპ:</b> {store.topProducts[0]?.name || "არაა"}
-                </div>
-            );
-        }
+            case "navigate_to":
+                const routes: Record<string, string> = {
+                    dashboard: "/",
+                    warehouse: "/warehouse",
+                    sales: "/sales",
+                    purchase: "/purchase",
+                    analytics: "/analytics"
+                };
+                if (routes[args.page]) {
+                    router.push(routes[args.page]);
+                    return { success: true, navigatedTo: args.page };
+                }
+                return { success: false, error: "Invalid page" };
 
-        return (
-            <div>
-                უკაცრავად, ამ კითხვაზე ზუსტი პასუხი არ მაქვს.
-                <br /><br />
-                <b>ჰკითხეთ AI-ს:</b><br />
-                • "10 ცალი 600x400 დაჭრა"<br />
-                • "რა მარაგი გვაქვს?"<br />
-                • "რა ვიყიდეთ ბოლოს?"
-            </div>
-        );
+            default:
+                return { error: "Tool not found" };
+        }
     };
 
-    const handleSend = (textOverride?: string) => {
+    const handleSend = async (textOverride?: string) => {
         const rawInput = textOverride || input;
-        if (!rawInput.trim()) return;
+        if (!rawInput.trim() || isLoading) return;
 
-        // Always auto-scroll when user sends a message
         setAutoScroll(true);
-        const userMsg: Message = { role: "user", content: rawInput };
-        setMessages((prev) => [...prev, userMsg]);
+        setMessages(prev => [...prev, { role: "user", content: rawInput }]);
         setInput("");
+        setIsLoading(true);
 
-        setTimeout(() => {
-            setMessages((prev) => [...prev, { role: "ai", content: generateAIResponse(rawInput) }]);
-        }, 600);
+        try {
+            if (!chatSession.current) {
+                chatSession.current = model.startChat({
+                    tools: tools,
+                });
+            }
+
+            let result = await chatSession.current.sendMessage(rawInput);
+            let response = result.response;
+            let calls = response.functionCalls();
+
+            // Handle function calling loop
+            while (calls && calls.length > 0) {
+                const toolResponses = await Promise.all(
+                    calls.map(async (call: any) => ({
+                        functionResponse: {
+                            name: call.name,
+                            response: await executeTool(call),
+                        },
+                    }))
+                );
+
+                result = await chatSession.current.sendMessage(toolResponses);
+                response = result.response;
+                calls = response.functionCalls();
+            }
+
+            const aiText = response.text();
+            setMessages(prev => [...prev, { role: "ai", content: aiText }]);
+        } catch (error: any) {
+            console.error("AI Error:", error);
+            toast.error("AI-სთან კავშირი ვერ დამყარდა");
+            setMessages(prev => [...prev, { role: "ai", content: "უკაცრავად, მოხდა შეცდომა. სცადეთ მოგვიანებით." }]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -406,12 +286,24 @@ export function AIAssistant() {
                         </div>
 
                         <div className="p-3 border-t bg-muted/30">
-                            <div className="flex flex-wrap gap-2">
-                                {QUICK_ACTIONS.map((action) => (
-                                    <Button key={action.value} variant="outline" size="sm" className="text-[10px] h-7 bg-background" onClick={() => handleSend(action.value)}>
+                            <div className="flex flex-wrap gap-2 transition-all duration-300 ease-in-out">
+                                {QUICK_ACTIONS.filter(a => a.primary || showAllActions).map((action) => (
+                                    <Button key={action.value} variant="outline" size="sm" className="text-[10px] h-7 bg-background hover:bg-primary/5 hover:border-primary/30 transition-colors" onClick={() => handleSend(action.value)}>
                                         {action.label}
                                     </Button>
                                 ))}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-[10px] h-7 gap-1 text-muted-foreground hover:text-primary"
+                                    onClick={() => setShowAllActions(!showAllActions)}
+                                >
+                                    {showAllActions ? (
+                                        <>ნაკლები <ChevronUp className="h-3 w-3" /></>
+                                    ) : (
+                                        <>მეტი <ChevronDown className="h-3 w-3" /></>
+                                    )}
+                                </Button>
                             </div>
                         </div>
                     </CardContent>
@@ -477,7 +369,7 @@ export function AIInsightsCard() {
             <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-primary">
                     <Sparkles className="h-5 w-5" />
-                    AI ინსაითები (ლამინატი)
+                    POWERED BY JABSONA
                 </CardTitle>
             </CardHeader>
             <CardContent>

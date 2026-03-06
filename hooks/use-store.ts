@@ -19,5 +19,6 @@ export function useWarehouseStore() {
     updateSale: warehouseStore.updateSale.bind(warehouseStore),
     deleteSale: warehouseStore.deleteSale.bind(warehouseStore),
     getProductById: warehouseStore.getProductById.bind(warehouseStore),
+    getProductByBarcode: warehouseStore.getProductByBarcode.bind(warehouseStore),
   };
 }

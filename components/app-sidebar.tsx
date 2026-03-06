@@ -11,10 +11,13 @@ import {
   Shield,
   LogOut,
   User,
+  Users,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
+import { useWarehouseStore } from "@/hooks/use-store";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -37,6 +40,7 @@ const navItems = [
     label: "შესყიდვა",
     href: "/purchases",
     icon: ShoppingCart,
+    requiresAdmin: true,
   },
   {
     label: "გაყიდვა",
@@ -47,17 +51,26 @@ const navItems = [
     label: "ბუღალტერია",
     href: "/accounting",
     icon: BookOpen,
+    requiresAdmin: true,
+  },
+  {
+    label: "თანამშრომლები",
+    href: "/employees",
+    icon: Users,
+    requiresAdmin: true,
   },
   {
     label: "ადმინ პანელი",
     href: "/admin",
     icon: Shield,
+    requiresAdmin: true,
   },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { currentUser, logout } = useAuth();
+  const store = useWarehouseStore();
   const { companyName } = useSettings();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -97,9 +110,12 @@ export function AppSidebar() {
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   )}
                 >
-                  <Link href={item.href}>
+                  <Link href={item.href} className="flex-1 flex items-center gap-3">
                     <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {item.requiresAdmin && store.currentEmployee?.position !== "ადმინისტრატორი" && (
+                      <Lock className="h-3 w-3 opacity-40 ml-auto" />
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

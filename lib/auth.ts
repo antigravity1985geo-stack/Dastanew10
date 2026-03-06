@@ -18,14 +18,6 @@ export interface AuthSnapshot {
 
 const SESSION_KEY = "warehouse_auth_session";
 
-const DEFAULT_ADMIN: User = {
-  id: "admin-default",
-  username: "admin",
-  displayName: "ადმინისტრატორი",
-  password: "admin123",
-  createdAt: new Date().toISOString(),
-};
-
 class AuthStore {
   private users: User[] = [];
   private currentUserId: string | null = null;
@@ -55,16 +47,7 @@ class AuthStore {
           createdAt: u.created_at
         }));
       } else {
-        // Fallback to default admin if no users found (and try to seed)
-        const dbAdmin = {
-          id: DEFAULT_ADMIN.id,
-          username: DEFAULT_ADMIN.username,
-          display_name: DEFAULT_ADMIN.displayName,
-          password: DEFAULT_ADMIN.password,
-          created_at: DEFAULT_ADMIN.createdAt
-        };
-        this.users = [DEFAULT_ADMIN];
-        await supabase.from('users').upsert(dbAdmin);
+        this.users = [];
       }
 
       const session = localStorage.getItem(SESSION_KEY);

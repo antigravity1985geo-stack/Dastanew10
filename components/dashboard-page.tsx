@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   ArrowUpRight,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -79,6 +80,13 @@ export function DashboardPage() {
       icon: ArrowUpRight,
       color: "text-chart-3",
       bgColor: "bg-chart-3/10",
+    },
+    {
+      label: "თანამშრომლები",
+      value: store.employees.length,
+      icon: Users,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
     },
   ];
 

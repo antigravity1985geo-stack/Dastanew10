@@ -67,11 +67,11 @@ export function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="username">მომხმარებლის სახელი</Label>
+                <Label htmlFor="username">ელ-ფოსტა / მომხმარებლის სახელი</Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="admin"
+                  placeholder="ელ-ფოსტა"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
@@ -117,10 +117,6 @@ export function LoginPage() {
                 <LogIn className="mr-2 h-4 w-4" />
                 {isLoading ? "შესვლა..." : "შესვლა"}
               </Button>
-
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                {"ნაგულისხმევი: admin / admin123"}
-              </p>
             </form>
           </CardContent>
         </Card>

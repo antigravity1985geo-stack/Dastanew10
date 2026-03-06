@@ -8,6 +8,14 @@ export interface Settings {
   email?: string;
   bankAccount?: string;
   address?: string;
+  // RS.GE Settings
+  rsgeUsername?: string;
+  rsgePassword?: string;
+  rsgeAutoSend?: boolean;
+  // Fiscal Settings
+  fiscalType?: "none" | "digital" | "physical";
+  fiscalAutoPrint?: boolean;
+  deletePin?: string;
 }
 
 type SettingsListener = () => void;
@@ -22,6 +30,12 @@ const DEFAULT_SETTINGS: Settings = {
   email: "",
   bankAccount: "",
   address: "",
+  rsgeUsername: "",
+  rsgePassword: "",
+  rsgeAutoSend: false,
+  fiscalType: "none",
+  fiscalAutoPrint: false,
+  deletePin: "1234",
 };
 
 class SettingsStore {
