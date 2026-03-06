@@ -9,7 +9,7 @@ export interface Product {
   purchasePrice: number;
   salePrice: number;
   quantity: number;
-  client: string;
+  client?: string;
   createdAt: string;
 }
 
@@ -21,8 +21,9 @@ export interface Sale {
   quantity: number;
   salePrice: number;
   totalAmount: number;
-  paidAmount: number; // Added for debt tracking
-  status: "paid" | "partial" | "unpaid"; // Added for debt tracking
+  paidInCash: number; // Split payment support
+  paidInCard: number; // Split payment support
+  status: "paid" | "partial" | "unpaid";
   client: string;
   createdAt: string;
 }
@@ -32,6 +33,7 @@ export interface Expense {
   amount: number;
   category: string;
   description: string;
+  paymentMethod: 'cash' | 'bank';
   date: string;
   createdAt: string;
 }
@@ -44,7 +46,10 @@ export interface PurchaseHistory {
   purchasePrice: number;
   salePrice: number;
   quantity: number;
-  client: string;
+  paidInCash: number;
+  paidInCard: number;
+  supplier: string;
+  client?: string;
   createdAt: string;
 }
 
@@ -92,6 +97,10 @@ export interface StoreSnapshot {
   currentEmployee: Employee | null;
   loginEmployee: (pin: string) => Promise<boolean>;
   logoutEmployee: () => void;
+
+  // Debts
+  updatePurchaseHistory: (id: string, updates: { paidInCash?: number; paidInCard?: number }) => Promise<void>;
+  payoffDebts: (transactions: any[], amount: number, method: 'cash' | 'bank', type: 'customer' | 'supplier') => Promise<void>;
 }
 
 class WarehouseStore {
@@ -128,6 +137,7 @@ class WarehouseStore {
           amount: Number(e.amount) || 0,
           category: e.category || "",
           description: e.description || "",
+          paymentMethod: e.payment_method || 'cash',
           date: e.date || new Date().toISOString(),
           createdAt: e.created_at || new Date().toISOString()
         }));
@@ -167,7 +177,8 @@ class WarehouseStore {
           quantity: s.quantity || 0,
           salePrice: Number(s.sale_price) || 0,
           totalAmount: Number(s.total_amount) || 0,
-          paidAmount: Number(s.paid_amount) || Number(s.total_amount) || 0,
+          paidInCash: Number(s.paid_in_cash) || 0,
+          paidInCard: Number(s.paid_in_card) || 0,
           status: s.status || "paid",
           client: s.client || "",
           createdAt: s.created_at || new Date().toISOString()
@@ -183,7 +194,9 @@ class WarehouseStore {
           purchasePrice: Number(ph.purchase_price) || 0,
           salePrice: Number(ph.sale_price) || 0,
           quantity: ph.quantity || 0,
-          client: ph.client || "",
+          paidInCash: Number(ph.paid_in_cash) || 0,
+          paidInCard: Number(ph.paid_in_card) || 0,
+          supplier: ph.supplier || "",
           createdAt: ph.created_at || new Date().toISOString()
         }));
       }
@@ -255,7 +268,8 @@ class WarehouseStore {
       quantity: s.quantity || 0,
       salePrice: Number(s.sale_price) || 0,
       totalAmount: Number(s.total_amount) || 0,
-      paidAmount: Number(s.paid_amount) || Number(s.total_amount) || 0,
+      paidInCash: Number(s.paid_in_cash) || 0,
+      paidInCard: Number(s.paid_in_card) || 0,
       status: s.status || "paid",
       client: s.client || "",
       createdAt: s.created_at || new Date().toISOString()
@@ -285,7 +299,9 @@ class WarehouseStore {
       purchasePrice: Number(ph.purchase_price) || 0,
       salePrice: Number(ph.sale_price) || 0,
       quantity: ph.quantity || 0,
-      client: ph.client || "",
+      paidInCash: Number(ph.paid_in_cash) || 0,
+      paidInCard: Number(ph.paid_in_card) || 0,
+      supplier: ph.supplier || "",
       createdAt: ph.created_at || new Date().toISOString()
     });
 
@@ -307,6 +323,7 @@ class WarehouseStore {
       amount: Number(e.amount) || 0,
       category: e.category || "",
       description: e.description || "",
+      paymentMethod: e.payment_method || 'cash',
       date: e.date || new Date().toISOString(),
       createdAt: e.created_at || new Date().toISOString()
     });
@@ -390,7 +407,10 @@ class WarehouseStore {
 
       currentEmployee: this.currentEmployee,
       loginEmployee: this.loginEmployee.bind(this),
-      logoutEmployee: this.logoutEmployee.bind(this)
+      logoutEmployee: this.logoutEmployee.bind(this),
+
+      updatePurchaseHistory: this.updatePurchaseHistory.bind(this),
+      payoffDebts: this.payoffDebts.bind(this)
     };
 
     return this._cachedSnapshot;
@@ -415,7 +435,7 @@ class WarehouseStore {
     return this.products.find((p) => p.barcode && p.barcode.trim() === trimmed);
   }
 
-  async addProduct(product: Omit<Product, "id" | "createdAt">) {
+  async addProduct(product: Omit<Product, "id" | "createdAt"> & { paidInCash?: number; paidInCard?: number; supplier?: string }) {
     // Check if product with same name exists - update quantity
     const existing = this.products.find(
       (p) => p.name.toLowerCase() === product.name.toLowerCase()
@@ -453,7 +473,24 @@ class WarehouseStore {
       if (error) {
         console.error("Error updating product:", error);
         toast.error("შეცდომა პროდუქტის განახლებისას");
+        return;
       }
+
+      // Log purchase history for stock increase
+      const purchaseHistoryEntry = {
+        product_id: existing.id,
+        product_name: existing.name,
+        category_name: existing.category,
+        purchase_price: product.purchasePrice,
+        sale_price: product.salePrice,
+        quantity: product.quantity,
+        paid_in_cash: product.paidInCash || 0,
+        paid_in_card: product.paidInCard || 0,
+        supplier: product.supplier || product.client || "",
+        created_at: new Date().toISOString()
+      };
+
+      await supabase.from('purchase_history').insert(purchaseHistoryEntry);
     } else {
       const newProduct: any = {
         id: crypto.randomUUID(),
@@ -480,19 +517,36 @@ class WarehouseStore {
       this.notify();
 
       // Supabase insert
-      const { error } = await supabase
+      const { data: dbProduct, error } = await supabase
         .from('products')
-        .insert(newProduct);
+        .insert(newProduct)
+        .select()
+        .single();
 
       if (error) {
         console.error("Error adding product:", JSON.stringify(error, null, 2));
-        console.error("Error message:", error.message);
-        console.error("Error code:", error.code);
-        console.error("Error hint:", error.hint);
         this.products = this.products.filter(p => p.id !== newProduct.id);
         this.notify();
         toast.error(error.message || "შეცდომა პროდუქტის დამატებისას");
+        return;
       }
+
+      // If successful, log to purchase_history WITH payment info
+      // We manually insert here to bypass the limited trigger
+      const purchaseHistoryEntry = {
+        product_id: dbProduct.id,
+        product_name: dbProduct.name,
+        category_name: dbProduct.category_name,
+        purchase_price: dbProduct.purchase_price,
+        sale_price: dbProduct.sale_price,
+        quantity: dbProduct.quantity,
+        paid_in_cash: product.paidInCash || 0,
+        paid_in_card: product.paidInCard || 0,
+        supplier: product.supplier || product.client || "",
+        created_at: new Date().toISOString()
+      };
+
+      await supabase.from('purchase_history').insert(purchaseHistoryEntry);
     }
   }
 
@@ -599,7 +653,7 @@ class WarehouseStore {
     return [...this.employees];
   }
 
-  async updateSale(id: string, updates: { quantity?: number; salePrice?: number; client?: string; paidAmount?: number; status?: "paid" | "partial" | "unpaid" }) {
+  async updateSale(id: string, updates: { quantity?: number; salePrice?: number; client?: string; paidInCash?: number; paidInCard?: number; status?: "paid" | "partial" | "unpaid" }) {
     const sale = this.sales.find((s) => s.id === id);
     if (!sale) throw new Error("გაყიდვა ვერ მოიძებნა");
 
@@ -621,7 +675,8 @@ class WarehouseStore {
 
     if (updates.salePrice !== undefined) sale.salePrice = updates.salePrice;
     if (updates.client !== undefined) sale.client = updates.client;
-    if (updates.paidAmount !== undefined) sale.paidAmount = updates.paidAmount;
+    if (updates.paidInCash !== undefined) sale.paidInCash = updates.paidInCash;
+    if (updates.paidInCard !== undefined) sale.paidInCard = updates.paidInCard;
     if (updates.status !== undefined) sale.status = updates.status;
 
     sale.totalAmount = sale.salePrice * sale.quantity;
@@ -637,7 +692,8 @@ class WarehouseStore {
           sale_price: sale.salePrice,
           total_amount: sale.totalAmount,
           client: sale.client,
-          paid_amount: sale.paidAmount,
+          paid_in_cash: sale.paidInCash,
+          paid_in_card: sale.paidInCard,
           status: sale.status
         })
         .eq('id', id);
@@ -693,7 +749,8 @@ class WarehouseStore {
       quantity: sale.quantity,
       sale_price: sale.salePrice,
       total_amount: sale.salePrice * sale.quantity,
-      paid_amount: sale.paidAmount,
+      paid_in_cash: sale.paidInCash,
+      paid_in_card: sale.paidInCard,
       status: sale.status,
       created_at: new Date().toISOString(),
       client: sale.client
@@ -743,6 +800,7 @@ class WarehouseStore {
           amount: Number(expense.amount),
           category: expense.category || "",
           description: expense.description || "",
+          payment_method: expense.paymentMethod || 'cash',
           date: expense.date || new Date().toISOString().split('T')[0]
         })
         .select()
@@ -759,6 +817,7 @@ class WarehouseStore {
             amount: Number(data.amount),
             category: data.category || "",
             description: data.description || "",
+            paymentMethod: data.payment_method || 'cash',
             date: data.date,
             createdAt: data.created_at
           };
@@ -1079,6 +1138,75 @@ class WarehouseStore {
     } catch (error) {
       console.error("Error importing data:", error);
       toast.error("შეცდომა იმპორტისას");
+    }
+  }
+
+  async updatePurchaseHistory(id: string, updates: { paidInCash?: number; paidInCard?: number }) {
+    const ph = this.purchaseHistory.find((p) => p.id === id);
+    if (!ph) throw new Error("შესყიდვა ვერ მოიძებნა");
+
+    const oldPh = { ...ph };
+    if (updates.paidInCash !== undefined) ph.paidInCash = updates.paidInCash;
+    if (updates.paidInCard !== undefined) ph.paidInCard = updates.paidInCard;
+
+    this.notify();
+
+    try {
+      const { error } = await supabase
+        .from('purchase_history')
+        .update({
+          paid_in_cash: ph.paidInCash,
+          paid_in_card: ph.paidInCard
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error updating purchase history:", error);
+      Object.assign(ph, oldPh);
+      this.notify();
+      toast.error("შეცდომა განახლებისას");
+    }
+  }
+
+  async payoffDebts(transactions: any[], amount: number, method: 'cash' | 'bank', type: 'customer' | 'supplier') {
+    let remainingAmount = amount;
+    // Sort by date (oldest first - FIFO)
+    const sorted = [...transactions].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    for (const t of sorted) {
+      if (remainingAmount <= 0) break;
+
+      const total = t.quantity * (t.salePrice || t.purchasePrice);
+      const currentlyPaid = t.paidInCash + t.paidInCard;
+      const currentDebt = total - currentlyPaid;
+
+      if (currentDebt <= 0) continue;
+
+      const payNow = Math.min(remainingAmount, currentDebt);
+      const newPaidInCash = method === 'cash' ? t.paidInCash + payNow : t.paidInCash;
+      const newPaidInCard = method === 'bank' ? t.paidInCard + payNow : t.paidInCard;
+
+      try {
+        if (type === 'customer') {
+          // Status update: if fully paid now
+          const newStatus = (currentlyPaid + payNow >= total) ? 'paid' : 'partial';
+          await this.updateSale(t.id, {
+            paidInCash: newPaidInCash,
+            paidInCard: newPaidInCard,
+            status: newStatus
+          });
+        } else {
+          await this.updatePurchaseHistory(t.id, {
+            paidInCash: newPaidInCash,
+            paidInCard: newPaidInCard
+          });
+        }
+        remainingAmount -= payNow;
+      } catch (err) {
+        console.error("Error in payoff chain:", err);
+        throw err;
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Plus, Minus, ShoppingCart, Trash2, Package, Download, FileText, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Search, AlertCircle } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Trash2, Package, Download, FileText, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Search, AlertCircle, Wallet, CreditCard, Eye, ChevronRight, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ import { Product, Sale } from "@/lib/store";
 import { PageHeader } from "@/components/page-header";
 import { toast } from "sonner";
 import { exportToExcel } from "@/lib/excel";
-import { printInvoice } from "@/lib/invoice";
+import { printInvoice, printPayoffReceipt } from "@/lib/invoice";
 import { rsgeService } from "@/lib/rs-ge";
 import { fiscalService } from "@/lib/fiscal";
 import { useSettings } from "@/hooks/use-settings";
@@ -70,6 +70,13 @@ export function SalesPage() {
   const [sendToRSGE, setSendToRSGE] = useState(false);
   const [printFiscal, setPrintFiscal] = useState(false);
 
+  // Checkout Modal State
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [payMode, setPayMode] = useState<"cash" | "card" | "split">("cash");
+  const [receivedAmount, setReceivedAmount] = useState(""); // For keypad
+  const [cashPaid, setCashPaid] = useState("");
+  const [cardPaid, setCardPaid] = useState("");
+
   // Sync toggles with global settings when they change or component mounts
   useEffect(() => {
     if (mounted) {
@@ -86,7 +93,8 @@ export function SalesPage() {
     quantity: "",
     salePrice: "",
     client: "",
-    paidAmount: "",
+    paidInCash: "",
+    paidInCard: "",
   });
 
   // Sorting and Pagination
@@ -97,6 +105,53 @@ export function SalesPage() {
 
   // Show/hide sales history
   const [showHistory, setShowHistory] = useState(false);
+
+  // Debts Modal State
+  const [debtsOpen, setDebtsOpen] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<{
+    name: string,
+    total: number,
+    transactions: any[],
+    type: 'customer' | 'supplier'
+  } | null>(null);
+
+  // Debts Grouping Logic (Mirrored from Accounting Page)
+  const groupedCustomerDebts = useMemo(() => {
+    const groups: Record<string, { client: string, totalDebt: number, transactions: Sale[] }> = {};
+    store.sales.forEach(s => {
+      const total = s.quantity * s.salePrice;
+      const paid = s.paidInCash + s.paidInCard;
+      const debt = total - paid;
+      if (debt > 0) {
+        const client = s.client || "ანონიმური";
+        if (!groups[client]) {
+          groups[client] = { client, totalDebt: 0, transactions: [] };
+        }
+        groups[client].totalDebt += debt;
+        groups[client].transactions.push(s);
+      }
+    });
+    return Object.values(groups).sort((a, b) => b.totalDebt - a.totalDebt);
+  }, [store.sales]);
+
+  const groupedSupplierDebts = useMemo(() => {
+    const groups: Record<string, { supplier: string, totalDebt: number, transactions: any[] }> = {};
+    store.purchaseHistory.forEach(ph => {
+      const total = ph.quantity * ph.purchasePrice;
+      const paid = ph.paidInCash + ph.paidInCard;
+      const debt = total - paid;
+      if (debt > 0) {
+        const supplier = ph.supplier || ph.client || "უცნობი";
+        if (!groups[supplier]) {
+          groups[supplier] = { supplier, totalDebt: 0, transactions: [] };
+        }
+        groups[supplier].totalDebt += debt;
+        groups[supplier].transactions.push(ph);
+      }
+    });
+    return Object.values(groups).sort((a, b) => b.totalDebt - a.totalDebt);
+  }, [store.purchaseHistory]);
+
 
   // ====== CART FUNCTIONS ======
 
@@ -151,6 +206,10 @@ export function SalesPage() {
     setCart([]);
     setClientName("");
     setPaidAmount("");
+    setCashPaid("");
+    setCardPaid("");
+    setPayMode("cash");
+    setReceivedAmount("");
   }, []);
 
   // Cart totals
@@ -165,47 +224,53 @@ export function SalesPage() {
   );
 
   // Sell all items in cart
-  const handleSellAll = async () => {
+  const handleSellAll = async (paymentData?: { cash: number; card: number; client: string }) => {
     if (cart.length === 0) {
       toast.error("კალათა ცარიელია");
       return;
     }
 
     const total = cartTotal;
-    const paid = paidAmount !== "" ? parseFloat(paidAmount) : total;
+    const finalCash = paymentData ? paymentData.cash : (paidAmount !== "" ? parseFloat(paidAmount) : total);
+    const finalCard = paymentData ? paymentData.card : 0;
+    const finalPaid = finalCash + finalCard;
+    const finalClient = (paymentData ? paymentData.client : clientName).trim();
+
+    // Client name is mandatory if there's debt
+    if (finalPaid < total && !finalClient) {
+      toast.error("ნიისისთვის საჭიროა კლიენტის სახელის მითითება");
+      return;
+    }
 
     try {
       const addedSales: Sale[] = [];
       for (const item of cart) {
+        const itemTotal = item.quantity * item.salePrice;
+        const ratio = total > 0 ? itemTotal / total : 0;
+
         const saleData = {
           productId: item.productId,
           productName: item.productName,
           category: item.category,
           quantity: item.quantity,
           salePrice: item.salePrice,
-          client: clientName.trim(),
-          paidAmount: (paid / total) * (item.quantity * item.salePrice), // proportional
-          status: (paid >= total ? "paid" : paid > 0 ? "partial" : "unpaid") as any,
+          client: finalClient,
+          paidInCash: finalCash * ratio,
+          paidInCard: finalCard * ratio,
+          status: (finalPaid >= total ? "paid" : finalPaid > 0 ? "partial" : "unpaid") as any,
         };
 
-        // In a real app, store.addSale would return the created sale object
-        // Here we'll simulate or just pass the data to services
         await store.addSale(saleData);
 
-        // For service calls, we create a temporary Sale object (id/createdAt are missing but services can handle it if needed or we can fetch them)
         addedSales.push({
           ...saleData,
           id: crypto.randomUUID(),
           createdAt: new Date().toISOString(),
-          totalAmount: saleData.quantity * saleData.salePrice
+          totalAmount: itemTotal
         });
       }
 
-      // Trigger Integrations
       if (sendToRSGE) {
-        // Typically waybills are per sale or per total order. 
-        // We'll send one notification or handle per item based on business logic. 
-        // For simplicity, we trigger for the first item or a summary.
         await rsgeService.sendWaybill(addedSales[0]);
       }
 
@@ -215,6 +280,7 @@ export function SalesPage() {
 
       toast.success(`გაყიდვა წარმატებით დაფიქსირდა — ${cart.length} პროდუქტი`);
       clearCart();
+      setCheckoutOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "შეცდომა გაყიდვისას");
     }
@@ -402,7 +468,8 @@ export function SalesPage() {
       quantity: String(sale.quantity),
       salePrice: String(sale.salePrice),
       client: sale.client,
-      paidAmount: String(sale.paidAmount),
+      paidInCash: String(sale.paidInCash),
+      paidInCard: String(sale.paidInCard),
     });
     setEditOpen(true);
   };
@@ -417,16 +484,19 @@ export function SalesPage() {
       const qty = parseInt(editForm.quantity);
       const price = parseFloat(editForm.salePrice);
       const total = qty * price;
-      const paid = editForm.paidAmount !== "" ? parseFloat(editForm.paidAmount) : total;
+      const cash = editForm.paidInCash !== "" ? parseFloat(editForm.paidInCash) : 0;
+      const card = editForm.paidInCard !== "" ? parseFloat(editForm.paidInCard) : 0;
+      const paid = cash + card;
 
       await store.updateSale(editingId, {
         quantity: qty,
         salePrice: price,
         client: editForm.client.trim(),
-        paidAmount: paid,
+        paidInCash: cash,
+        paidInCard: card,
         status: paid >= total ? "paid" : paid > 0 ? "partial" : "unpaid",
       });
-      toast.success("გაყიდვა წარმატებით განახლდა"); // Keep original message for edit
+      toast.success("გაყიდვა წარმატებით განახლდა");
       setEditOpen(false);
       setEditingId(null);
     } catch (error) {
@@ -452,6 +522,15 @@ export function SalesPage() {
           printTitle="გაყიდვების რეესტრი"
           actions={
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-amber-200 hover:bg-amber-50 text-amber-700"
+                onClick={() => setDebtsOpen(true)}
+              >
+                <Wallet className="h-4 w-4" />
+                ვალები & ნისიები
+              </Button>
               <Button
                 variant={showHistory ? "default" : "outline"}
                 size="sm"
@@ -749,7 +828,12 @@ export function SalesPage() {
                     <Button
                       className="w-full gap-2 h-11 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-xl transition-all rounded-xl"
                       size="lg"
-                      onClick={handleSellAll}
+                      onClick={() => {
+                        if (cart.length === 0) return;
+                        setCashPaid(cartTotal.toFixed(2));
+                        setCardPaid("");
+                        setCheckoutOpen(true);
+                      }}
                     >
                       <ShoppingCart className="h-4 w-4" />
                       გაყიდვა • {cartTotal.toFixed(2)} ₾
@@ -761,6 +845,239 @@ export function SalesPage() {
           </Card>
         </div>
       </div>
+
+      {/* Checkout Modal */}
+      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+        <DialogContent className="sm:max-w-[700px] rounded-3xl overflow-hidden p-0 border-none shadow-2xl bg-white">
+          <DialogHeader className="sr-only">
+            <DialogTitle>გადახდის ფანჯარა</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col md:flex-row h-[480px]">
+            {/* Left Sidebar: Payment Methods */}
+            <div className="w-full md:w-[260px] bg-slate-50 p-5 border-r border-slate-100 flex flex-col gap-3">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-black text-slate-800 tracking-tight">გადახდა</h2>
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-400" onClick={() => setCheckoutOpen(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-0.5 mb-2">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">სულ გადასახდელი</span>
+                <span className="text-3xl font-black text-primary">{cartTotal.toFixed(2)} ₾</span>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">მეთოდი</span>
+                <button
+                  onClick={() => { setPayMode("cash"); setReceivedAmount(""); setCashPaid(""); setCardPaid(""); }}
+                  className={cn(
+                    "w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all duration-200",
+                    payMode === "cash"
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100"
+                      : "bg-white border-transparent hover:border-slate-200 text-slate-600"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", payMode === "cash" ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500")}>
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <span className="font-black text-xs">ნაღდი ფულით</span>
+                  </div>
+                  {payMode === "cash" && <div className="h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center"><Plus className="h-2.5 w-2.5 text-white rotate-45" /></div>}
+                </button>
+
+                <button
+                  onClick={() => { setPayMode("card"); setReceivedAmount(""); setCashPaid(""); setCardPaid(""); }}
+                  className={cn(
+                    "w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all duration-200",
+                    payMode === "card"
+                      ? "bg-blue-50 border-blue-500 text-blue-700 shadow-md shadow-blue-100"
+                      : "bg-white border-transparent hover:border-slate-200 text-slate-600"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", payMode === "card" ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-500")}>
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <span className="font-black text-xs">ბარათით TBC/BOG</span>
+                  </div>
+                  {payMode === "card" && <div className="h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center"><Plus className="h-2.5 w-2.5 text-white rotate-45" /></div>}
+                </button>
+
+                <button
+                  onClick={() => { setPayMode("split"); setReceivedAmount(""); }}
+                  className={cn(
+                    "w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all duration-200",
+                    payMode === "split"
+                      ? "bg-slate-800 border-slate-800 text-white shadow-md shadow-slate-200"
+                      : "bg-white border-transparent hover:border-slate-200 text-slate-600"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", payMode === "split" ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-500")}>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                    <span className="font-black text-xs">გაყოფილი გადახდა</span>
+                  </div>
+                  {payMode === "split" && <div className="h-4 w-4 rounded-full bg-white flex items-center justify-center"><Plus className="h-2.5 w-2.5 text-slate-800 rotate-45" /></div>}
+                </button>
+              </div>
+            </div>
+
+            {/* Right Panel: Content */}
+            <div className="flex-1 p-6 flex flex-col bg-white">
+              {payMode === "split" ? (
+                <div className="space-y-8 h-full flex flex-col justify-center">
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">💵 ნაღდი ფული</Label>
+                      <Input
+                        type="number"
+                        value={cashPaid}
+                        onChange={(e) => setCashPaid(e.target.value)}
+                        className="h-16 rounded-2xl bg-emerald-50/50 border-2 border-emerald-100 px-6 font-black text-2xl text-emerald-700 focus:border-emerald-500 focus:ring-0 transition-all"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">💳 ბარათი</Label>
+                      <Input
+                        type="number"
+                        value={cardPaid}
+                        onChange={(e) => setCardPaid(e.target.value)}
+                        className="h-16 rounded-2xl bg-blue-50/50 border-2 border-blue-100 px-6 font-black text-2xl text-blue-700 focus:border-blue-500 focus:ring-0 transition-all"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">👤 მყიდველი (ნისიის შემთხვევაში)</Label>
+                    <Input
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      className="h-16 rounded-2xl bg-slate-50 border-2 border-slate-100 px-6 font-bold text-lg focus:border-primary focus:ring-0 transition-all"
+                      placeholder="სახელი / ნომერი"
+                    />
+                  </div>
+                  {(() => {
+                    const paid = (parseFloat(cashPaid || "0") + parseFloat(cardPaid || "0"));
+                    const debt = cartTotal - paid;
+                    if (debt > 0) {
+                      return (
+                        <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-100 flex justify-between items-center animate-in zoom-in-95">
+                          <span className="font-black text-amber-700 uppercase tracking-widest text-xs">დარჩენილი ნისია</span>
+                          <span className="text-2xl font-black text-amber-700">{debt.toFixed(2)} ₾</span>
+                        </div>
+                      )
+                    }
+                    return null;
+                  })()}
+                </div>
+              ) : (
+                <div className="flex flex-col h-full">
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-9 rounded-xl border-2 border-slate-100 font-black text-[11px] text-primary hover:bg-primary/5 hover:border-primary/20"
+                      onClick={() => setReceivedAmount("50")}
+                    >50 ₾</Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-9 rounded-xl border-2 border-slate-100 font-black text-[11px] text-primary hover:bg-primary/5 hover:border-primary/20"
+                      onClick={() => setReceivedAmount("100")}
+                    >100 ₾</Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-9 rounded-xl border-2 border-slate-100 font-black text-[11px] text-primary hover:bg-primary/5 hover:border-primary/20"
+                      onClick={() => setReceivedAmount(cartTotal.toFixed(2))}
+                    >ზუსტი</Button>
+                  </div>
+
+                  <div className="space-y-1.5 mb-4 text-center">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">მოგაწოდათ</Label>
+                    <div className="h-14 w-full rounded-xl bg-emerald-50 border-2 border-emerald-500 flex items-center justify-center gap-2">
+                      <span className="text-3xl font-black text-emerald-700">{receivedAmount || "0"}</span>
+                      <span className="text-xl font-black text-emerald-500">₾</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 grid grid-cols-3 gap-2 mb-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0].map(val => (
+                      <button
+                        key={val}
+                        onClick={() => {
+                          if (val === "." && receivedAmount.includes(".")) return;
+                          setReceivedAmount(prev => prev + val);
+                        }}
+                        className="h-full min-h-[44px] rounded-xl bg-slate-50 hover:bg-slate-100 font-black text-xl text-slate-800 transition-colors border border-slate-100"
+                      >
+                        {val}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setReceivedAmount("")}
+                      className="h-full min-h-[44px] rounded-xl bg-rose-50 hover:bg-rose-100 font-black text-xl text-rose-600 transition-colors border border-rose-100"
+                    >
+                      C
+                    </button>
+                  </div>
+
+                  {payMode === "cash" && receivedAmount && parseFloat(receivedAmount) > cartTotal && (
+                    <div className="mb-4 p-3 rounded-xl bg-primary/10 border-2 border-primary/20 flex justify-between items-center animate-in slide-in-from-bottom-2">
+                      <span className="font-black text-primary uppercase tracking-widest text-[10px]">დასაბრუნებელი ხურდა</span>
+                      <span className="text-2xl font-black text-primary">{(parseFloat(receivedAmount) - cartTotal).toFixed(2)} ₾</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {payMode === "card" && (
+                      <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-center mb-2">
+                        <p className="text-blue-700 font-black uppercase tracking-widest text-[9px]">გადახდა ხდება ბარათით</p>
+                        <p className="text-xl font-black text-blue-800 mt-0.5">{cartTotal.toFixed(2)} ₾</p>
+                      </div>
+                    )}
+                    <Input
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      className="h-11 rounded-xl bg-slate-50 border border-slate-100 px-4 font-bold text-sm focus:border-primary focus:ring-0 transition-all"
+                      placeholder="მყიდველის სახელი (არასავალდებულო)"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-auto pt-4 flex gap-3">
+                <Button
+                  className="w-full h-14 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 transition-all active:scale-[0.98]"
+                  onClick={() => {
+                    let finalCash = 0;
+                    let finalCard = 0;
+
+                    if (payMode === "cash") {
+                      finalCash = cartTotal;
+                    } else if (payMode === "card") {
+                      finalCard = cartTotal;
+                    } else if (payMode === "split") {
+                      finalCash = parseFloat(cashPaid || "0");
+                      finalCard = parseFloat(cardPaid || "0");
+                    }
+
+                    handleSellAll({
+                      cash: finalCash,
+                      card: finalCard,
+                      client: clientName
+                    });
+                  }}
+                >
+                  დასრულება
+                  <Plus className="h-5 w-5 rotate-45" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* SALES HISTORY — toggle */}
       {showHistory && (
@@ -848,7 +1165,7 @@ export function SalesPage() {
                               <span className="inline-flex items-center rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700 uppercase tracking-tight">
                                 ნაწილობრივი
                               </span>
-                              <span className="text-[9px] font-bold text-muted-foreground ml-1">({sale.paidAmount} ₾)</span>
+                              <span className="text-[9px] font-bold text-muted-foreground ml-1">({(sale.paidInCash + sale.paidInCard).toFixed(2)} ₾)</span>
                             </div>
                           ) : (
                             <span className="inline-flex items-center rounded-lg bg-destructive/10 px-2 py-1 text-[10px] font-black text-destructive uppercase tracking-tight">
@@ -959,11 +1276,19 @@ export function SalesPage() {
                   onChange={(e) => setEditForm({ ...editForm, client: e.target.value })}
                   placeholder="არასავალდებულო" className="h-11 rounded-xl bg-muted/30 border-none px-4 font-medium" />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="editPaid" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">გადახდილი (GEL)</Label>
-                <Input id="editPaid" type="number" step="0.01" min="0" value={editForm.paidAmount}
-                  onChange={(e) => setEditForm({ ...editForm, paidAmount: e.target.value })}
-                  placeholder="სრულიად" className="h-11 rounded-xl bg-primary/5 border-none px-4 font-black text-primary" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="editCash" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ნაღდი (GEL)</Label>
+                  <Input id="editCash" type="number" step="0.01" min="0" value={editForm.paidInCash}
+                    onChange={(e) => setEditForm({ ...editForm, paidInCash: e.target.value })}
+                    className="h-11 rounded-xl bg-primary/5 border-none px-4 font-black text-primary" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="editCard" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ბარათი (GEL)</Label>
+                  <Input id="editCard" type="number" step="0.01" min="0" value={editForm.paidInCard}
+                    onChange={(e) => setEditForm({ ...editForm, paidInCard: e.target.value })}
+                    className="h-11 rounded-xl bg-primary/5 border-none px-4 font-black text-primary" />
+                </div>
               </div>
             </div>
             <div className="p-6 bg-muted/30 flex gap-3 justify-end border-t">
@@ -971,6 +1296,231 @@ export function SalesPage() {
               <Button type="submit" className="rounded-xl font-bold h-11 px-8 shadow-lg shadow-primary/20">შენახვა</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Debts List Modal */}
+      <Dialog open={debtsOpen} onOpenChange={setDebtsOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="p-6 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+            <div className="flex justify-between items-center">
+              <div>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">ვალები & ნისიები</DialogTitle>
+                <p className="text-amber-100 text-xs font-bold mt-1 uppercase tracking-widest opacity-80">მყიდველებისა და მომწოდებლების ვალების მართვა</p>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                <Wallet className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/30">
+            {/* Customer Debts */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground">მყიდველები (ნისია)</h3>
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black">
+                  {groupedCustomerDebts.length} პირი
+                </span>
+              </div>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {groupedCustomerDebts.map(debt => (
+                  <div key={debt.client} className="group p-4 rounded-2xl bg-white border border-border/50 hover:border-amber-400/50 hover:shadow-lg transition-all duration-300">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 font-bold group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                          {debt.client[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-black text-sm tracking-tight">{debt.client}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">{debt.transactions.length} ტრანზაქცია</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-4">
+                        <div>
+                          <p className="font-black text-amber-600">{debt.totalDebt.toFixed(2)} ₾</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">ნაშთი</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl hover:bg-amber-50 text-amber-600"
+                          onClick={() => setSelectedEntity({
+                            name: debt.client,
+                            total: debt.totalDebt,
+                            transactions: debt.transactions,
+                            type: 'customer'
+                          })}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Supplier Debts */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground">მომწოდებლები (ვალი)</h3>
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black">
+                  {groupedSupplierDebts.length} პირი
+                </span>
+              </div>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {groupedSupplierDebts.map(debt => (
+                  <div key={debt.supplier} className="group p-4 rounded-2xl bg-white border border-border/50 hover:border-blue-400/50 hover:shadow-lg transition-all duration-300">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                          {debt.supplier[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-black text-sm tracking-tight">{debt.supplier}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">{debt.transactions.length} ტრანზაქცია</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-4">
+                        <div>
+                          <p className="font-black text-blue-600">{debt.totalDebt.toFixed(2)} ₾</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">ნაშთი</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl hover:bg-blue-50 text-blue-600"
+                          onClick={() => setSelectedEntity({
+                            name: debt.supplier,
+                            total: debt.totalDebt,
+                            transactions: debt.transactions,
+                            type: 'supplier'
+                          })}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Debt Detail & Payoff Modal */}
+      <Dialog open={!!selectedEntity} onOpenChange={(open) => !open && setSelectedEntity(null)}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          {selectedEntity && (
+            <>
+              <DialogHeader className={cn(
+                "p-6 text-white",
+                selectedEntity.type === 'customer' ? "bg-amber-600" : "bg-blue-600"
+              )}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-widest">
+                        {selectedEntity.type === 'customer' ? 'ნისია' : 'ვალი'}
+                      </span>
+                    </div>
+                    <DialogTitle className="text-2xl font-black tracking-tighter uppercase">{selectedEntity.name}</DialogTitle>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-black tracking-tighter">{selectedEntity.total.toFixed(2)} ₾</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">ჯამური დავალიანება</p>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="p-6 bg-white space-y-6">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {selectedEntity.transactions.map((t, idx) => {
+                    const total = t.quantity * (t.salePrice || t.purchasePrice);
+                    const paid = (t.paidInCash || 0) + (t.paidInCard || 0);
+                    const debt = total - paid;
+                    return (
+                      <div key={t.id} className="p-3 rounded-xl bg-muted/30 border border-border/50 flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-xs truncate w-40">{t.productName}</p>
+                          <p className="text-[10px] font-medium text-muted-foreground">{new Date(t.createdAt).toLocaleDateString("ka-GE")}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-black text-xs">{debt.toFixed(2)} ₾</p>
+                          <p className="text-[9px] uppercase font-bold text-muted-foreground">დარჩენილი</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-4 rounded-2xl bg-muted/20 border-2 border-dashed border-border flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">თანხა</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        className="h-11 rounded-xl bg-white border-none font-black text-lg text-primary"
+                        id="payoff-amount-sales"
+                      />
+                    </div>
+                    <div className="w-[120px] space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">მეთოდი</Label>
+                      <select
+                        id="payoff-method-sales"
+                        className="w-full h-11 rounded-xl bg-white border-none font-bold px-2 text-xs appearance-none cursor-pointer"
+                      >
+                        <option value="cash">💵 ნაღდი</option>
+                        <option value="bank">💳 ბანკი</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <Button className={cn(
+                    "w-full h-12 rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg",
+                    selectedEntity.type === 'customer' ? "bg-amber-600 hover:bg-amber-700 shadow-amber-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"
+                  )} onClick={async () => {
+                    const amountInput = document.getElementById('payoff-amount-sales') as HTMLInputElement;
+                    const methodSelect = document.getElementById('payoff-method-sales') as HTMLSelectElement;
+                    const amount = parseFloat(amountInput.value);
+                    const method = methodSelect.value as 'cash' | 'bank';
+
+                    if (!amount || amount <= 0) {
+                      toast.error("შეიყვანეთ ვალიდური თანხა");
+                      return;
+                    }
+                    if (amount > selectedEntity.total) {
+                      toast.error("თანხა აღემატება არსებულ ვალს");
+                      return;
+                    }
+
+                    try {
+                      await store.payoffDebts(selectedEntity.transactions, amount, method, selectedEntity.type);
+                      const remaining = selectedEntity.total - amount;
+                      toast.success("ვალი წარმატებით დაიფარა");
+
+                      // Show confirmation with print option
+                      if (confirm("გსურთ გადახდის ქვითრის ამობეჭდვა?")) {
+                        printPayoffReceipt(selectedEntity.name, amount, remaining, method, selectedEntity.type);
+                      }
+
+                      setSelectedEntity(null);
+                    } catch (err) {
+                      toast.error("შეცდომა ვალის დაფარვისას");
+                    }
+                  }}>
+                    დაფარვა & ბეჭდვა
+                  </Button>
+                </div>
+
+                <Button variant="outline" className="w-full h-11 rounded-xl font-bold uppercase tracking-widest text-[10px]" onClick={() => setSelectedEntity(null)}>
+                  დახურვა
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

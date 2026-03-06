@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'საწყობის მართვის სისტემა - Malema',
-        short_name: 'Malema ERP',
-        description: 'საწყობის მართვა, შესყიდვა, გაყიდვა, ბუღალტერია',
+        name: 'DASTA CLOUD JR - SaaS ERP',
+        short_name: 'DASTA',
+        description: 'ბიზნესის მართვის სისტემა: გაყიდვები, საწყობი, ბუღალტერია',
         start_url: '/',
         display: 'standalone',
         background_color: '#09090b',

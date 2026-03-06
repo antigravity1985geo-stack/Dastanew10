@@ -66,7 +66,10 @@ export function PurchasesPage() {
     purchasePrice: "",
     salePrice: "",
     quantity: "",
-    client: "",
+    supplier: "",
+    client: "", // Keep for compatibility
+    paidInCash: "",
+    paidInCard: "",
   });
   const [editForm, setEditForm] = useState({
     name: "",
@@ -188,7 +191,10 @@ export function PurchasesPage() {
       purchasePrice: parseFloat(form.purchasePrice),
       salePrice: parseFloat(form.salePrice),
       quantity: parseInt(form.quantity),
-      client: form.client.trim(),
+      client: form.supplier.trim() || form.client.trim(), // Map supplier to client
+      supplier: form.supplier.trim() || form.client.trim(),
+      paidInCash: parseFloat(form.paidInCash || "0"),
+      paidInCard: parseFloat(form.paidInCard || "0"),
     });
 
     toast.success("პროდუქცია წარმატებით დაემატა");
@@ -199,7 +205,10 @@ export function PurchasesPage() {
       purchasePrice: "",
       salePrice: "",
       quantity: "",
+      supplier: "",
       client: "",
+      paidInCash: "",
+      paidInCard: "",
     });
     setOpen(false);
   };
@@ -220,7 +229,7 @@ export function PurchasesPage() {
       purchasePrice: String(product.purchasePrice),
       salePrice: String(product.salePrice),
       quantity: String(product.quantity),
-      client: product.client,
+      client: product.client || "",
     });
     setEditOpen(true);
   };
@@ -447,19 +456,60 @@ export function PurchasesPage() {
                     autoFocus
                   />
                 </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <Label htmlFor="client" className="text-foreground">
-                    კლიენტი / მომწოდებელი
+                <div className="col-span-2">
+                  <Label htmlFor="supplier" className="text-foreground">
+                    მომწოდებელი
                   </Label>
                   <Input
-                    id="client"
-                    value={form.client}
+                    id="supplier"
+                    value={form.supplier}
                     onChange={(e) =>
-                      setForm({ ...form, client: e.target.value })
+                      setForm({ ...form, supplier: e.target.value })
                     }
-                    placeholder="არასავალდებულო"
+                    placeholder="მაგ: შპს დასტა"
                     className="mt-1.5"
                   />
+                </div>
+                <div className="col-span-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="paidInCash" className="text-foreground text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">გადახდილი ნაღდით</Label>
+                      <Input
+                        id="paidInCash"
+                        type="number"
+                        step="0.01"
+                        value={form.paidInCash}
+                        onChange={(e) => setForm({ ...form, paidInCash: e.target.value })}
+                        placeholder="0.00"
+                        className="h-10 rounded-xl bg-primary/5 border-none px-4 font-black text-primary"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="paidInCard" className="text-foreground text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">გადახდილი ბარათით</Label>
+                      <Input
+                        id="paidInCard"
+                        type="number"
+                        step="0.01"
+                        value={form.paidInCard}
+                        onChange={(e) => setForm({ ...form, paidInCard: e.target.value })}
+                        placeholder="0.00"
+                        className="h-10 rounded-xl bg-primary/5 border-none px-4 font-black text-primary"
+                      />
+                    </div>
+                  </div>
+                  {form.quantity && form.purchasePrice && (
+                    <div className="mt-2 text-[10px] font-bold text-muted-foreground flex justify-between px-1">
+                      <span>სულ ჯამი: {(parseFloat(form.quantity) * parseFloat(form.purchasePrice)).toFixed(2)} ₾</span>
+                      {(() => {
+                        const total = parseFloat(form.quantity) * parseFloat(form.purchasePrice);
+                        const paid = parseFloat(form.paidInCash || "0") + parseFloat(form.paidInCard || "0");
+                        const debt = total - paid;
+                        if (debt > 0) return <span className="text-amber-600">ვალი: {debt.toFixed(2)} ₾</span>;
+                        if (debt < 0) return <span className="text-emerald-600">ზედმეტობა: {Math.abs(debt).toFixed(2)} ₾</span>;
+                        return <span className="text-emerald-600">სრულად გადახდილი</span>;
+                      })()}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="purchasePrice" className="text-foreground">
@@ -874,10 +924,10 @@ export function PurchasesPage() {
                     <TableRow>
                       <TableHead className="text-foreground w-12">#</TableHead>
                       <TableHead className="text-foreground">პროდუქცია</TableHead>
-                      <TableHead className="text-foreground">კატეგორია</TableHead>
                       <TableHead className="text-foreground">რაოდენობა</TableHead>
                       <TableHead className="text-foreground">შესყიდვის ფასი</TableHead>
-                      <TableHead className="text-foreground">კლიენტი</TableHead>
+                      <TableHead className="text-foreground">გადახდილი</TableHead>
+                      <TableHead className="text-foreground">მომწოდებელი</TableHead>
                       <TableHead className="text-foreground">თარიღი</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -894,13 +944,25 @@ export function PurchasesPage() {
                           <TableCell className="font-medium text-foreground">
                             {(historyCurrentPage - 1) * historyItemsPerPage + index + 1}
                           </TableCell>
-                          <TableCell className="font-medium text-foreground">{ph.productName}</TableCell>
-                          <TableCell className="text-foreground">{ph.category || "-"}</TableCell>
-                          <TableCell className="text-foreground font-semibold text-chart-2">
+                          <TableCell className="font-medium text-foreground">
+                            <div className="flex flex-col">
+                              <span>{ph.productName}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase">{ph.category || "—"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-foreground font-semibold text-emerald-600">
                             +{ph.quantity}
                           </TableCell>
-                          <TableCell className="text-foreground">{ph.purchasePrice.toLocaleString()} GEL</TableCell>
-                          <TableCell className="text-foreground">{ph.client || "-"}</TableCell>
+                          <TableCell className="text-foreground font-bold">{ph.purchasePrice.toLocaleString()} GEL</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-black text-primary">{(ph.paidInCash + ph.paidInCard).toLocaleString()} ₾</span>
+                              {((ph.purchasePrice * ph.quantity) > (ph.paidInCash + ph.paidInCard)) && (
+                                <span className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">ვალი: {((ph.purchasePrice * ph.quantity) - (ph.paidInCash + ph.paidInCard)).toFixed(2)}</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-foreground text-sm font-medium">{ph.supplier || ph.client || "-"}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">
                             {new Date(ph.createdAt).toLocaleString("ka-GE")}
                           </TableCell>

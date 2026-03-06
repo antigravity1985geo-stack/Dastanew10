@@ -8,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-const DISMISS_KEY = 'malema-pwa-install-dismissed'
+const DISMISS_KEY = 'dasta-pwa-install-dismissed'
 
 export function PWAInstallBanner() {
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -103,7 +103,7 @@ export function PWAInstallBanner() {
                     {/* Text */}
                     <div className="flex-1 min-w-0">
                         <p className="text-white font-semibold text-sm leading-tight">
-                            დააინსტალირეთ Malema ERP
+                            დააინსტალირეთ DASTA CLOUD JR
                         </p>
                         <p className="text-zinc-400 text-xs mt-0.5 leading-tight">
                             სწრაფი წვდომა მოწყობილობიდან

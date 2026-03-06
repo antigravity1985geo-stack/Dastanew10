@@ -23,7 +23,7 @@ type SettingsListener = () => void;
 const SETTINGS_KEY = "warehouse_settings";
 
 const DEFAULT_SETTINGS: Settings = {
-  companyName: "საწყობი",
+  companyName: "DASTA CLOUD JR",
   currency: "₾",
   language: "ქართული",
   phone: "",

@@ -48,7 +48,7 @@ export function AIAssistant() {
                         <Sparkles className="h-4 w-4" />
                         <b>სისტემა მზად არის (Level 10)</b>
                     </div>
-                    გამარჯობა! მე ვარ თქვენი <b>Malema Pro Advisor</b>.
+                    გამარჯობა! მე ვარ თქვენი <b>DASTA Pro Advisor</b>.
                     <br />
                     შემიძლია ვმართო აპლიკაცია, დავთვალო მოგება და შევასრულო ოპერაციები.
                 </div>
@@ -152,7 +152,8 @@ export function AIAssistant() {
                         category: args.category || "General",
                         quantity: args.quantity,
                         salePrice: args.salePrice,
-                        paidAmount: args.paidAmount || (args.salePrice * args.quantity),
+                        paidInCash: args.paidInCash || (args.salePrice * args.quantity),
+                        paidInCard: args.paidInCard || 0,
                         status: (args.status as any) || "paid",
                         client: args.client || "AI Assistant"
                     });
@@ -169,7 +170,8 @@ export function AIAssistant() {
                         amount: args.amount,
                         category: args.category || "AI Logged",
                         description: args.description,
-                        date: args.date || new Date().toISOString().split('T')[0]
+                        date: args.date || new Date().toISOString().split('T')[0],
+                        paymentMethod: args.paymentMethod || "cash"
                     });
                     toast.success("ხარჯი დაემატა");
                     return { success: true };
@@ -260,7 +262,7 @@ export function AIAssistant() {
                         <CardTitle className="flex items-center justify-between text-base">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-                                <span className="font-bold">Malema Pro AI</span>
+                                <span className="font-bold">DASTA Pro AI</span>
                             </div>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsOpen(false)}>
                                 <X className="h-4 w-4" />
@@ -357,7 +359,7 @@ export function AIInsightsCard() {
             color: "text-chart-1",
         },
         {
-            title: "საწყობის სტატუსი",
+            title: "ბიზნესის სტატუსი",
             description: `საწყობში ამჟამად არის ${store.totalStock} ლისტი.`,
             icon: Package,
             color: "text-chart-3",

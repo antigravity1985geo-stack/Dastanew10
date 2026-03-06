@@ -48,8 +48,8 @@ export function LoginPage() {
             <Warehouse className="h-7 w-7 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              საწყობის მართვის სისტემა
+            <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
+              DASTA CLOUD JR
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               სისტემაში შესასვლელად შეიყვანეთ მონაცემები

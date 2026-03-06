@@ -372,7 +372,7 @@ function SettingsTab({ settings }: SettingsTabProps) {
 
   const handleSave = () => {
     settings.updateSettings({
-      companyName: companyName.trim() || "საწყობი",
+      companyName: companyName.trim() || "DASTA CLOUD JR",
       currency: currency.trim() || "₾",
       phone: phone.trim(),
       email: email.trim(),
@@ -405,7 +405,7 @@ function SettingsTab({ settings }: SettingsTabProps) {
                 id="company-name"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="საწყობი"
+                placeholder="DASTA CLOUD JR"
               />
             </div>
             <div className="flex flex-col gap-2">

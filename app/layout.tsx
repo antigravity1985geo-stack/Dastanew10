@@ -12,14 +12,14 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'საწყობის მართვის სისტემა',
-  description: 'საწყობის მართვა, შესყიდვა, გაყიდვა, ბუღალტერია',
+  title: 'DASTA CLOUD JR',
+  description: 'ბიზნესის მართვის სისტემა: გაყიდვები, საწყობი, ბუღალტერია',
   generator: 'v0.app',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Malema ERP',
+    title: 'DASTA',
   },
   icons: {
     icon: [

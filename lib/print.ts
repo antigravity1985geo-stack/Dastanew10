@@ -8,7 +8,7 @@ export function printPage(title: string) {
   if (!content) return;
 
   const settings = settingsStore.getSettings();
-  const companyName = settings.companyName || "საწყობი";
+  const companyName = settings.companyName || "DASTA CLOUD JR";
   const currency = settings.currency || "₾";
   const now = new Date();
 
@@ -316,7 +316,7 @@ export function printPage(title: string) {
 
         <!-- FOOTER -->
         <footer class="print-footer">
-          <div>გენერირებულია: <strong>Malema ERP</strong>-ის მიერ</div>
+          <div>გენერირებულია: <strong>DASTA</strong>-ს მიერ</div>
           <div>გვერდი 1/1</div>
         </footer>
 

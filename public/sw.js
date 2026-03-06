@@ -1,4 +1,4 @@
-const CACHE_NAME = 'malema-erp-v1'
+const CACHE_NAME = 'dasta-cloud-jr-v1'
 const STATIC_ASSETS = [
     '/',
     '/icon-192.png',

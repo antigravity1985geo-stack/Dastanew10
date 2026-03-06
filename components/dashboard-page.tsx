@@ -75,7 +75,7 @@ export function DashboardPage() {
       bgColor: "bg-chart-2/10",
     },
     {
-      label: "საწყობის ღირებულება",
+      label: "აქტივების ღირებულება",
       value: `${store.totalSaleValue.toLocaleString()} GEL`,
       icon: ArrowUpRight,
       color: "text-chart-3",
@@ -94,7 +94,7 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="დეშბორდი"
-        description="საწყობის მთლიანი ანალიტიკა"
+        description="ბიზნესის მთლიანი ანალიტიკა"
         printTitle="დეშბორდი - ანალიტიკა"
       />
 
