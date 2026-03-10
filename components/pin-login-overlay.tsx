@@ -31,9 +31,9 @@ export function PINLoginOverlay() {
     };
 
     const handleLogin = async (currentPin: string) => {
-        const success = await store.loginEmployee(currentPin);
-        if (success) {
-            toast.success(`გამარჯობა, ${store.currentEmployee?.name}!`);
+        const employee = await store.loginEmployee(currentPin);
+        if (employee) {
+            toast.success(`გამარჯობა, ${employee.name}!`);
         } else {
             setError(true);
             setPin("");

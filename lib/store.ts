@@ -153,7 +153,7 @@ export interface StoreSnapshot {
 
   // PIN Identification
   currentEmployee: Employee | null;
-  loginEmployee: (pin: string) => Promise<boolean>;
+  loginEmployee: (pin: string) => Promise<Employee | null>;
   logoutEmployee: () => void;
 
   // Debts
@@ -1334,14 +1334,14 @@ class WarehouseStore {
     }
   }
 
-  async loginEmployee(pin: string): Promise<boolean> {
+  async loginEmployee(pin: string): Promise<Employee | null> {
     const employee = this.employees.find(e => e.pinCode === pin);
     if (employee) {
       this.currentEmployee = employee;
       this.notify();
-      return true;
+      return employee;
     }
-    return false;
+    return null;
   }
 
   logoutEmployee() {
