@@ -15,6 +15,15 @@ export function AccessGuard({ children, requiredRole = "ადმინისტ
     const currentEmployee = store.currentEmployee;
     const hasAdmin = store.employees.some(e => e.position === "ადმინისტრატორი");
 
+    // Wait until the store has loaded the employees list from database/localStorage
+    if (!store.initialized) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh] animate-pulse">
+                <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            </div>
+        );
+    }
+
     // 0. Emergency access: If no Administrator exists in the system, 
     // allow access to the Employees page so the user can create one.
     if (!hasAdmin) {

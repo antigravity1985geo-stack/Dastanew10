@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { authStore } from "./auth";
 import { settingsStore } from "./settings";
 import { CHART_OF_ACCOUNTS } from "./coa";
+import { hashPin } from "./utils";
 
 const EMPLOYEE_SESSION_KEY = "dasta_employee_session";
 const SHIFTS_KEY = "dasta_shifts";
@@ -140,6 +141,7 @@ export interface StoreSnapshot {
   lowStockProducts: Product[];
   purchaseHistory: PurchaseHistory[];
   auditLogs: AuditLog[]; // Added Phase 5
+  initialized: boolean; // Added for AccessGuard
 
   // Actions
   addExpense: (expense: Omit<Expense, "id" | "createdAt">) => Promise<void>;
@@ -183,6 +185,7 @@ class WarehouseStore {
   private employees: Employee[] = [];
   private auditLogs: AuditLog[] = []; // Phase 5
   private shifts: Shift[] = [];
+  private currentShift: Shift | null = null;
   private journalEntries: JournalEntry[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
@@ -336,13 +339,39 @@ class WarehouseStore {
         }
       } catch (e) { console.warn("Failed to restore employee session", e); }
 
-      // Restore shifts from localStorage
+      // Restore shifts from localStorage + Supabase
       try {
         const savedShifts = localStorage.getItem(SHIFTS_KEY);
         if (savedShifts) {
-          this.shifts = JSON.parse(savedShifts);
+          const localShifts: Shift[] = JSON.parse(savedShifts);
+          // Only restore open shift if it exists, historical shifts will come from Supabase next
+          const openShift = localShifts.find(s => s.status === 'open');
+          if (openShift) {
+            this.shifts = [openShift];
+            this.currentShift = openShift;
+          }
         }
-      } catch (e) { console.warn("Failed to restore shifts", e); }
+      } catch (e) { console.warn("Failed to restore local shifts", e); }
+
+      try {
+        const { data: dbShifts, error: shiftError } = await supabase.from('shifts').select('*').order('opened_at', { ascending: false }).limit(50);
+        if (!shiftError && dbShifts && dbShifts.length > 0) {
+          const mappedShifts = dbShifts.map(s => this.mapShift(s));
+
+          // DB is the ultimate source of truth, ensure local open shift is accurate
+          const dbOpenShift = mappedShifts.find(s => s.status === 'open');
+          this.shifts = mappedShifts;
+
+          if (dbOpenShift) {
+            this.currentShift = dbOpenShift;
+          } else {
+            // If DB doesn't have an open shift, but local did, we probably missed an offline close.
+            // Or, more safely, just trust the DB
+            this.currentShift = null;
+          }
+          this.persistShifts();
+        }
+      } catch (e) { console.warn("Failed to fetch shifts from Supabase", e); }
 
       this.initialized = true;
       this.notify();
@@ -588,6 +617,7 @@ class WarehouseStore {
       // Accounting Reform
       journalEntries: [...this.journalEntries],
       getAccountBalance: this.getAccountBalance.bind(this),
+      initialized: this.initialized,
     };
 
     return this._cachedSnapshot;
@@ -1272,7 +1302,6 @@ class WarehouseStore {
 
   // Employees
   async addEmployee(employee: Omit<Employee, "id" | "createdAt">) {
-    // #6: PIN uniqueness check
     if (employee.pinCode && this.employees.some(e => e.pinCode === employee.pinCode)) {
       toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
       throw new Error("PIN კოდი უკვე არსებობს");
@@ -1281,8 +1310,17 @@ class WarehouseStore {
     const optimisticId = crypto.randomUUID();
     const optimisticCreatedAt = new Date().toISOString();
 
+    // Hash PIN before saving (simple SHA-256 via crypto.subtle for browser)
+    let hashedPin = employee.pinCode;
+    if (employee.pinCode) {
+      hashedPin = await hashPin(employee.pinCode);
+    }
+
+    // Keep the optimistic update unhashed so the user doesn't see a giant hash locally right away, 
+    // or we hash it so local validation matches. Safer to hash it:
     this.employees.push({
       ...employee,
+      pinCode: hashedPin,
       id: optimisticId,
       createdAt: optimisticCreatedAt
     });
@@ -1295,7 +1333,7 @@ class WarehouseStore {
           name: employee.name,
           position: employee.position,
           phone: employee.phone || "",
-          pin_code: employee.pinCode || ""
+          pin_code: hashedPin || ""
         })
         .select()
         .single();
@@ -1330,16 +1368,20 @@ class WarehouseStore {
     const oldEmployee = this.employees.find(e => e.id === id);
     if (!oldEmployee) return;
 
-    // #6: PIN uniqueness check
-    if (employee.pinCode && this.employees.some(e => e.id !== id && e.pinCode === employee.pinCode)) {
-      toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
-      throw new Error("PIN კოდი უკვე არსებობს");
+    // #6: PIN uniqueness check (only checking if they input a NEW pin that isn't hashed yet)
+    // Note: if employee.pinCode is a raw 4 digit pin, we hash it. If it's already a hash (from UI not changing it), we keep it.
+    let finalPin = oldEmployee.pinCode;
+    if (employee.pinCode && employee.pinCode !== oldEmployee.pinCode) {
+      if (employee.pinCode.length <= 8 && this.employees.some(e => e.id !== id && e.pinCode === employee.pinCode)) {
+        throw new Error("PIN კოდი უკვე არსებობს");
+      }
+      finalPin = await hashPin(employee.pinCode);
     }
 
     const originalData = { ...oldEmployee };
 
     // Optimistic update
-    Object.assign(oldEmployee, employee);
+    Object.assign(oldEmployee, { ...employee, pinCode: finalPin });
     this.notify();
 
     try {
@@ -1349,7 +1391,7 @@ class WarehouseStore {
           name: employee.name,
           position: employee.position,
           phone: employee.phone,
-          pin_code: employee.pinCode
+          pin_code: finalPin
         })
         .eq('id', id);
 
@@ -1379,7 +1421,8 @@ class WarehouseStore {
   }
 
   async loginEmployee(pin: string): Promise<Employee | null> {
-    const employee = this.employees.find(e => e.pinCode === pin);
+    const hashedAttempt = await hashPin(pin);
+    const employee = this.employees.find(e => e.pinCode === hashedAttempt || e.pinCode === pin); // fallback to plain if not migrated
     if (employee) {
       this.currentEmployee = employee;
       try { localStorage.setItem(EMPLOYEE_SESSION_KEY, JSON.stringify(employee.id)); } catch (e) { }

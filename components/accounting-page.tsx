@@ -651,7 +651,7 @@ export function AccountingPage() {
         title="ბუღალტერია"
         description="ფინანსური მაჩვენებლები და ხარჯების მართვა"
         actions={
-          <div className="flex items-center gap-2 flex-wrap">
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -659,7 +659,7 @@ export function AccountingPage() {
               className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold"
             >
               <RefreshCcw className="h-4 w-4" />
-              NBG კურსები
+              <span className="hidden sm:inline">NBG კურსები</span>
             </Button>
             <Button
               variant="outline"
@@ -696,8 +696,10 @@ export function AccountingPage() {
               </div>
               <span className="hidden sm:inline">შიდა გადარიცხვა</span>
             </Button>
-            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
-          </div>
+            <div className="w-full sm:w-auto mt-2 sm:mt-0">
+              <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+            </div>
+          </>
         }
       />
 
@@ -909,48 +911,50 @@ export function AccountingPage() {
 
       {/* TABS OVERVIEW */}
       <Tabs defaultValue="dashboard" className="space-y-8" >
-        <TabsList className="bg-muted/30 p-1 rounded-2xl border border-border/50 h-auto flex-wrap gap-1 justify-start">
-          <TabsTrigger value="dashboard" className="rounded-xl px-6 font-bold gap-2">
-            <PieChartIcon className="h-4 w-4" />
-            დაშბორდი
-          </TabsTrigger>
-          <TabsTrigger value="pnl" className="rounded-xl px-6 font-bold gap-2">
-            <TrendingUp className="h-4 w-4" />
-            მოგება-ზარალი
-          </TabsTrigger>
-          <TabsTrigger value="cash-flow" className="rounded-xl px-6 font-bold gap-2">
-            <ArrowRightLeft className="h-4 w-4" />
-            ფულადი ნაკადები
-          </TabsTrigger>
-          <TabsTrigger value="journal" className="rounded-xl px-6 font-bold gap-2">
-            <History className="h-4 w-4" />
-            ჟურნალი
-          </TabsTrigger>
-          <TabsTrigger value="hr-budget" className="rounded-xl px-6 font-bold gap-2">
-            <Briefcase className="h-4 w-4" />
-            HR & ბიუჯეტი
-          </TabsTrigger>
-          <TabsTrigger value="tax-assets" className="rounded-xl px-6 font-bold gap-2">
-            <Calculator className="h-4 w-4" />
-            გადასახადები & ცვეთა
-          </TabsTrigger>
-          <TabsTrigger value="coa" className="rounded-xl px-6 font-bold gap-2">
-            <Landmark className="h-4 w-4" />
-            ანგარიშთა გეგმა
-          </TabsTrigger>
-          <TabsTrigger value="expenses" className="rounded-xl px-6 font-bold gap-2">
-            <Receipt className="h-4 w-4" />
-            ხარჯები
-          </TabsTrigger>
-          <TabsTrigger value="debts" className="rounded-xl px-6 font-bold gap-2">
-            <Users className="h-4 w-4" />
-            ვალები & ნისიები
-          </TabsTrigger>
-          <TabsTrigger value="security" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm gap-2">
-            <Shield className="h-4 w-4 text-primary" />
-            უსაფრთხოება
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar">
+          <TabsList className="bg-muted/30 p-1 rounded-2xl border border-border/50 h-auto inline-flex flex-nowrap min-w-max gap-1 justify-start">
+            <TabsTrigger value="dashboard" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <PieChartIcon className="h-4 w-4" />
+              დაშბორდი
+            </TabsTrigger>
+            <TabsTrigger value="pnl" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <TrendingUp className="h-4 w-4" />
+              მოგება-ზარალი
+            </TabsTrigger>
+            <TabsTrigger value="cash-flow" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <ArrowRightLeft className="h-4 w-4" />
+              ფულადი ნაკადები
+            </TabsTrigger>
+            <TabsTrigger value="journal" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <History className="h-4 w-4" />
+              ჟურნალი
+            </TabsTrigger>
+            <TabsTrigger value="hr-budget" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <Briefcase className="h-4 w-4" />
+              HR & ბიუჯეტი
+            </TabsTrigger>
+            <TabsTrigger value="tax-assets" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <Calculator className="h-4 w-4" />
+              გადასახადები & ცვეთა
+            </TabsTrigger>
+            <TabsTrigger value="coa" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <Landmark className="h-4 w-4" />
+              ანგარიშთა გეგმა
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <Receipt className="h-4 w-4" />
+              ხარჯები
+            </TabsTrigger>
+            <TabsTrigger value="debts" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
+              <Users className="h-4 w-4" />
+              ვალები & ნისიები
+            </TabsTrigger>
+            <TabsTrigger value="security" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm gap-2 whitespace-nowrap">
+              <Shield className="h-4 w-4 text-primary" />
+              უსაფრთხოება
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="dashboard" className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
           {/* Summary Cards */}

@@ -20,8 +20,8 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 pb-6 sm:flex-row sm:items-center sm:justify-between">
-      <div>
+    <div className="flex flex-row flex-wrap items-start justify-between gap-2 sm:gap-4 pb-4 sm:pb-6">
+      <div className="flex-1 min-w-[200px]">
         <h1 className="text-2xl font-black tracking-tight text-foreground text-balance">
           {title}
         </h1>
@@ -31,17 +31,17 @@ export function PageHeader({
           </p>
         )}
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2 w-full sm:w-auto mt-1 sm:mt-0">
         {children}
         {actions}
         <Button
           variant="outline"
           size="sm"
           onClick={() => printPage(printTitle || title)}
-          className="gap-2"
+          className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold"
         >
           <Printer className="h-4 w-4" />
-          ბეჭდვა
+          <span className="hidden sm:inline">ბეჭდვა</span>
         </Button>
       </div>
     </div>

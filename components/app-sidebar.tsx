@@ -111,6 +111,12 @@ export function AppSidebar() {
             const isActive =
               pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href));
+
+            // SECURITY: Completely hide the menu item if it requires admin and the current user is not an admin.
+            if (item.requiresAdmin && store.currentEmployee?.position !== "ადმინისტრატორი") {
+              return null;
+            }
+
             return (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
@@ -127,9 +133,6 @@ export function AppSidebar() {
                   <Link href={item.href} className="flex-1 flex items-center gap-3">
                     <item.icon className="h-4 w-4" />
                     <span className="flex-1">{item.label}</span>
-                    {item.requiresAdmin && store.currentEmployee?.position !== "ადმინისტრატორი" && (
-                      <Lock className="h-3 w-3 opacity-40 ml-auto" />
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
