@@ -1,4 +1,6 @@
-// Settings Store - localStorage based
+// Settings Store - Supabase-synced with localStorage fallback
+
+import { supabase } from "./supabase";
 
 export interface Settings {
   companyName: string;
@@ -12,21 +14,21 @@ export interface Settings {
   // RS.GE Settings
   rsgeUsername?: string;
   rsgePassword?: string;
-  rsgeTin?: string;               // Company TIN / საიდენტიფიკაციო ნომერი
+  rsgeTin?: string;
   rsgeAutoSend?: boolean;
-  rsgeAutoInvoice?: boolean;      // Auto send tax invoice with waybill
-  rsgeDefaultWaybillType?: 1 | 2 | 3; // 1=Internal, 2=External, 3=Transfer
+  rsgeAutoInvoice?: boolean;
+  rsgeDefaultWaybillType?: 1 | 2 | 3;
   rsgeRequireRecipientTin?: boolean;
   // Fiscal Settings
   fiscalType?: "none" | "digital" | "physical";
   fiscalAutoPrint?: boolean;
-  deletePin?: string;
-  closedUntil?: string; // Phase 5: Period Closing
+  closedUntil?: string;
 }
 
 type SettingsListener = () => void;
 
 const SETTINGS_KEY = "warehouse_settings";
+const SUPABASE_SETTINGS_KEY = "app_settings"; // Row key in settings table
 
 const DEFAULT_SETTINGS: Settings = {
   companyName: "DASTA CLOUD JR",
@@ -46,16 +48,17 @@ const DEFAULT_SETTINGS: Settings = {
   rsgeRequireRecipientTin: false,
   fiscalType: "none",
   fiscalAutoPrint: false,
-  deletePin: "1234",
 };
 
 class SettingsStore {
   private settings: Settings = { ...DEFAULT_SETTINGS };
   private listeners: Set<SettingsListener> = new Set();
   private _cachedSnapshot: Settings | null = null;
+  private syncedFromSupabase = false;
 
   constructor() {
     if (typeof window !== "undefined") {
+      // 1. Load from localStorage first (instant, offline-ready)
       try {
         const saved = localStorage.getItem(SETTINGS_KEY);
         if (saved) {
@@ -64,6 +67,50 @@ class SettingsStore {
       } catch {
         // ignore
       }
+
+      // 2. Then sync from Supabase (async, latest source of truth)
+      this.loadFromSupabase();
+    }
+  }
+
+  private async loadFromSupabase() {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', SUPABASE_SETTINGS_KEY)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("Settings: Supabase fetch failed (table might not exist):", error.message);
+        return;
+      }
+
+      if (data?.value) {
+        this.settings = { ...DEFAULT_SETTINGS, ...data.value };
+        this.persistLocal();
+        this.syncedFromSupabase = true;
+        this.notify();
+      }
+    } catch (err) {
+      console.warn("Settings: Supabase sync failed:", err);
+    }
+  }
+
+  private async saveToSupabase() {
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .upsert(
+          { key: SUPABASE_SETTINGS_KEY, value: this.settings, updated_at: new Date().toISOString() },
+          { onConflict: 'key' }
+        );
+
+      if (error) {
+        console.warn("Settings: Supabase save failed:", error.message);
+      }
+    } catch (err) {
+      console.warn("Settings: Supabase save error:", err);
     }
   }
 
@@ -76,7 +123,7 @@ class SettingsStore {
     this.listeners.forEach((l) => l());
   }
 
-  private persist() {
+  private persistLocal() {
     if (typeof window !== "undefined") {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings));
     }
@@ -96,7 +143,8 @@ class SettingsStore {
 
   updateSettings(updates: Partial<Settings>) {
     this.settings = { ...this.settings, ...updates };
-    this.persist();
+    this.persistLocal();
+    this.saveToSupabase();
     this.notify();
   }
 
@@ -106,7 +154,8 @@ class SettingsStore {
 
   importSettings(settings: Settings) {
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
-    this.persist();
+    this.persistLocal();
+    this.saveToSupabase();
     this.notify();
   }
 }
