@@ -195,28 +195,28 @@ const sections = [
         bg: "bg-emerald-500/10",
         content: [
             {
-                title: "რაარის RS.GE ინტეგრაცია?",
-                desc: "DASTA ინტეგრირებულია საქართველოს შემოსავლების სამსახურის პორტალთან (RS.GE). APEX-ისა და FINA-ს ანალოგიურად, შეგიძლიათ: ზედნადების გაგზავნა, დადასტურება/უარყოფა, დახურვა, ანგარიშ-ფაქტურის გაგზავნა — ყოველაფერი RS.GE-ზე გასვლად აპლიკაციიდან."
+                title: "რა არის RS.GE ინტეგრაცია?",
+                desc: "DASTA ინტეგრირებულია საქართველოს შემოსავლების სამსახურის პორტალთან (RS.GE). APEX-ისა და FINA-ს ანალოგიურად, შეგიძლიათ: ზედნადების გაგზავნა, დადასტურება/უარყოფა, დახურვა, ანგარიშ-ფაქტურის გაგზავნა — ყველაფერი RS.GE-ზე გადასვლის გარეშე, პირდაპირ აპლიკაციიდან."
             },
             {
-                title: "გააქტივება — ადმინ პანელი საჩიროები",
-                desc: "გადით ადმინ პანელი → RS.GE ინტეგრაცია. შეყვანეთ აქაური 4 მონაცემი: 1) სერვის-მომხმარებელი (Username) 2) პაროლი 3) საიდენტიფიკაციო ნომერი (ს/ნ). შემდეგ დააჭირეთ 'კავშირის ტესტი' ღილაკის გასასაკვეთლად. ✅ ნიშანის გაჩენა ნიშნავს კავშირი წარმათებულია."
+                title: "გააქტივება — პარამეტრები",
+                desc: "შედით ადმინ პანელი → RS.GE ინტეგრაცია. შეიყვანეთ აქაური 4 მონაცემი: 1) სერვის-მომხმარებელი (Username) 2) პაროლი 3) საიდენტიფიკაციო ნომერი (ს/ნ). შემდეგ დააჭირეთ 'კავშირის ტესტი' ღილაკს დასაკავშირებლად. ✅ ნიშანის გაჩენა ნიშნავს, რომ კავშირი წარმატებულია."
             },
             {
-                title: "RS.GE ღილაკი ადმინ პანელში",
-                desc: "ვინაიდან გაგაკეთება: ნაგულისხმევი ზედნადების ტიპი (შიდა/გარე/გადაადგილება), ავტომატური გაგზავნა გაყიდვისას, ანგარიშ-ფაქტურას ავტომატური გაგზავნა."
+                title: "ავტომატური წესები (ადმინ პანელი)",
+                desc: "აქ შეგიძლიათ მიუთითოთ: ნაგულისხმევი ზედნადების ტიპი (შიდა/გარე/გადაადგილება), ავტომატური გაგზავნა გაყიდვისას, ანგარიშ-ფაქტურის ავტო-გაგზავნა."
             },
             {
                 title: "ზედნადების გაგზავნა გაყიდვებისას (POS)",
-                desc: "გადით გაყიდვა. კალათში დაამატეთ კარტში. დააჭირეთ ჩეკ-აუტი. აქ კარტაში დააჭირეთ [RS.GE] ღილაკი. ჩაირთვება მწვანე ემერალდი ბლოკი, სადაც შეგიძლიათ შეავსეთ მყიდველის ს/ნ და ზედნადების ტიპი. გაყიდვის დადასტურებისას ზედნადები ავტომატურად გაიგზავნება RS.GE-ზე."
+                desc: "გადადით გაყიდვებში. დაამატეთ პროდუქტი კალათაში. დააჭირეთ 'გადახდა/Check-out'. აქ კალათაში დააჭირეთ [RS.GE] ღილაკს. ჩაირთვება მწვანე ბლოკი, სადაც შეგიძლიათ შეავსოთ მყიდველის ს/ნ და ზედნადების ტიპი. გაყიდვის დადასტურებისას ზედნადები ავტომატურად გაიგზავნება RS.GE-ზე."
             },
             {
-                title: "RS.GE სამართავი გვერდი",
-                desc: "მარცენა ავტომატური გაგზავნისა, RS.GE მენიუდან გვერდვე (პანელიდან თოვითვით სანავიგაციაში) გაგვაძლებს ყველა გაგზავნილი ზედნადებების სიას. ღილაკები: [სინქრ.] — RS.GE-დან განახლება, [დადასტურე] — მიღებულის მიერად დადასტურება, [უარყოფა] — ზედნადების უარყოფა, [დახურვა] — მიწოდების შემდეგ დახურვა, [წაშლა] — სამუშაო ზედნადების ნაკვეთი."
+                title: "RS.GE სამართავი პანელი",
+                desc: "RS.GE მენიუ (მარცხენა ნავიგაციაში) გაჩვენებთ ყველა გაგზავნილი ზედნადების სიას. ღილაკები:\n• [სინქრ.]: RS.GE-დან სტატუსების განახლება.\n• [დადასტურება]: მიღებული ზედნადების დადასტურება.\n• [უარყოფა]: ზედნადების უარყოფა.\n• [დახურვა]: მიწოდების შემდეგ ზედნადების დასრულება.\n• [წაშლა]: სამუშაო ვერსიის წაშლა."
             },
             {
                 title: "ანგარიშ-ფაქტურა RS.GE-ზე",
-                desc: "RS.GE სამართავი გვერდის ზედა დააჭირეთ [ანგარიშ-ფაქტურა]. შეყვანეთ მყიდველის ს/ნ, სახელი და საქონებს/მომსახურებას. დააჭირეთ [გაგზავნა RS.GE-ზე]. თუ ადმინ პანელში ანგარიშ-ფაქტურის ავტოგაგზავნა ჩართულია, აგრეთ იგი ავტომატურად გაგზავნდება ზედნადებისთან ერთად."
+                desc: "RS.GE სამართავი გვერდის ზედა ნაწილში დააჭირეთ [ანგარიშ-ფაქტურა]. შეიყვანეთ მყიდველის ს/ნ, სახელი და საქონელი/მომსახურება. დააჭირეთ [გაგზავნა RS.GE-ზე]. თუ ადმინ პანელში ავტოგაგზავნა ჩართულია, იგი ავტომატურად გაიგზავნება ზედნადებთან ერთად."
             }
         ]
     }
@@ -235,120 +235,187 @@ export function GuidePage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700 max-w-6xl mx-auto pb-20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
-                <PageHeader
-                    title="სისტემის გზამკვლევი"
-                    description="ისწავლეთ DASTA-ს ყველა ფუნქცია და მართეთ თქვენი ბიზნესი ეფექტურად"
-                />
-                <Button
-                    variant="outline"
-                    className="rounded-xl flex items-center gap-2 h-12 px-6 font-bold border-2 hover:bg-primary hover:text-white transition-all shadow-lg"
-                    onClick={handlePrint}
-                >
-                    <Printer className="h-4 w-4" />
-                    PDF ჩამოტვირთვა
-                </Button>
-            </div>
-
-            <div className="relative print:hidden">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    placeholder="მოძებნეთ ფუნქცია ან ინსტრუქცია..."
-                    className="pl-12 h-14 rounded-2xl bg-muted/30 border-none text-lg font-medium shadow-inner"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Navigation Sidebar */}
-                <div className="md:col-span-1 space-y-3 print:hidden">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground px-4 mb-4">კატეგორიები</h3>
-                    {sections.map((s) => (
-                        <a
-                            key={s.id}
-                            href={`#${s.id}`}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 transition-all font-bold text-sm text-foreground/70 hover:text-primary group"
+        <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 max-w-7xl mx-auto pb-32 px-4 sm:px-6 lg:px-8 pt-8">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 print:hidden">
+                    <div className="max-w-2xl">
+                        <PageHeader
+                            title="სისტემის გზამკვლევი"
+                            description="ყველაფერი რაც გჭირდებათ DASTA-ს ეფექტურად გამოყენებისთვის. დეტალური ინსტრუქციები, რჩევები და საუკეთესო პრაქტიკა თქვენი ბიზნესის ზრდისთვის."
+                        />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="outline"
+                            className="rounded-2xl flex items-center gap-2 h-14 px-8 font-bold border-2 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all duration-300 shadow-sm group active:scale-95"
+                            onClick={handlePrint}
                         >
-                            <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center transition-all", s.bg)}>
-                                <s.icon className={cn("h-4 w-4", s.color)} />
-                            </div>
-                            {s.title}
-                            <ChevronRight className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-                        </a>
-                    ))}
-
-                    <Card className="mt-8 border-none bg-gradient-to-br from-primary/10 to-transparent rounded-2xl overflow-hidden">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">გჭირდებათ დახმარება?</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                                თუ ვერ იპოვნეთ თქვენთვის საინტერესო ფუნქცია, დაუკავშირდით მხარდაჭერის ჯგუფს.
-                            </p>
-                            <Button size="sm" variant="outline" className="w-full rounded-lg font-bold text-[10px] uppercase">კონტაქტი</Button>
-                        </CardContent>
-                    </Card>
+                            <Printer className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            დაბეჭდვა / PDF
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="md:col-span-2 space-y-12">
-                    {filteredSections.map((s) => (
-                        <div key={s.id} id={s.id} className="scroll-mt-24">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg", s.bg)}>
-                                    <s.icon className={cn("h-7 w-7", s.color)} />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-black tracking-tight">{s.title}</h2>
-                                    <p className="text-sm text-muted-foreground font-medium">სექციის დეტალური მიმოხილვა</p>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4">
-                                {s.content.map((c, i) => (
-                                    <Card key={i} className="border-border/50 shadow-sm rounded-2xl hover:shadow-md transition-all group overflow-hidden border-l-4" style={{ borderColor: `var(--${s.id}-color)` }}>
-                                        <CardHeader className="pb-3">
-                                            <div className="flex items-center justify-between">
-                                                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                                    <div className={cn("h-1.5 w-1.5 rounded-full", s.color.replace('text', 'bg'))} />
-                                                    {c.title}
-                                                </CardTitle>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <p className="text-muted-foreground text-sm leading-relaxed font-medium">
-                                                {c.desc}
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-
-                    {filteredSections.length === 0 && (
-                        <div className="text-center py-20 bg-muted/20 rounded-3xl border-2 border-dashed border-muted-foreground/20">
-                            <div className="bg-muted p-4 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Info className="h-8 w-8 text-muted-foreground/50" />
-                            </div>
-                            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">შედეგი ვერ მოიძებნა</h3>
-                            <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2 italic">სცადეთ სხვა საკვანძო სიტყვა ან მოძებნეთ კატეგორიების მიხედვით</p>
-                        </div>
-                    )}
+                {/* Search Bar */}
+                <div className="relative print:hidden group max-w-4xl mx-auto w-full">
+                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                        <Search className="h-6 w-6 text-muted-foreground group-focus-within:text-primary transition-all duration-300" />
+                    </div>
+                    <Input
+                        placeholder="მოძებნეთ ფუნქცია, ინსტრუქცია ან RS.GE..."
+                        className="pl-16 h-20 rounded-[2rem] bg-card/50 backdrop-blur-xl border-2 border-muted hover:border-primary/20 focus:border-primary text-xl shadow-2xl shadow-primary/5 transition-all duration-500 placeholder:text-muted-foreground/60"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter text-muted-foreground/40 bg-muted/30 px-3 py-1.5 rounded-full border border-border/50">
+                        <span className="text-primary/60">Search</span> Instant
+                    </div>
                 </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                    {/* Navigation Sidebar (Sticky) */}
+                    <div className="lg:col-span-3 space-y-3 sticky top-12 print:hidden hidden md:block">
+                        <div className="mb-8 px-4 relative">
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary/60 mb-2">ნავიგაცია</h3>
+                            <div className="h-1.5 w-12 bg-gradient-to-r from-primary/40 to-transparent rounded-full"></div>
+                        </div>
+                        <nav className="flex flex-col gap-2">
+                            {sections.map((s) => (
+                                <a
+                                    key={s.id}
+                                    href={`#${s.id}`}
+                                    className="flex items-center gap-4 px-4 py-4 rounded-2xl hover:bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 font-bold text-[13px] text-foreground/70 hover:text-primary group border border-transparent hover:border-primary/10 active:scale-[0.98]"
+                                >
+                                    <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:rotate-6 group-hover:scale-110 shadow-sm", s.bg)}>
+                                        <s.icon className={cn("h-5 w-5", s.color)} />
+                                    </div>
+                                    <span className="flex-1 text-left tracking-tight">{s.title}</span>
+                                    <ChevronRight className="h-4 w-4 text-primary/0 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-4 group-hover:translate-x-0" />
+                                </a>
+                            ))}
+                        </nav>
+
+                        <Card className="mt-12 border-primary/10 bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-[2rem] overflow-hidden shadow-2xl shadow-primary/5 group">
+                            <CardHeader className="p-8 pb-4">
+                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+                                    <Info className="h-6 w-6 text-primary" />
+                                </div>
+                                <CardTitle className="text-lg font-black tracking-tight">გჭირდებათ დახმარება?</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8 pt-0">
+                                <p className="text-xs text-muted-foreground leading-relaxed mb-6 font-medium">
+                                    ვერ იპოვეთ სასურველი ინფორმაცია? ჩვენი გუნდი მზადაა ნებისმიერ დროს დაგეხმაროთ.
+                                </p>
+                                <Button className="w-full rounded-xl font-black text-xs uppercase tracking-widest h-12 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 active:scale-95">
+                                    კონტაქტი
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Main Content Areas */}
+                    <div className="lg:col-span-9 space-y-24">
+                        {filteredSections.map((s) => (
+                            <div key={s.id} id={s.id} className="scroll-mt-40 relative group/section">
+                                {/* Section Header */}
+                                <div className="flex items-center gap-6 mb-12">
+                                    <div className={cn("h-20 w-20 shrink-0 rounded-3xl flex items-center justify-center shadow-2xl shadow-primary/10 border border-border/50 bg-gradient-to-br from-white to-transparent transform transition-transform duration-700 group-hover/section:rotate-3", s.bg)}>
+                                        <s.icon className={cn("h-10 w-10", s.color)} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="px-3 py-1 rounded-full bg-muted text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Module</span>
+                                            <div className={cn("h-1.5 w-12 rounded-full", s.color.replace('text-', 'bg-'))} />
+                                        </div>
+                                        <h2 className="text-3xl sm:text-5xl font-black tracking-tighter text-foreground leading-none">{s.title}</h2>
+                                    </div>
+                                </div>
+
+                                {/* Section Cards List */}
+                                <div className="grid gap-6">
+                                    {s.content.map((c, i) => {
+                                        const highlightMatch = (text: string) => {
+                                            if (!searchQuery) return text;
+                                            const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'));
+                                            return parts.map((part, i) =>
+                                                part.toLowerCase() === searchQuery.toLowerCase() ?
+                                                    <mark key={i} className="bg-primary/20 text-primary rounded-sm px-1 font-bold italic">{part}</mark> : part
+                                            );
+                                        };
+
+                                        return (
+                                            <Card key={i} className="group/item border-border/40 shadow-sm rounded-[1.5rem] hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 overflow-hidden bg-white/50 backdrop-blur-md border-r-0 border-t-0 border-b-0 border-l-[10px]" style={{ borderLeftColor: `rgba(var(--primary-rgb), ${0.1 + (i * 0.1)})` }}>
+                                                <div className="p-8 sm:p-10">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h4 className="text-xl font-black tracking-tight text-foreground group-hover/item:text-primary transition-colors duration-300">
+                                                            {highlightMatch(c.title)}
+                                                        </h4>
+                                                        <div className="h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all duration-300 translate-x-4 group-hover/item:translate-x-0">
+                                                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-muted-foreground text-[15px] leading-8 whitespace-pre-wrap font-medium">
+                                                        {highlightMatch(c.desc)}
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Empty State */}
+                        {filteredSections.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-40 px-6 text-center bg-card/30 backdrop-blur-xl rounded-[3rem] border-4 border-dashed border-muted/50">
+                                <div className="bg-background shadow-2xl p-8 rounded-[2rem] mb-8 relative animate-pulse">
+                                    <Search className="h-12 w-12 text-primary/40" />
+                                    <div className="absolute -top-2 -right-2 h-6 w-6 bg-primary rounded-full flex items-center justify-center">
+                                        <div className="h-2 w-2 bg-white rounded-full" />
+                                    </div>
+                                </div>
+                                <h3 className="text-3xl font-black mb-4 tracking-tighter">შედეგი ვერ მოიძებნა</h3>
+                                <p className="text-muted-foreground text-lg max-w-md mx-auto font-medium">
+                                    სამწუხაროდ, ძიების კრიტერიუმით "{searchQuery}" ინფორმაცია არ მოიძებნა. სცადეთ სხვა სიტყვა ან გამოიყენეთ მარცხენა მენიუ.
+                                </p>
+                                <Button 
+                                    className="mt-10 rounded-2xl h-14 px-10 font-black tracking-widest uppercase text-xs shadow-xl shadow-primary/20"
+                                    onClick={() => setSearchQuery("")}
+                                >
+                                    ძიების გასუფთავება
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <style jsx global>{`
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+                    
+                    :root {
+                        --primary-rgb: 59, 130, 246;
+                    }
+
+                    .guide-container {
+                        font-family: 'Inter', sans-serif;
+                    }
+
+                    @media print {
+                        .print\\:hidden { display: none !important; }
+                        body { background: white !important; color: black !important; }
+                        .scroll-mt-40 { scroll-margin-top: 0 !important; margin-top: 3rem; page-break-inside: avoid; }
+                        .rounded-3xl, .rounded-\\[2rem\\], .rounded-\\[3rem\\] { border-radius: 12px !important; }
+                        .shadow-sm, .shadow-xl, .shadow-2xl { box-shadow: none !important; border: 1px solid #eee !important; }
+                        .bg-white\\/50 { background: white !important; }
+                    }
+
+                    ::selection {
+                        background: rgba(var(--primary-rgb), 0.2);
+                        color: rgb(var(--primary-rgb));
+                    }
+                `}</style>
             </div>
-
-            <style jsx global>{`
-        @media print {
-          .print\\:hidden { display: none !important; }
-          body { background: white !important; color: black !important; }
-          .scroll-mt-24 { scroll-margin-top: 0 !important; margin-top: 2rem; page-break-inside: avoid; }
-          .rounded-2xl { border-radius: 4px !important; }
-          .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #eee !important; }
-        }
-      `}</style>
         </div>
     );
 }
