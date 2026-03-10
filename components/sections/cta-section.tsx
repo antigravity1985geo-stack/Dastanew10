@@ -36,7 +36,7 @@ export function CTASection() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] md:w-[800px] h-[400px] md:h-[800px] rounded-full border border-primary/20 animate-pulse" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[600px] h-[300px] md:h-[600px] rounded-full border border-primary/30 animate-pulse" style={{ animationDelay: "0.5s" }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] md:w-[400px] h-[200px] md:h-[400px] rounded-full border border-primary/40 animate-pulse" style={{ animationDelay: "1s" }} />
-        
+
         {/* Floating particles - fixed positions to avoid hydration mismatch */}
         <div className="hidden md:block">
           {[
@@ -72,9 +72,8 @@ export function CTASection() {
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">
         <div
-          className={`max-w-4xl mx-auto text-center transition-all duration-1000 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-          }`}
+          className={`max-w-4xl mx-auto text-center transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            }`}
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 glass px-3 md:px-4 py-2 rounded-full mb-6 md:mb-8 animate-pulse">
@@ -115,9 +114,9 @@ export function CTASection() {
 
           {/* Contact Options */}
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 md:gap-8 mb-10 md:mb-16">
-            <a href="tel:+995555123456" className="flex items-center justify-center gap-2 text-sm md:text-base text-muted-foreground hover:text-foreground transition-colors">
+            <a href="tel:+995557504141" className="flex items-center justify-center gap-2 text-sm md:text-base text-muted-foreground hover:text-foreground transition-colors">
               <Phone className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-              <span>+995 555 123 456</span>
+              <span>+995 557 50 41 41</span>
             </a>
             <a href="mailto:info@dastacloud.ge" className="flex items-center justify-center gap-2 text-sm md:text-base text-muted-foreground hover:text-foreground transition-colors">
               <Mail className="w-4 h-4 md:w-5 md:h-5 text-primary" />
