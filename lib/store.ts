@@ -482,6 +482,21 @@ class WarehouseStore {
     };
   }
 
+  private mapShift(s: any): Shift {
+    return {
+      id: s.id,
+      employeeId: s.employee_id || s.employeeId,
+      employeeName: s.employee_name || s.employeeName || "",
+      openedAt: s.opened_at || s.openedAt,
+      closedAt: s.closed_at || s.closedAt,
+      openingCash: Number(s.opening_cash ?? s.openingCash) || 0,
+      expectedCash: s.expected_cash != null ? Number(s.expected_cash) : (s.expectedCash != null ? Number(s.expectedCash) : undefined),
+      actualCash: s.actual_cash != null ? Number(s.actual_cash) : (s.actualCash != null ? Number(s.actualCash) : undefined),
+      variance: s.variance != null ? Number(s.variance) : undefined,
+      status: s.status as 'open' | 'closed'
+    };
+  }
+
   private handleRealtimeProduct(payload: any) {
     const { eventType, new: newRow, old: oldRow } = payload;
 
