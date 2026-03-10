@@ -853,7 +853,7 @@ export function SalesPage() {
             variant="ghost"
             size="sm"
             onClick={() => store.logoutEmployee()}
-            className="hidden md:flex items-center gap-2 bg-primary/5 hover:bg-orange-50 border border-primary/10 hover:border-orange-200 px-2 py-0.5 h-8 rounded-lg transition-colors group"
+            className="flex items-center gap-2 bg-primary/5 hover:bg-orange-50 border border-primary/10 hover:border-orange-200 px-2 py-0.5 h-8 rounded-lg transition-colors group"
             title="მოლარის შეცვლა"
           >
             <User className="h-3 w-3 text-primary/60 group-hover:text-orange-500" />
