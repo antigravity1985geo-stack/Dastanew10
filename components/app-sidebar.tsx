@@ -154,6 +154,20 @@ export function AppSidebar() {
             </div>
           </div>
         )}
+        {store.currentEmployee && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => store.logoutEmployee()}
+            className={cn(
+              "w-full justify-start gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 font-bold",
+              isCollapsed && "px-2"
+            )}
+          >
+            <LogOut className="h-4 w-4" />
+            {!isCollapsed && <span>მოლარის გასვლა</span>}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -164,7 +178,7 @@ export function AppSidebar() {
           )}
         >
           <LogOut className="h-4 w-4" />
-          {!isCollapsed && <span>გასვლა</span>}
+          {!isCollapsed && <span>სისტემიდან გასვლა</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>

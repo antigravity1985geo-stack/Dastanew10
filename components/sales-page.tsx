@@ -861,10 +861,17 @@ export function SalesPage() {
 
         {/* Operator Info */}
         {store.currentEmployee && (
-          <div className="hidden md:flex items-center gap-2 bg-primary/5 border border-primary/10 px-2 py-0.5 rounded-lg">
-            <User className="h-3 w-3 text-primary/60" />
-            <span className="text-[11px] font-black">{store.currentEmployee.name}</span>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => store.logoutEmployee()}
+            className="hidden md:flex items-center gap-2 bg-primary/5 hover:bg-orange-50 border border-primary/10 hover:border-orange-200 px-2 py-0.5 h-8 rounded-lg transition-colors group"
+            title="მოლარის შეცვლა"
+          >
+            <User className="h-3 w-3 text-primary/60 group-hover:text-orange-500" />
+            <span className="text-[11px] font-black group-hover:text-orange-600">{store.currentEmployee.name}</span>
+            <LogOut className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 text-orange-500 transition-opacity" />
+          </Button>
         )}
       </div>
     );
