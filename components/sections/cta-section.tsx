@@ -155,7 +155,7 @@ export function CTASection() {
               <a href="#" className="hover:text-foreground transition-colors">კონტაქტი</a>
             </div>
             <p className="text-xs md:text-sm text-muted-foreground">
-              &copy; 2024 DASTA CLOUD. ყველა უფლება დაცულია.
+              &copy; 2026 DASTA CLOUD. ყველა უფლება დაცულია.
             </p>
           </div>
         </div>
