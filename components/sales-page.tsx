@@ -770,18 +770,6 @@ export function SalesPage() {
   const handleCloseShift = async () => {
     try {
       await store.closeShift(parseFloat(closingCashInput || "0"));
-
-      // Auto-generate Z-Report on close
-      try {
-        const res = await fiscalService.printZReport();
-        if (res.success) {
-          toast.success("Z-რეპორტი წარმატებით დაიბეჭდა");
-        }
-      } catch (zErr) {
-        console.error("Z-Report failed:", zErr);
-        toast.error("ცვლა დაიხურა, მაგრამ Z-რეპორტის ბეჭდვა ვერ მოხერხდა");
-      }
-
       setShiftOpenModal(false);
       setClosingCashInput("");
     } catch (e: any) {

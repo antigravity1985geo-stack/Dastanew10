@@ -4,6 +4,9 @@ import { authStore } from "./auth";
 import { settingsStore } from "./settings";
 import { CHART_OF_ACCOUNTS } from "./coa";
 
+const EMPLOYEE_SESSION_KEY = "dasta_employee_session";
+const SHIFTS_KEY = "dasta_shifts";
+
 export interface JournalEntry {
   id: string;
   date: string;
@@ -323,6 +326,24 @@ class WarehouseStore {
         }));
       }
 
+      // Restore employee session from localStorage
+      try {
+        const savedEmpId = localStorage.getItem(EMPLOYEE_SESSION_KEY);
+        if (savedEmpId) {
+          const empId = JSON.parse(savedEmpId);
+          const emp = this.employees.find(e => e.id === empId);
+          if (emp) this.currentEmployee = emp;
+        }
+      } catch (e) { console.warn("Failed to restore employee session", e); }
+
+      // Restore shifts from localStorage
+      try {
+        const savedShifts = localStorage.getItem(SHIFTS_KEY);
+        if (savedShifts) {
+          this.shifts = JSON.parse(savedShifts);
+        }
+      } catch (e) { console.warn("Failed to restore shifts", e); }
+
       this.initialized = true;
       this.notify();
 
@@ -608,8 +629,8 @@ class WarehouseStore {
       status: 'open'
     };
 
-    // In a real app, this would be a Supabase call
     this.shifts.push(newShift);
+    this.persistShifts();
     this.notify();
     toast.success("ცვლა გახსნილია");
   }
@@ -638,6 +659,7 @@ class WarehouseStore {
     shift.actualCash = actualCash;
     shift.variance = variance;
 
+    this.persistShifts();
     this.notify();
 
     if (Math.abs(variance) > 0.1) {
@@ -645,6 +667,12 @@ class WarehouseStore {
     } else {
       toast.success("ცვლა დაიხურა ხარვეზების გარეშე");
     }
+  }
+
+  private persistShifts() {
+    try {
+      localStorage.setItem(SHIFTS_KEY, JSON.stringify(this.shifts));
+    } catch (e) { console.warn("Failed to persist shifts", e); }
   }
 
   subscribe(listener: StoreListener) {
@@ -1338,6 +1366,7 @@ class WarehouseStore {
     const employee = this.employees.find(e => e.pinCode === pin);
     if (employee) {
       this.currentEmployee = employee;
+      try { localStorage.setItem(EMPLOYEE_SESSION_KEY, JSON.stringify(employee.id)); } catch (e) { }
       this.notify();
       return employee;
     }
@@ -1346,6 +1375,7 @@ class WarehouseStore {
 
   logoutEmployee() {
     this.currentEmployee = null;
+    try { localStorage.removeItem(EMPLOYEE_SESSION_KEY); } catch (e) { }
     this.notify();
   }
 
