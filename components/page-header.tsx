@@ -20,25 +20,25 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-row flex-wrap items-start justify-between gap-2 sm:gap-4 pb-4 sm:pb-6">
-      <div className="flex-1 min-w-[200px]">
-        <h1 className="text-2xl font-black tracking-tight text-foreground text-balance">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-border/10 mb-6">
+      <div className="flex-1 min-w-0">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground truncate">
           {title}
         </h1>
         {description && (
-          <p className="text-[11px] font-bold text-muted-foreground/70 mt-1 uppercase tracking-widest leading-none">
+          <p className="text-[10px] sm:text-[11px] font-bold text-muted-foreground/60 mt-1 uppercase tracking-widest leading-none">
             {description}
           </p>
         )}
       </div>
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+      <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 w-full sm:w-auto">
         {children}
         {actions}
         <Button
           variant="outline"
           size="sm"
           onClick={() => printPage(printTitle || title)}
-          className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold"
+          className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold h-9 sm:h-10 rounded-xl"
         >
           <Printer className="h-4 w-4" />
           <span className="hidden sm:inline">ბეჭდვა</span>

@@ -656,15 +656,16 @@ export function AccountingPage() {
               variant="outline"
               size="sm"
               onClick={handleUpdateRates}
-              className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold"
+              className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold h-9 sm:h-10 rounded-xl shrink-0"
             >
               <RefreshCcw className="h-4 w-4" />
-              <span className="hidden sm:inline">NBG კურსები</span>
+              <span className="hidden md:inline">NBG კურსები</span>
+              <span className="md:hidden inline text-[10px]">NBG</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white text-slate-700"
+              className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white text-slate-700 h-9 sm:h-10 rounded-xl shrink-0"
               onClick={() => printFinancialReport({
                 revenue: finances.totalSales,
                 profit: finances.totalSales - finances.totalPurchases,
@@ -676,25 +677,28 @@ export function AccountingPage() {
               })}
             >
               <DownloadCloud className="h-4 w-4" />
-              <span className="hidden sm:inline">ანგარიში (PDF)</span>
+              <span className="hidden md:inline">ანგარიში (PDF)</span>
+              <span className="md:hidden inline text-[10px]">PDF</span>
             </Button>
 
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 shadow-sm font-bold border-blue-100 bg-blue-50/30 hover:bg-blue-50 text-blue-700"
+              className="gap-2 shadow-sm font-bold border-blue-100 bg-blue-50/30 hover:bg-blue-50 text-blue-700 h-9 sm:h-10 rounded-xl shrink-0"
               onClick={() => setIsBankImportOpen(true)}
             >
               <History className="h-4 w-4" />
-              <span className="hidden sm:inline">ბანკის იმპორტი</span>
+              <span className="hidden md:inline">ბანკის იმპორტი</span>
+              <span className="md:hidden inline text-[10px]">იმპორტი</span>
             </Button>
 
-            <Button variant="outline" size="sm" className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white" onClick={() => setIsTransferOpen(true)}>
+            <Button variant="outline" size="sm" className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white h-9 sm:h-10 rounded-xl shrink-0" onClick={() => setIsTransferOpen(true)}>
               <div className="flex -space-x-1.5 items-center">
                 <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
                 <ArrowDownRight className="h-3.5 w-3.5 text-rose-600" />
               </div>
-              <span className="hidden sm:inline">შიდა გადარიცხვა</span>
+              <span className="hidden md:inline">შიდა გადარიცხვა</span>
+              <span className="md:hidden inline text-[10px]">გადარიცხვა</span>
             </Button>
             <div className="w-full sm:w-auto mt-2 sm:mt-0">
               <DatePickerWithRange date={dateRange} setDate={setDateRange} />
@@ -911,8 +915,8 @@ export function AccountingPage() {
 
       {/* TABS OVERVIEW */}
       <Tabs defaultValue="dashboard" className="space-y-8" >
-        <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar">
-          <TabsList className="bg-muted/30 p-1 rounded-2xl border border-border/50 h-auto inline-flex flex-nowrap min-w-max gap-1 justify-start">
+        <div className="w-full overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40 transition-colors">
+          <TabsList className="bg-muted/30 p-1.5 rounded-2xl border border-border/50 h-auto inline-flex flex-nowrap min-w-max gap-1.5 justify-start">
             <TabsTrigger value="dashboard" className="rounded-xl px-6 font-bold gap-2 whitespace-nowrap">
               <PieChartIcon className="h-4 w-4" />
               დაშბორდი
