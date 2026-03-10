@@ -477,7 +477,7 @@ class WarehouseStore {
       name: e.name,
       position: e.position,
       phone: e.phone || "",
-      pinCode: e.pin_code || "",
+      pinCode: e.pin_code ? String(e.pin_code) : "",
       createdAt: e.created_at
     };
   }
@@ -1423,7 +1423,14 @@ class WarehouseStore {
   async loginEmployee(pin: string): Promise<Employee | null> {
     const hashedAttempt = await hashPin(pin);
     const employee = this.employees.find(e => e.pinCode === hashedAttempt || e.pinCode === pin); // fallback to plain if not migrated
+
     if (employee) {
+      if (employee.pinCode === pin && employee.pinCode !== hashedAttempt) {
+        // Auto-migrate: Force hash the old plain-text PIN
+        employee.pinCode = hashedAttempt; // Optimistic local update
+        supabase.from('employees').update({ pin_code: hashedAttempt }).eq('id', employee.id).then();
+      }
+
       this.currentEmployee = employee;
       try { localStorage.setItem(EMPLOYEE_SESSION_KEY, JSON.stringify(employee.id)); } catch (e) { }
       this.notify();
