@@ -46,6 +46,19 @@ export const syncQueue = {
     async process() {
         if (typeof window === "undefined") return;
 
+        // Cleanup old success items (older than 24h)
+        try {
+            const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+            const oldItems = await outboxDB.outbox
+                .where('status')
+                .equals('success')
+                .filter(item => item.createdAt < cutoff)
+                .toArray();
+            if (oldItems.length > 0) {
+                await outboxDB.outbox.bulkDelete(oldItems.map(i => i.id!));
+            }
+        } catch (e) { /* ignore cleanup errors */ }
+
         const now = Date.now();
         const pending = await outboxDB.outbox
             .where('status')

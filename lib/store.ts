@@ -384,6 +384,7 @@ class WarehouseStore {
       salePrice: Number(p.sale_price) || 0,
       wholesalePrice: Number(p.wholesale_price) || 0,
       quantity: p.quantity || 0,
+      minStockLevel: p.min_stock_level != null ? Number(p.min_stock_level) : undefined,
       client: p.client || "",
       createdAt: p.created_at || new Date().toISOString()
     };
@@ -749,12 +750,11 @@ class WarehouseStore {
       this.notify();
 
       // Supabase update
-      supabase.from('products').update(updates).eq('id', existing.id).then(({ error }) => {
-        if (error) {
-          console.error("Error updating product:", error);
-          toast.error("შეცდომა პროდუქტის განახლებისას");
-        }
-      });
+      const { error: updateError } = await supabase.from('products').update(updates).eq('id', existing.id);
+      if (updateError) {
+        console.error("Error updating product:", updateError);
+        toast.error("შეცდომა პროდუქტის განახლებისას");
+      }
 
       // Log action
       this.logAction({
@@ -892,6 +892,8 @@ class WarehouseStore {
     if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
     if (updates.salePrice !== undefined) dbUpdates.sale_price = updates.salePrice;
+    if (updates.wholesalePrice !== undefined) dbUpdates.wholesale_price = updates.wholesalePrice;
+    if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
     if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
     if (updates.client !== undefined) dbUpdates.client = updates.client;
 
@@ -1139,8 +1141,10 @@ class WarehouseStore {
           referenceId: dbSale.id,
           referenceType: 'sale',
           transactions: [
-            // 1. Revenue & Payment
-            { accountCode: dbSale.paid_in_cash ? '1110' : '1210', debit: saleAmount, credit: 0 }, // Cash/Bank increases
+            // 1. Revenue & Payment — split between cash and card
+            ...(dbSale.paid_in_cash > 0 ? [{ accountCode: '1110', debit: dbSale.paid_in_cash, credit: 0 }] : []),
+            ...(dbSale.paid_in_card > 0 ? [{ accountCode: '1210', debit: dbSale.paid_in_card, credit: 0 }] : []),
+            ...((saleAmount - dbSale.paid_in_cash - dbSale.paid_in_card) > 0.01 ? [{ accountCode: '1410', debit: saleAmount - dbSale.paid_in_cash - dbSale.paid_in_card, credit: 0 }] : []),
             { accountCode: '6110', debit: 0, credit: saleAmount }, // Revenue increases
 
             // 2. COGS & Inventory
@@ -1268,6 +1272,12 @@ class WarehouseStore {
 
   // Employees
   async addEmployee(employee: Omit<Employee, "id" | "createdAt">) {
+    // #6: PIN uniqueness check
+    if (employee.pinCode && this.employees.some(e => e.pinCode === employee.pinCode)) {
+      toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
+      throw new Error("PIN კოდი უკვე არსებობს");
+    }
+
     const optimisticId = crypto.randomUUID();
     const optimisticCreatedAt = new Date().toISOString();
 
@@ -1319,6 +1329,12 @@ class WarehouseStore {
   async updateEmployee(id: string, employee: Partial<Omit<Employee, "id" | "createdAt">>) {
     const oldEmployee = this.employees.find(e => e.id === id);
     if (!oldEmployee) return;
+
+    // #6: PIN uniqueness check
+    if (employee.pinCode && this.employees.some(e => e.id !== id && e.pinCode === employee.pinCode)) {
+      toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
+      throw new Error("PIN კოდი უკვე არსებობს");
+    }
 
     const originalData = { ...oldEmployee };
 
@@ -1563,8 +1579,15 @@ class WarehouseStore {
     this.products = [];
     this.sales = [];
     this.purchaseHistory = [];
-    this.expenses = []; // Added
-    this.employees = []; // Added
+    this.expenses = [];
+    this.employees = [];
+    this.auditLogs = [];
+    this.journalEntries = [];
+    this.shifts = [];
+    // Clear localStorage shift/session data
+    try { localStorage.removeItem(SHIFTS_KEY); } catch (e) { }
+    try { localStorage.removeItem(EMPLOYEE_SESSION_KEY); } catch (e) { }
+    this.currentEmployee = null;
     this.notify();
 
     try {
@@ -1614,6 +1637,9 @@ class WarehouseStore {
       quantity: s.quantity,
       sale_price: s.salePrice,
       total_amount: s.totalAmount,
+      paid_in_cash: s.paidInCash || 0,
+      paid_in_card: s.paidInCard || 0,
+      status: s.status || 'paid',
       client: s.client,
       created_at: s.createdAt
     }));
@@ -1623,6 +1649,9 @@ class WarehouseStore {
       amount: e.amount,
       category: e.category,
       description: e.description,
+      payment_method: e.paymentMethod || 'cash',
+      currency: e.currency || 'GEL',
+      exchange_rate: e.exchangeRate || 1,
       date: e.date,
       created_at: e.createdAt
     }));
