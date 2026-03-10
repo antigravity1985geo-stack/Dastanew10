@@ -66,11 +66,14 @@ export function PurchasesPage() {
     barcode: "",
     purchasePrice: "",
     salePrice: "",
+    wholesalePrice: "",
     quantity: "",
     supplier: "",
     client: "", // Keep for compatibility
     paidInCash: "",
     paidInCard: "",
+    currency: "GEL" as "GEL" | "USD" | "EUR",
+    exchangeRate: "1",
   });
   const [editForm, setEditForm] = useState({
     name: "",
@@ -78,6 +81,7 @@ export function PurchasesPage() {
     barcode: "",
     purchasePrice: "",
     salePrice: "",
+    wholesalePrice: "",
     quantity: "",
     client: "",
   });
@@ -164,6 +168,7 @@ export function PurchasesPage() {
           category: (row["კატეგორია"] || row["category"] || "").trim(),
           purchasePrice,
           salePrice,
+          wholesalePrice: parseFloat(row["საბითუმო ფასი"] || row["wholesalePrice"] || String(salePrice)),
           quantity,
           client: (row["კლიენტი"] || row["client"] || "").trim(),
         });
@@ -207,12 +212,15 @@ export function PurchasesPage() {
         barcode: form.barcode.trim(),
         purchasePrice: parseFloat(form.purchasePrice),
         salePrice: parseFloat(form.salePrice),
+        wholesalePrice: form.wholesalePrice ? parseFloat(form.wholesalePrice) : parseFloat(form.salePrice),
         quantity: parseInt(form.quantity),
         client: form.supplier.trim() || form.client.trim(),
         supplier: form.supplier.trim() || form.client.trim(),
         paidInCash: parseFloat(form.paidInCash || "0"),
         paidInCard: parseFloat(form.paidInCard || "0"),
         imageUrl,
+        currency: form.currency,
+        exchangeRate: parseFloat(form.exchangeRate) || 1,
       });
 
       toast.success("პროდუქცია წარმატებით დაემატა");
@@ -222,11 +230,14 @@ export function PurchasesPage() {
         barcode: "",
         purchasePrice: "",
         salePrice: "",
+        wholesalePrice: "",
         quantity: "",
         supplier: "",
         client: "",
         paidInCash: "",
         paidInCard: "",
+        currency: "GEL",
+        exchangeRate: "1",
       });
       setImageFile(null);
       setImagePreview(null);
@@ -253,6 +264,7 @@ export function PurchasesPage() {
       barcode: product.barcode || "",
       purchasePrice: String(product.purchasePrice),
       salePrice: String(product.salePrice),
+      wholesalePrice: product.wholesalePrice !== undefined ? String(product.wholesalePrice) : "",
       quantity: String(product.quantity),
       client: product.client || "",
     });
@@ -283,6 +295,10 @@ export function PurchasesPage() {
         quantity: parseInt(editForm.quantity),
         client: editForm.client.trim(),
       };
+
+      if (editForm.wholesalePrice) {
+        updates.wholesalePrice = parseFloat(editForm.wholesalePrice);
+      }
 
       if (imageUrl) {
         updates.imageUrl = imageUrl;
@@ -429,7 +445,7 @@ export function PurchasesPage() {
               პროდუქციის დამატება
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">
                 ახალი პროდუქციის დამატება
@@ -542,11 +558,14 @@ export function PurchasesPage() {
                             barcode: existingProduct.barcode || newBarcode,
                             purchasePrice: String(existingProduct.purchasePrice),
                             salePrice: String(existingProduct.salePrice),
+                            wholesalePrice: existingProduct.wholesalePrice !== undefined ? String(existingProduct.wholesalePrice) : "",
                             quantity: "", // Leave quantity empty for new purchase
                             client: existingProduct.client || "",
                             supplier: "",
                             paidInCash: "",
                             paidInCard: "",
+                            currency: "GEL",
+                            exchangeRate: "1",
                           });
                           toast.success(`პროდუქტი ამოცნობილია: ${existingProduct.name}`);
                         }
@@ -613,22 +632,48 @@ export function PurchasesPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="purchasePrice" className="text-foreground">
-                    შესყიდვის ფასი (GEL) *
-                  </Label>
-                  <Input
-                    id="purchasePrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.purchasePrice}
-                    onChange={(e) =>
-                      setForm({ ...form, purchasePrice: e.target.value })
-                    }
-                    placeholder="0.00"
-                    className="mt-1.5"
-                    required
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="purchasePrice">შესყიდვის ფასი *</Label>
+                      <Input
+                        id="purchasePrice"
+                        type="number"
+                        step="0.01"
+                        value={form.purchasePrice}
+                        onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">ვალუტა</Label>
+                      <select
+                        id="currency"
+                        value={form.currency}
+                        onChange={(e) => setForm({ ...form, currency: e.target.value as any })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="GEL">GEL (₾)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {form.currency !== "GEL" && (
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="exchangeRate">კურსი (1 {form.currency} = ? GEL) *</Label>
+                      <Input
+                        id="exchangeRate"
+                        type="number"
+                        step="0.0001"
+                        value={form.exchangeRate}
+                        onChange={(e) => setForm({ ...form, exchangeRate: e.target.value })}
+                        placeholder="მაგ: 2.65"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="salePrice" className="text-foreground">
@@ -646,6 +691,23 @@ export function PurchasesPage() {
                     placeholder="0.00"
                     className="mt-1.5"
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="wholesalePrice" className="text-foreground text-muted-foreground">
+                    საბითუმო ფასი (GEL)
+                  </Label>
+                  <Input
+                    id="wholesalePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.wholesalePrice}
+                    onChange={(e) =>
+                      setForm({ ...form, wholesalePrice: e.target.value })
+                    }
+                    placeholder="არასავალდებულო"
+                    className="mt-1.5"
                   />
                 </div>
                 <div className="col-span-2">
@@ -682,7 +744,7 @@ export function PurchasesPage() {
           </DialogContent>
         </Dialog>
       </PageHeader>
-      <div className="animate-in fade-in duration-700">
+      <div id="print-area" className="animate-in fade-in duration-700">
         <Tabs defaultValue="stock" className="space-y-8">
           <TabsList className="bg-muted/40 p-1 rounded-2xl border border-border/50 mb-8 max-w-md">
             <TabsTrigger value="stock" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">მიმდინარე ნაშთი</TabsTrigger>
@@ -781,7 +843,7 @@ export function PurchasesPage() {
                     შესყიდული პროდუქცია ({filteredProducts.length})
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-muted/30">
                       <TableRow>
@@ -1056,7 +1118,7 @@ export function PurchasesPage() {
                     შესყიდვების ლოგი ({filteredHistory.length})
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1150,7 +1212,7 @@ export function PurchasesPage() {
 
         {/* Edit Dialog */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">
                 პროდუქციის რედაქტირება
@@ -1300,6 +1362,22 @@ export function PurchasesPage() {
                     }
                     className="mt-1.5"
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editWholesalePrice" className="text-foreground text-muted-foreground">
+                    საბითუმო ფასი (GEL)
+                  </Label>
+                  <Input
+                    id="editWholesalePrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.wholesalePrice}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, wholesalePrice: e.target.value })
+                    }
+                    className="mt-1.5"
                   />
                 </div>
                 <div className="col-span-2">

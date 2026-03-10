@@ -2,8 +2,6 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
-import { AuthGuard } from '@/components/auth-guard'
-import { AppShell } from '@/components/app-shell'
 import { PWAInstallBanner } from '@/components/pwa-install-banner'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import './globals.css'
@@ -46,11 +44,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ka">
+    <html lang="ka" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <AuthGuard>
-          <AppShell>{children}</AppShell>
-        </AuthGuard>
+        {children}
         <PWAInstallBanner />
         <ServiceWorkerRegister />
         <Toaster position="top-right" richColors />

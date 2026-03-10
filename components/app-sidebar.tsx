@@ -13,6 +13,7 @@ import {
   User,
   Users,
   Lock,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,7 +34,7 @@ import {
 const navItems = [
   {
     label: "დეშბორდი",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
@@ -65,7 +66,20 @@ const navItems = [
     icon: Shield,
     requiresAdmin: true,
   },
+  {
+    label: "გზამკვლევი",
+    href: "/guide",
+    icon: BookOpen,
+  },
+  {
+    label: "RS.GE",
+    href: "/rsge",
+    icon: Link2,
+    requiresAdmin: true,
+  },
 ];
+
+import { ModeToggle } from "@/components/mode-toggle";
 
 export function AppSidebar() {
   const pathname = usePathname();

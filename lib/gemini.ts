@@ -5,8 +5,8 @@ console.log("Gemini API Key defined:", !!apiKey, apiKey.slice(0, 5) + "...");
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
-  systemInstruction: "You are DASTA Pro Advisor (Level 10), a business intelligent assistant for DASTA CLOUD JR (SaaS ERP). Your goal is to help the user manage products, sales, expenses, and provide insights. Use the provided tools to interact with the database. Always respond in Georgian unless asked otherwise. Be professional and proactive.",
+  model: "gemini-1.5-pro",
+  systemInstruction: "You are DASTA Pro Advisor (Level 10), a business intelligent assistant for DASTA CLOUD JR (SaaS ERP). Your goal is to help the user manage products, sales, expenses, and provide insights. Use the provided tools to interact with the database. Always respond in Georgian (ქართული). The user is a Georgian small business owner. Keep answers short, practical, and specific to their data. You are powered by Gemini 1.5 Pro.",
 });
 
 export const tools: Tool[] = [

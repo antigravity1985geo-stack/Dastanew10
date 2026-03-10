@@ -36,42 +36,51 @@
   --sidebar-accent: oklch(0.28 0.04 250);
   --sidebar-accent-foreground: oklch(0.92 0.01 250);
   --sidebar-border: oklch(0.3 0.03 250);
-  --sidebar-ring: oklch(0.55 0.2 250);
+  --sidebar-ring: oklch(0.45 0.18 250);
+
+  /* ERP Glow Effects */
+  --glow-primary: oklch(0.65 0.2 250);
+  --glow-accent: oklch(0.55 0.25 170);
 }
 
 .dark {
-  --background: oklch(0.13 0.015 250);
-  --foreground: oklch(0.95 0.005 250);
-  --card: oklch(0.17 0.02 250);
-  --card-foreground: oklch(0.95 0.005 250);
-  --popover: oklch(0.17 0.02 250);
-  --popover-foreground: oklch(0.95 0.005 250);
-  --primary: oklch(0.55 0.2 250);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.25 0.02 250);
-  --secondary-foreground: oklch(0.92 0.01 250);
-  --muted: oklch(0.22 0.02 250);
-  --muted-foreground: oklch(0.65 0.02 250);
-  --accent: oklch(0.55 0.15 160);
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.45 0.18 27);
-  --destructive-foreground: oklch(0.65 0.22 27);
-  --border: oklch(0.28 0.02 250);
-  --input: oklch(0.28 0.02 250);
-  --ring: oklch(0.55 0.2 250);
-  --chart-1: oklch(0.55 0.2 250);
-  --chart-2: oklch(0.6 0.15 160);
-  --chart-3: oklch(0.7 0.18 40);
-  --chart-4: oklch(0.65 0.18 300);
-  --chart-5: oklch(0.7 0.15 80);
-  --sidebar: oklch(0.15 0.02 250);
-  --sidebar-foreground: oklch(0.92 0.01 250);
-  --sidebar-primary: oklch(0.55 0.2 250);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.03 250);
-  --sidebar-accent-foreground: oklch(0.92 0.01 250);
-  --sidebar-border: oklch(0.25 0.02 250);
-  --sidebar-ring: oklch(0.55 0.2 250);
+  --background: oklch(0.08 0.01 260);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.12 0.01 260);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.12 0.01 260);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.65 0.2 250);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0.01 260);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.2 0.01 260);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.55 0.25 170);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.25 0.01 260);
+  --input: oklch(0.2 0.01 260);
+  --ring: oklch(0.65 0.2 250);
+  --chart-1: oklch(0.65 0.2 250);
+  --chart-2: oklch(0.55 0.25 170);
+  --chart-3: oklch(0.7 0.15 50);
+  --chart-4: oklch(0.65 0.2 320);
+  --chart-5: oklch(0.6 0.2 30);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.1 0.01 260);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.65 0.2 250);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.18 0.01 260);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(0.25 0.01 260);
+  --sidebar-ring: oklch(0.65 0.2 250);
+
+  /* ERP Glow Effects */
+  --glow-primary: oklch(0.65 0.2 250);
+  --glow-accent: oklch(0.55 0.25 170);
 }
 
 @theme inline {
@@ -113,12 +122,15 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-glow-primary: var(--glow-primary);
+  --color-glow-accent: var(--glow-accent);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -129,8 +141,9 @@
     size: auto;
     margin: 15mm;
   }
-  
-  html, body {
+
+  html,
+  body {
     background-color: transparent !important;
     background-image: none !important;
     color: black !important;
@@ -140,11 +153,19 @@
     padding: 0 !important;
     overflow: visible !important;
   }
-  
+
   /* Hide sidebars, navigation, scroll-areas, and buttons when printing natively */
-  nav, aside, button, footer, header:not(.print-header), 
-  [role="dialog"], [data-radix-scroll-area-viewport],
-  .no-print, .pagination, input, select {
+  nav,
+  aside,
+  button,
+  footer,
+  header:not(.print-header),
+  [role="dialog"],
+  [data-radix-scroll-area-viewport],
+  .no-print,
+  .pagination,
+  input,
+  select {
     display: none !important;
   }
 
@@ -160,19 +181,22 @@
     width: 100% !important;
     page-break-inside: auto !important;
   }
-  
+
   tr {
     page-break-inside: avoid !important;
     page-break-after: auto !important;
   }
-  
-  th, td {
+
+  th,
+  td {
     padding: 8px !important;
     border: 1px solid #ddd !important;
   }
 
   /* Improve Card appearance for printing */
-  .border, .rounded-xl, .shadow-sm {
+  .border,
+  .rounded-xl,
+  .shadow-sm {
     border-color: #ddd !important;
     box-shadow: none !important;
     border-radius: 4px !important;
@@ -184,4 +208,307 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
+
+/* --- Premium AI Insights Card Styles --- */
+.ai-insights-outer {
+  width: 100%;
+  min-height: 200px;
+  border-radius: 16px;
+  padding: 1px;
+  background: radial-gradient(circle 400px at 0% 0%, rgba(56, 189, 248, 0.3), #0f172a);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-insights-dot {
+  width: 6px;
+  aspect-ratio: 1;
+  position: absolute;
+  background-color: #38bdf8;
+  box-shadow: 0 0 15px #38bdf8;
+  border-radius: 100px;
+  z-index: 2;
+  right: 10%;
+  top: 10%;
+  animation: moveDot 8s linear infinite;
+}
+
+@keyframes moveDot {
+
+  0%,
+  100% {
+    top: 5%;
+    right: 5%;
+  }
+
+  25% {
+    top: 5%;
+    right: calc(100% - 25px);
+  }
+
+  50% {
+    top: calc(100% - 25px);
+    right: calc(100% - 25px);
+  }
+
+  75% {
+    top: calc(100% - 25px);
+    right: 5%;
+  }
+}
+
+.ai-insights-card {
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  border: solid 1px rgba(56, 189, 248, 0.1);
+  background: radial-gradient(circle 500px at 0% 0%, #1e293b, #0c1222);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  color: #fff;
+  padding: 1.5rem;
+}
+
+.ai-insights-ray {
+  width: 300px;
+  height: 60px;
+  border-radius: 100px;
+  position: absolute;
+  background-color: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 60px rgba(56, 189, 248, 0.15);
+  filter: blur(20px);
+  transform-origin: 10%;
+  top: -10%;
+  left: -5%;
+  transform: rotate(35deg);
+  pointer-events: none;
+}
+
+.ai-insights-line {
+  width: 100%;
+  height: 1px;
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.ai-insights-topl {
+  top: 10%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+}
+
+.ai-insights-bottoml {
+  bottom: 10%;
+  background: linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.05) 100%);
+}
+
+.ai-insights-leftl {
+  left: 10%;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+}
+
+.ai-insights-rightl {
+  right: 10%;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent 30%, rgba(255, 255, 255, 0.05) 100%);
+}
+
+.ai-insights-title-text {
+  font-weight: 900;
+  font-size: 1.25rem;
+  background: linear-gradient(45deg, #888, #fff, #888);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* --- Landing Page (FIRST PAGE) Specific Styles --- */
+
+/* Scroll-driven animations - GPU optimized */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes data-flow {
+  0% {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(50px) rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg) translateX(50px) rotate(-360deg);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Utility classes - GPU accelerated with will-change */
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 30s linear infinite;
+  will-change: transform;
+}
+
+.animate-data-flow {
+  animation: data-flow 3s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+  will-change: background-position;
+}
+
+.animate-orbit {
+  animation: orbit 12s linear infinite;
+  will-change: transform;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+/* 3D Perspective */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Glass morphism - simplified for performance */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, oklch(0.65 0.2 250), oklch(0.55 0.25 170));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Scroll snap */
+.scroll-snap-y {
+  scroll-snap-type: y mandatory;
+}
+
+.scroll-snap-start {
+  scroll-snap-align: start;
+}
+
+/* Hide scrollbar but allow scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

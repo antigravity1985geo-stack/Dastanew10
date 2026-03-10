@@ -1,0 +1,59 @@
+# DASTA ERP - Project Overview
+
+This document presents a comprehensive overview of the DASTA ERP system, designed for a full technical audit and review.
+
+## 1. Technical Stack
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Database / Auth**: Supabase (PostgreSQL with RLS)
+- **Styling**: Tailwind CSS + Shadcn UI
+- **AI Integration**: Gemini 1.5 Pro (via Google AI SDK)
+- **Deployment**: Vercel
+
+## 2. Core Modules
+
+### 🛒 Point of Sale (POS)
+- **Interactive Cart**: Supports scanning (Barcode/QR), manual entry, and multiple items.
+- **Payment Modes**: Cash, Card (TBC/BOG terminal integration simulation), and Split payments.
+- **Credit (Nisia)**: Allows partial payments with debt tracking for specific clients.
+- **Receipts**: Generation of professional invoices (PDF) and Thermal Printer receipts.
+- **Held Sales**: Ability to pause and resume current shopping sessions.
+
+### 📦 Warehouse Management
+- **Inventory Tracking**: Real-time stock levels with category-based filtering.
+- **Purchase History**: Automated logging of stock entries and supplier information.
+- **Barcode System**: In-browser barcode/QR code generation and scanning.
+- **Multi-Currency**: Support for GEL, USD, and EUR with automated exchange rate calculations.
+
+### 📊 Accounting & Reporting
+- **Profit & Loss**: Automated calculation of Revenue, COGS, Expenses, and Net Profit.
+- **Expense Tracking**: Categorized business expenses with payment method tracking.
+- **Z-Reports**: Detailed daily sales summaries.
+- **Auditing**: Full Row-Level Security (RLS) and Audit Logs for all critical table modifications.
+
+### 🇬🇪 RS.GE Integration (Waybills)
+- **Automation**: Real-time synchronization of incoming/outgoing waybills.
+- **Smart Mapping**: Automated product recognition based on Barcode/Name from RS.GE goods list.
+- **Hardened Architecture**:
+    - **Security**: Credentials stored only in server-side Environment Variables.
+    - **Async Sync**: Non-blocking background synchronization for POS operations.
+    - **Outbox Pattern**: Persistent `sync-queue` (LocalStorage) for automated retries on failure.
+    - **Idempotency**: UUID-based duplicate prevention.
+
+### 🤖 AI Assistant
+- **Dashbaord Insights**: Proactive business advice based on sales trends and inventory levels.
+- **Animated UI**: Premium, glassmorphism-based design with micro-animations.
+- **Knowledge Base**: Integrated guide for ERP operations.
+
+## 3. Architecture & Reliability
+- **State Management**: Robust custom store patterns with Supabase synchronization.
+- **Offline Support**: PWA integration with service workers and local data persistence.
+- **Security**: Strict RLS policies on PostgreSQL; Manager-level authorization for sensitive actions.
+- **Error Handling**: Comprehensive toast notifications and fallbacks for API failures.
+
+## 4. Directory Structure
+- `/app/api`: Serverless functions (RS.GE Proxy).
+- `/components`: Modular UI library + Core Page components.
+- `/lib`: Business logic, Services (Store, RS-GE, Fiscal, Gemini).
+- `/hooks`: Custom React hooks for global state and auth.
+- `/supabase`: SQL migrations and RLS policies.

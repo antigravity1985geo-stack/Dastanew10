@@ -2,7 +2,8 @@
 
 export interface Settings {
   companyName: string;
-  currency: string;
+  currency: "GEL" | "USD" | "EUR";
+  accountingMethod: "accrual" | "cash";
   language: string;
   phone?: string;
   email?: string;
@@ -11,11 +12,16 @@ export interface Settings {
   // RS.GE Settings
   rsgeUsername?: string;
   rsgePassword?: string;
+  rsgeTin?: string;               // Company TIN / საიდენტიფიკაციო ნომერი
   rsgeAutoSend?: boolean;
+  rsgeAutoInvoice?: boolean;      // Auto send tax invoice with waybill
+  rsgeDefaultWaybillType?: 1 | 2 | 3; // 1=Internal, 2=External, 3=Transfer
+  rsgeRequireRecipientTin?: boolean;
   // Fiscal Settings
   fiscalType?: "none" | "digital" | "physical";
   fiscalAutoPrint?: boolean;
   deletePin?: string;
+  closedUntil?: string; // Phase 5: Period Closing
 }
 
 type SettingsListener = () => void;
@@ -24,7 +30,8 @@ const SETTINGS_KEY = "warehouse_settings";
 
 const DEFAULT_SETTINGS: Settings = {
   companyName: "DASTA CLOUD JR",
-  currency: "₾",
+  currency: "GEL",
+  accountingMethod: "accrual",
   language: "ქართული",
   phone: "",
   email: "",
@@ -32,7 +39,11 @@ const DEFAULT_SETTINGS: Settings = {
   address: "",
   rsgeUsername: "",
   rsgePassword: "",
+  rsgeTin: "",
   rsgeAutoSend: false,
+  rsgeAutoInvoice: false,
+  rsgeDefaultWaybillType: 1,
+  rsgeRequireRecipientTin: false,
   fiscalType: "none",
   fiscalAutoPrint: false,
   deletePin: "1234",

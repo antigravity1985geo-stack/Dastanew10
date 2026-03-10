@@ -133,7 +133,7 @@ export function EmployeesPage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
+        <div id="print-area" className="space-y-8 animate-in fade-in duration-700">
             <PageHeader
                 title="თანამშრომლები"
                 description="პერსონალის მართვა და პოზიციები"
@@ -157,7 +157,7 @@ export function EmployeesPage() {
                             დამატება
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[450px] rounded-2xl">
+                    <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
                         <form onSubmit={handleAdd}>
                             <DialogHeader>
                                 <DialogTitle className="text-xl font-bold flex items-center gap-2">
@@ -317,7 +317,7 @@ export function EmployeesPage() {
 
             {/* Edit Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[450px] rounded-2xl">
+                <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
                     <form onSubmit={handleUpdate}>
                         <DialogHeader>
                             <DialogTitle className="text-xl font-bold flex items-center gap-2">

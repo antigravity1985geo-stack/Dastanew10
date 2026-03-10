@@ -22,6 +22,10 @@ import {
   Phone,
   Package,
   TrendingUp,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -200,7 +204,7 @@ function UsersTab({ auth }: UsersTabProps) {
               დამატება
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[450px] rounded-2xl">
+          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-primary" />
@@ -324,7 +328,7 @@ function UsersTab({ auth }: UsersTabProps) {
       </CardContent>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[450px] rounded-2xl">
+        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
@@ -373,14 +377,21 @@ interface SettingsTabProps {
 
 function SettingsTab({ settings }: SettingsTabProps) {
   const [companyName, setCompanyName] = useState(settings.companyName);
-  const [currency, setCurrency] = useState(settings.currency);
+  const [currency, setCurrency] = useState<"GEL" | "USD" | "EUR">(settings.currency);
+  const [accountingMethod, setAccountingMethod] = useState<"accrual" | "cash">(settings.accountingMethod || "accrual");
   const [phone, setPhone] = useState(settings.phone || "");
   const [email, setEmail] = useState(settings.email || "");
   const [bankAccount, setBankAccount] = useState(settings.bankAccount || "");
   const [address, setAddress] = useState(settings.address || "");
   const [rsgeUsername, setRsgeUsername] = useState(settings.rsgeUsername || "");
   const [rsgePassword, setRsgePassword] = useState(settings.rsgePassword || "");
+  const [rsgeTin, setRsgeTin] = useState((settings as any).rsgeTin || "");
   const [rsgeAutoSend, setRsgeAutoSend] = useState(settings.rsgeAutoSend || false);
+  const [rsgeAutoInvoice, setRsgeAutoInvoice] = useState((settings as any).rsgeAutoInvoice || false);
+  const [rsgeDefaultWaybillType, setRsgeDefaultWaybillType] = useState<1 | 2 | 3>(
+    (settings as any).rsgeDefaultWaybillType || 1
+  );
+  const [rsgeTestStatus, setRsgeTestStatus] = useState<"idle" | "loading" | "ok" | "fail">("idle");
   const [fiscalType, setFiscalType] = useState<"none" | "digital" | "physical">(settings.fiscalType || "none");
   const [fiscalAutoPrint, setFiscalAutoPrint] = useState(settings.fiscalAutoPrint || false);
   const [deletePin, setDeletePin] = useState(settings.deletePin || "1234");
@@ -388,14 +399,18 @@ function SettingsTab({ settings }: SettingsTabProps) {
   const handleSave = () => {
     settings.updateSettings({
       companyName: companyName.trim() || "DASTA CLOUD JR",
-      currency: currency.trim() || "₾",
+      currency,
+      accountingMethod,
       phone: phone.trim(),
       email: email.trim(),
       bankAccount: bankAccount.trim(),
       address: address.trim(),
       rsgeUsername: rsgeUsername.trim(),
       rsgePassword: rsgePassword.trim(),
+      rsgeTin: rsgeTin.trim(),
       rsgeAutoSend,
+      rsgeAutoInvoice,
+      rsgeDefaultWaybillType,
       fiscalType,
       fiscalAutoPrint,
       deletePin,
@@ -428,12 +443,26 @@ function SettingsTab({ settings }: SettingsTabProps) {
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ვალუტა</Label>
-              <Input
+              <select
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                placeholder="₾"
-                className="h-11 rounded-xl bg-muted/30 border-none font-medium"
-              />
+                onChange={(e) => setCurrency(e.target.value as any)}
+                className="flex h-11 w-full rounded-xl border-none bg-muted/30 px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              >
+                <option value="GEL">GEL (₾)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ბუღალტრული მეთოდი</Label>
+              <select
+                value={accountingMethod}
+                onChange={(e) => setAccountingMethod(e.target.value as any)}
+                className="flex h-11 w-full rounded-xl border-none bg-muted/30 px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              >
+                <option value="accrual">დარიცხვის (Accrual)</option>
+                <option value="cash">საკასო (Cash)</option>
+              </select>
             </div>
           </div>
 
@@ -494,6 +523,17 @@ function SettingsTab({ settings }: SettingsTabProps) {
               <div className="h-px flex-1 bg-emerald-200/50" />
             </div>
 
+            {/* Status badge */}
+            {rsgeUsername && rsgePassword ? (
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <CheckCircle2 className="h-4 w-4" /> კონფიგურირებულია — RS.GE მომხმარებელი შევსებულია
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <AlertTriangle className="h-4 w-4" /> შეიყვანეთ RS.GE პარამეტრები — ბაზა ძალიან კლიენტისაგან
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">მომხმარებელი (Username)</Label>
@@ -516,15 +556,83 @@ function SettingsTab({ settings }: SettingsTabProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl border border-border/20">
-              <input
-                type="checkbox"
-                id="rsge-auto"
-                checked={rsgeAutoSend}
-                onChange={(e) => setRsgeAutoSend(e.target.checked)}
-                className="h-5 w-5 rounded-md border-border/50 bg-background text-primary focus:ring-primary/20"
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
+                <Link2 className="h-3 w-3" /> საიდენტიფიკაციო ნომერი (ს/ნ)
+              </Label>
+              <Input
+                value={rsgeTin}
+                onChange={(e) => setRsgeTin(e.target.value)}
+                placeholder="200000000"
+                maxLength={20}
+                className="h-11 rounded-xl bg-muted/30 border-none font-medium"
               />
-              <Label htmlFor="rsge-auto" className="cursor-pointer font-bold text-sm">ზედნადების ავტომატური გაგზავნა გაყიდვისას</Label>
+            </div>
+
+            {/* Test Connection */}
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl border-2 font-bold flex items-center gap-2"
+                disabled={!rsgeUsername || !rsgePassword || rsgeTestStatus === "loading"}
+                onClick={async () => {
+                  setRsgeTestStatus("loading");
+                  try {
+                    const res = await fetch(`/api/rsge/test?username=${encodeURIComponent(rsgeUsername)}&password=${encodeURIComponent(rsgePassword)}`);
+                    const data = await res.json();
+                    setRsgeTestStatus(data.success ? "ok" : "fail");
+                  } catch {
+                    setRsgeTestStatus("fail");
+                  }
+                }}
+              >
+                {rsgeTestStatus === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
+                {rsgeTestStatus === "ok" && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                {rsgeTestStatus === "fail" && <XCircle className="h-4 w-4 text-red-500" />}
+                {rsgeTestStatus === "idle" && <Link2 className="h-4 w-4" />}
+                კავშირის ტესტი
+              </Button>
+              {rsgeTestStatus === "ok" && <span className="text-sm font-bold text-emerald-600">კავშირი წარმატებულია! ✅</span>}
+              {rsgeTestStatus === "fail" && <span className="text-sm font-bold text-red-500">კავშირი ვერ ესახა. შეამოწმეთ მონაცემები! ❌</span>}
+            </div>
+
+            {/* Waybill type */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ნაგულისხმევი ზედნადების ტიპი</Label>
+              <select
+                value={rsgeDefaultWaybillType}
+                onChange={(e) => setRsgeDefaultWaybillType(Number(e.target.value) as 1 | 2 | 3)}
+                className="flex h-11 w-full rounded-xl border-none bg-muted/30 px-3 py-2 text-sm font-medium"
+              >
+                <option value={1}>შიდა (Internal)</option>
+                <option value={2}>გარე (External)</option>
+                <option value={3}>გადაადგილება (Transfer)</option>
+              </select>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl border border-border/20">
+                <input
+                  type="checkbox"
+                  id="rsge-auto"
+                  checked={rsgeAutoSend}
+                  onChange={(e) => setRsgeAutoSend(e.target.checked)}
+                  className="h-5 w-5 rounded-md"
+                />
+                <Label htmlFor="rsge-auto" className="cursor-pointer font-bold text-sm">ზედნადების ავტომატური გაგზავნა გაყიდვისას</Label>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl border border-border/20">
+                <input
+                  type="checkbox"
+                  id="rsge-auto-invoice"
+                  checked={rsgeAutoInvoice}
+                  onChange={(e) => setRsgeAutoInvoice(e.target.checked)}
+                  className="h-5 w-5 rounded-md"
+                />
+                <Label htmlFor="rsge-auto-invoice" className="cursor-pointer font-bold text-sm">ანგარიშ-ფაქტურას ავტომატური გაგზავნა ზედნადებისთან ერთად</Label>
+              </div>
             </div>
           </div>
 

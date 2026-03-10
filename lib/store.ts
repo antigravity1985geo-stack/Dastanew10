@@ -1,5 +1,22 @@
 import { supabase } from "./supabase";
 import { toast } from "sonner";
+import { authStore } from "./auth";
+import { settingsStore } from "./settings";
+import { CHART_OF_ACCOUNTS } from "./coa";
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  description: string;
+  transactions: {
+    accountCode: string;
+    debit: number;
+    credit: number;
+  }[];
+  referenceId: string; // ID of sale, purchase, or expense
+  referenceType: 'sale' | 'purchase' | 'expense' | 'transfer';
+  createdAt: string;
+}
 
 export interface Product {
   id: string;
@@ -9,7 +26,9 @@ export interface Product {
   imageUrl?: string;
   purchasePrice: number;
   salePrice: number;
+  wholesalePrice?: number;
   quantity: number;
+  minStockLevel?: number; // Fix #4: Low Stock Alerts
   client?: string;
   createdAt: string;
 }
@@ -22,10 +41,16 @@ export interface Sale {
   quantity: number;
   salePrice: number;
   totalAmount: number;
+  totalValue?: number; // Added for RS.GE Fiscal Receipt
+  paymentMethod?: 'cash' | 'card' | 'split' | 'nisia'; // Added for RS.GE Fiscal Receipt
   paidInCash: number; // Split payment support
   paidInCard: number; // Split payment support
   status: "paid" | "partial" | "unpaid";
   client: string;
+  currency: "GEL" | "USD" | "EUR"; // Added
+  exchangeRate: number; // Added
+  idempotencyKey?: string; // Added for RS.GE sync
+  receiptNumber?: string; // Added for RS.GE Fiscal Receipt
   createdAt: string;
 }
 
@@ -35,6 +60,8 @@ export interface Expense {
   category: string;
   description: string;
   paymentMethod: 'cash' | 'bank';
+  currency: "GEL" | "USD" | "EUR"; // Added
+  exchangeRate: number; // Added
   date: string;
   createdAt: string;
 }
@@ -51,6 +78,8 @@ export interface PurchaseHistory {
   paidInCard: number;
   supplier: string;
   client?: string;
+  currency: "GEL" | "USD" | "EUR";
+  exchangeRate: number;
   createdAt: string;
 }
 
@@ -61,6 +90,30 @@ export interface Employee {
   phone: string;
   pinCode?: string; // New field
   createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  userId?: string;
+  actionType: "INSERT" | "UPDATE" | "DELETE";
+  tableName: "sales" | "expenses" | "products" | "transfers" | "employees";
+  recordId: string;
+  oldData?: any;
+  newData?: any;
+  createdAt: string;
+}
+
+export interface Shift {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  openedAt: string;
+  closedAt?: string;
+  openingCash: number;
+  expectedCash?: number;
+  actualCash?: number;
+  variance?: number;
+  status: 'open' | 'closed';
 }
 
 export type StoreListener = () => void;
@@ -83,10 +136,14 @@ export interface StoreSnapshot {
   categoryDistribution: { category: string; count: number; value: number }[];
   lowStockProducts: Product[];
   purchaseHistory: PurchaseHistory[];
+  auditLogs: AuditLog[]; // Added Phase 5
 
   // Actions
   addExpense: (expense: Omit<Expense, "id" | "createdAt">) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+
+  // Period Closing action
+  setClosedUntil: (date: string | undefined) => void;
 
   // Employees
   employees: Employee[];
@@ -102,6 +159,17 @@ export interface StoreSnapshot {
   // Debts
   updatePurchaseHistory: (id: string, updates: { paidInCash?: number; paidInCard?: number }) => Promise<void>;
   payoffDebts: (transactions: any[], amount: number, method: 'cash' | 'bank', type: 'customer' | 'supplier') => Promise<void>;
+  importWaybillToWarehouse: (items: any[]) => Promise<void>;
+
+  // Shift Management
+  shifts: Shift[];
+  currentShift: Shift | null;
+  openShift: (openingCash: number) => Promise<void>;
+  closeShift: (actualCash: number) => Promise<void>;
+
+  // Accounting Reform (NEW)
+  journalEntries: JournalEntry[];
+  getAccountBalance: (code: string) => number;
 }
 
 class WarehouseStore {
@@ -110,10 +178,86 @@ class WarehouseStore {
   private purchaseHistory: PurchaseHistory[] = [];
   private expenses: Expense[] = [];
   private employees: Employee[] = [];
+  private auditLogs: AuditLog[] = []; // Phase 5
+  private shifts: Shift[] = [];
+  private journalEntries: JournalEntry[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
   private _cachedSnapshot: StoreSnapshot | null = null;
   private initialized = false;
+
+  private checkPeriodLocked(date: string) {
+    const closedUntil = settingsStore.getSnapshot().closedUntil;
+    if (closedUntil && new Date(date) <= new Date(closedUntil)) {
+      const errorMsg = `პერიოდი ჩაკეტილია ${new Date(closedUntil).toLocaleDateString('ka-GE')}-მდე. ცვლილება შეუძლებელია.`;
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
+
+  private async addJournalEntry(entry: Omit<JournalEntry, "id" | "createdAt">) {
+    const newEntry: JournalEntry = {
+      ...entry,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString()
+    };
+
+    // Optimistic local update
+    this.journalEntries.unshift(newEntry);
+    this.notify();
+
+    // Supabase insert (assuming journal_entries table exists or will be created)
+    const dbEntry = {
+      id: newEntry.id,
+      date: newEntry.date,
+      description: newEntry.description,
+      transactions: JSON.stringify(newEntry.transactions),
+      reference_id: newEntry.referenceId,
+      reference_type: newEntry.referenceType,
+      created_at: newEntry.createdAt
+    };
+
+    const { error } = await supabase.from('journal_entries').insert(dbEntry);
+    if (error) {
+      console.warn("Journal logging failed (Table might be missing):", error.message);
+      // We don't block the UI if table doesn't exist yet, but we log the intent
+    }
+  }
+
+  private async logAction(log: Omit<AuditLog, "id" | "createdAt" | "userId">) {
+    const { currentUser } = authStore.getSnapshot();
+    const sanitizeJson = (obj: any) => obj ? JSON.parse(JSON.stringify(obj)) : null;
+
+    const newLog = {
+      user_id: currentUser?.id || null,
+      action_type: log.actionType,
+      table_name: log.tableName,
+      record_id: log.recordId,
+      old_data: sanitizeJson(log.oldData),
+      new_data: sanitizeJson(log.newData)
+    };
+
+    // Optimistic local update
+    this.auditLogs.unshift({
+      ...log,
+      id: crypto.randomUUID(),
+      userId: currentUser?.id,
+      createdAt: new Date().toISOString()
+    });
+    this.notify();
+
+    // Supabase insert
+    const { error } = await supabase.from('audit_logs').insert(newLog);
+    if (error) {
+      console.error("Audit logging failed. Payload:", newLog);
+      console.error("Supabase Error Details:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+    }
+  }
 
   constructor() {
     this.initialize();
@@ -124,82 +268,58 @@ class WarehouseStore {
 
     try {
       // Parallel fetch products, sales, and purchase history
-      const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }] = await Promise.all([
+      const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }, { data: auditLogsData }, { data: journalData }] = await Promise.all([
         supabase.from('products').select('*'),
         supabase.from('sales').select('*'),
         supabase.from('purchase_history').select('*'),
         supabase.from('expenses').select('*'),
-        supabase.from('employees').select('*')
+        supabase.from('employees').select('*'),
+        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('journal_entries').select('*').order('created_at', { ascending: false })
       ]);
 
-      if (expensesData) {
-        this.expenses = expensesData.map((e: any) => ({
-          id: e.id,
-          amount: Number(e.amount) || 0,
-          category: e.category || "",
-          description: e.description || "",
-          paymentMethod: e.payment_method || 'cash',
-          date: e.date || new Date().toISOString(),
-          createdAt: e.created_at || new Date().toISOString()
+      if (journalData) {
+        this.journalEntries = journalData.map(j => ({
+          id: j.id,
+          date: j.date,
+          description: j.description,
+          transactions: typeof j.transactions === 'string' ? JSON.parse(j.transactions) : j.transactions,
+          referenceId: j.reference_id,
+          referenceType: j.reference_type,
+          createdAt: j.created_at
         }));
+      }
+
+      if (expensesData) {
+        this.expenses = expensesData.map(e => this.mapExpense(e));
       }
 
       if (productsData) {
-        this.products = productsData.map((p: any) => ({
-          id: p.id,
-          name: p.name || "",
-          category: p.category_name || "",
-          barcode: p.barcode || "",
-          imageUrl: p.image_url || "",
-          purchasePrice: Number(p.purchase_price) || 0,
-          salePrice: Number(p.sale_price) || 0,
-          quantity: p.quantity || 0,
-          client: p.client || "",
-          createdAt: p.created_at || new Date().toISOString()
-        }));
+        this.products = productsData.map(p => this.mapProduct(p));
       }
 
       if (employeesData) {
-        this.employees = employeesData.map((e: any) => ({
-          id: e.id,
-          name: e.name,
-          position: e.position,
-          phone: e.phone || "",
-          pinCode: e.pin_code || "",
-          createdAt: e.created_at
-        }));
+        this.employees = employeesData.map(e => this.mapEmployee(e));
       }
 
       if (salesData) {
-        this.sales = salesData.map((s: any) => ({
-          id: s.id,
-          productId: s.product_id,
-          productName: s.product_name || "",
-          category: s.category_name || "",
-          quantity: s.quantity || 0,
-          salePrice: Number(s.sale_price) || 0,
-          totalAmount: Number(s.total_amount) || 0,
-          paidInCash: Number(s.paid_in_cash) || 0,
-          paidInCard: Number(s.paid_in_card) || 0,
-          status: s.status || "paid",
-          client: s.client || "",
-          createdAt: s.created_at || new Date().toISOString()
-        }));
+        this.sales = salesData.map(s => this.mapSale(s));
       }
 
       if (purchaseData) {
-        this.purchaseHistory = purchaseData.map((ph: any) => ({
-          id: ph.id,
-          productId: ph.product_id,
-          productName: ph.product_name || "",
-          category: ph.category_name || "",
-          purchasePrice: Number(ph.purchase_price) || 0,
-          salePrice: Number(ph.sale_price) || 0,
-          quantity: ph.quantity || 0,
-          paidInCash: Number(ph.paid_in_cash) || 0,
-          paidInCard: Number(ph.paid_in_card) || 0,
-          supplier: ph.supplier || "",
-          createdAt: ph.created_at || new Date().toISOString()
+        this.purchaseHistory = purchaseData.map(ph => this.mapPurchase(ph));
+      }
+
+      if (auditLogsData) {
+        this.auditLogs = auditLogsData.map(log => ({
+          id: log.id,
+          userId: log.user_id,
+          actionType: log.action_type,
+          tableName: log.table_name,
+          recordId: log.record_id,
+          oldData: log.old_data,
+          newData: log.new_data,
+          createdAt: log.created_at
         }));
       }
 
@@ -231,10 +351,9 @@ class WarehouseStore {
     }
   }
 
-  private handleRealtimeProduct(payload: any) {
-    const { eventType, new: newRow, old: oldRow } = payload;
-
-    const mapProduct = (p: any) => ({
+  // --- Mappers ---
+  private mapProduct(p: any): Product {
+    return {
       id: p.id,
       name: p.name || "",
       category: p.category_name || "",
@@ -242,28 +361,15 @@ class WarehouseStore {
       imageUrl: p.image_url || "",
       purchasePrice: Number(p.purchase_price) || 0,
       salePrice: Number(p.sale_price) || 0,
+      wholesalePrice: Number(p.wholesale_price) || 0,
       quantity: p.quantity || 0,
       client: p.client || "",
       createdAt: p.created_at || new Date().toISOString()
-    });
-
-    if (eventType === 'INSERT') {
-      if (!this.products.find(p => p.id === newRow.id)) {
-        this.products.push(mapProduct(newRow));
-      }
-    } else if (eventType === 'UPDATE') {
-      const idx = this.products.findIndex(p => p.id === newRow.id);
-      if (idx !== -1) this.products[idx] = mapProduct(newRow);
-    } else if (eventType === 'DELETE') {
-      this.products = this.products.filter(p => p.id !== oldRow.id);
-    }
-    this.notify();
+    };
   }
 
-  private handleRealtimeSale(payload: any) {
-    const { eventType, new: newRow, old: oldRow } = payload;
-
-    const mapSale = (s: any) => ({
+  private mapSale(s: any): Sale {
+    return {
       id: s.id,
       productId: s.product_id,
       productName: s.product_name || "",
@@ -275,26 +381,14 @@ class WarehouseStore {
       paidInCard: Number(s.paid_in_card) || 0,
       status: s.status || "paid",
       client: s.client || "",
+      currency: (s.currency || "GEL") as "GEL" | "USD" | "EUR",
+      exchangeRate: Number(s.exchange_rate) || 1,
       createdAt: s.created_at || new Date().toISOString()
-    });
-
-    if (eventType === 'INSERT') {
-      if (!this.sales.find(s => s.id === newRow.id)) {
-        this.sales.push(mapSale(newRow));
-      }
-    } else if (eventType === 'UPDATE') {
-      const idx = this.sales.findIndex(s => s.id === newRow.id);
-      if (idx !== -1) this.sales[idx] = mapSale(newRow);
-    } else if (eventType === 'DELETE') {
-      this.sales = this.sales.filter(s => s.id !== oldRow.id);
-    }
-    this.notify();
+    };
   }
 
-  private handleRealtimePurchase(payload: any) {
-    const { eventType, new: newRow, old: oldRow } = payload;
-
-    const mapPurchase = (ph: any) => ({
+  private mapPurchase(ph: any): PurchaseHistory {
+    return {
       id: ph.id,
       productId: ph.product_id,
       productName: ph.product_name || "",
@@ -305,12 +399,76 @@ class WarehouseStore {
       paidInCash: Number(ph.paid_in_cash) || 0,
       paidInCard: Number(ph.paid_in_card) || 0,
       supplier: ph.supplier || "",
+      client: ph.client || "",
+      currency: (ph.currency || "GEL") as "GEL" | "USD" | "EUR",
+      exchangeRate: Number(ph.exchange_rate) || 1,
       createdAt: ph.created_at || new Date().toISOString()
-    });
+    };
+  }
+
+  private mapExpense(e: any): Expense {
+    return {
+      id: e.id,
+      amount: Number(e.amount) || 0,
+      category: e.category || "",
+      description: e.description || "",
+      paymentMethod: (e.payment_method || "cash") as 'cash' | 'bank',
+      currency: (e.currency || "GEL") as "GEL" | "USD" | "EUR",
+      exchangeRate: Number(e.exchange_rate) || 1,
+      date: e.date || new Date().toISOString(),
+      createdAt: e.created_at || new Date().toISOString()
+    };
+  }
+
+  private mapEmployee(e: any): Employee {
+    return {
+      id: e.id,
+      name: e.name,
+      position: e.position,
+      phone: e.phone || "",
+      pinCode: e.pin_code || "",
+      createdAt: e.created_at
+    };
+  }
+
+  private handleRealtimeProduct(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+
+    if (eventType === 'INSERT') {
+      if (!this.products.find(p => p.id === newRow.id)) {
+        this.products.push(this.mapProduct(newRow));
+      }
+    } else if (eventType === 'UPDATE') {
+      const idx = this.products.findIndex(p => p.id === newRow.id);
+      if (idx !== -1) this.products[idx] = this.mapProduct(newRow);
+    } else if (eventType === 'DELETE') {
+      this.products = this.products.filter(p => p.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
+  private handleRealtimeSale(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+
+    if (eventType === 'INSERT') {
+      if (!this.sales.find(s => s.id === newRow.id)) {
+        this.sales.push(this.mapSale(newRow));
+      }
+    } else if (eventType === 'UPDATE') {
+      const idx = this.sales.findIndex(s => s.id === newRow.id);
+      if (idx !== -1) this.sales[idx] = this.mapSale(newRow);
+    } else if (eventType === 'DELETE') {
+      this.sales = this.sales.filter(s => s.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
+  private handleRealtimePurchase(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
 
     if (eventType === 'INSERT') {
       if (!this.purchaseHistory.find(ph => ph.id === newRow.id)) {
-        this.purchaseHistory.push(mapPurchase(newRow));
+        this.purchaseHistory.push(this.mapPurchase(newRow));
       }
     } else if (eventType === 'DELETE') {
       this.purchaseHistory = this.purchaseHistory.filter(ph => ph.id !== oldRow.id);
@@ -321,24 +479,14 @@ class WarehouseStore {
   private handleRealtimeExpense(payload: any) {
     const { eventType, new: newRow, old: oldRow } = payload;
 
-    const mapExpense = (e: any) => ({
-      id: e.id,
-      amount: Number(e.amount) || 0,
-      category: e.category || "",
-      description: e.description || "",
-      paymentMethod: e.payment_method || 'cash',
-      date: e.date || new Date().toISOString(),
-      createdAt: e.created_at || new Date().toISOString()
-    });
-
     if (eventType === 'INSERT') {
       if (!this.expenses.find(e => e.id === newRow.id)) {
-        this.expenses.push(mapExpense(newRow));
+        this.expenses.push(this.mapExpense(newRow));
         this.expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       }
     } else if (eventType === 'UPDATE') {
       const idx = this.expenses.findIndex(e => e.id === newRow.id);
-      if (idx !== -1) this.expenses[idx] = mapExpense(newRow);
+      if (idx !== -1) this.expenses[idx] = this.mapExpense(newRow);
     } else if (eventType === 'DELETE') {
       this.expenses = this.expenses.filter(e => e.id !== oldRow.id);
     }
@@ -348,22 +496,13 @@ class WarehouseStore {
   private handleRealtimeEmployee(payload: any) {
     const { eventType, new: newRow, old: oldRow } = payload;
 
-    const mapEmployee = (e: any) => ({
-      id: e.id,
-      name: e.name,
-      position: e.position,
-      phone: e.phone || "",
-      pinCode: e.pin_code || "",
-      createdAt: e.created_at
-    });
-
     if (eventType === 'INSERT') {
       if (!this.employees.find(e => e.id === newRow.id)) {
-        this.employees.push(mapEmployee(newRow));
+        this.employees.push(this.mapEmployee(newRow));
       }
     } else if (eventType === 'UPDATE') {
       const idx = this.employees.findIndex(e => e.id === newRow.id);
-      if (idx !== -1) this.employees[idx] = mapEmployee(newRow);
+      if (idx !== -1) this.employees[idx] = this.mapEmployee(newRow);
     } else if (eventType === 'DELETE') {
       this.employees = this.employees.filter(e => e.id !== oldRow.id);
     }
@@ -401,22 +540,111 @@ class WarehouseStore {
       purchaseHistory: this.getPurchaseHistory(),
       expenses: this.getExpenses(),
       employees: this.getEmployees(),
+      auditLogs: [...this.auditLogs],
 
       addExpense: this.addExpense.bind(this),
       deleteExpense: this.deleteExpense.bind(this),
       addEmployee: this.addEmployee.bind(this),
       updateEmployee: this.updateEmployee.bind(this),
       deleteEmployee: this.deleteEmployee.bind(this),
+      setClosedUntil: this.setClosedUntil.bind(this),
 
       currentEmployee: this.currentEmployee,
       loginEmployee: this.loginEmployee.bind(this),
       logoutEmployee: this.logoutEmployee.bind(this),
 
       updatePurchaseHistory: this.updatePurchaseHistory.bind(this),
-      payoffDebts: this.payoffDebts.bind(this)
+      payoffDebts: this.payoffDebts.bind(this),
+      importWaybillToWarehouse: this.importWaybillToWarehouse.bind(this),
+
+      // Shift Management
+      shifts: [...this.shifts],
+      currentShift: this.shifts.find(s => s.status === 'open') || null,
+      openShift: this.openShift.bind(this),
+      closeShift: this.closeShift.bind(this),
+
+      // Accounting Reform
+      journalEntries: [...this.journalEntries],
+      getAccountBalance: this.getAccountBalance.bind(this),
     };
 
     return this._cachedSnapshot;
+  }
+
+  getAccountBalance(code: string): number {
+    let balance = 0;
+    const account = CHART_OF_ACCOUNTS.find(a => a.code === code);
+    if (!account) return 0;
+
+    this.journalEntries.forEach(entry => {
+      entry.transactions.forEach(t => {
+        if (t.accountCode === code) {
+          if (account.type === 'asset' || account.type === 'expense') {
+            balance += (t.debit - t.credit);
+          } else {
+            balance += (t.credit - t.debit);
+          }
+        }
+      });
+    });
+    return balance;
+  }
+
+  // --- SHIFT MANAGEMENT ---
+  async openShift(openingCash: number) {
+    if (this.shifts.some(s => s.status === 'open')) {
+      throw new Error("ცვლა უკვე გახსნილია");
+    }
+    if (!this.currentEmployee) {
+      throw new Error("ცვლის გასახსნელად საჭიროა ავტორიზაცია");
+    }
+
+    const newShift: Shift = {
+      id: crypto.randomUUID(),
+      employeeId: this.currentEmployee.id,
+      employeeName: this.currentEmployee.name,
+      openedAt: new Date().toISOString(),
+      openingCash,
+      status: 'open'
+    };
+
+    // In a real app, this would be a Supabase call
+    this.shifts.push(newShift);
+    this.notify();
+    toast.success("ცვლა გახსნილია");
+  }
+
+  async closeShift(actualCash: number) {
+    const shift = this.shifts.find(s => s.status === 'open');
+    if (!shift) {
+      throw new Error("გახსნილი ცვლა ვერ მოიძებნა");
+    }
+
+    // Calculate expected cash: Opening Cash + Total Cash Sales + Partial Cash Payoffs - Cash Expenses
+    // We only filter sales/expenses since shift was opened
+    const shiftSales = this.sales.filter(s => s.createdAt > shift.openedAt);
+    const shiftSalesCash = shiftSales.reduce((sum, s) => sum + s.paidInCash, 0);
+
+    const shiftExpenses = this.expenses.filter(e => e.date > shift.openedAt && e.paymentMethod === 'cash');
+    const shiftExpensesTotal = shiftExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+    // Simplification: Not tracking payoffs since shift open yet, but could be added.
+    const expectedCash = shift.openingCash + shiftSalesCash - shiftExpensesTotal;
+    const variance = actualCash - expectedCash;
+
+    shift.closedAt = new Date().toISOString();
+    shift.status = 'closed';
+    shift.expectedCash = expectedCash;
+    shift.actualCash = actualCash;
+    shift.variance = variance;
+
+    this.notify();
+
+    if (Math.abs(variance) > 0.1) {
+      toast.warning(`ცვლა დაიხურა სხვაობით: ${variance.toFixed(2)} ₾`);
+    } else {
+      toast.success("ცვლა დაიხურა ხარვეზების გარეშე");
+    }
   }
 
   subscribe(listener: StoreListener) {
@@ -438,20 +666,37 @@ class WarehouseStore {
     return this.products.find((p) => p.barcode && p.barcode.trim() === trimmed);
   }
 
-  async addProduct(product: Omit<Product, "id" | "createdAt"> & { paidInCash?: number; paidInCard?: number; supplier?: string; imageUrl?: string }) {
-    // Check if product with same name exists - update quantity
-    const existing = this.products.find(
-      (p) => p.name.toLowerCase() === product.name.toLowerCase()
+  async addProduct(product: Omit<Product, "id" | "createdAt"> & {
+    paidInCash?: number;
+    paidInCard?: number;
+    supplier?: string;
+    imageUrl?: string;
+    currency?: "GEL" | "USD" | "EUR";
+    exchangeRate?: number;
+  }) {
+    // Phase 5: Products usually don't have a distinct "transaction date" for locking
+    // unless added via purchase history. We'll use TODAY.
+    this.checkPeriodLocked(new Date().toISOString());
+
+    const existing = this.products.find((p) =>
+      (p.barcode && product.barcode && p.barcode === product.barcode) ||
+      (p.name.toLowerCase() === product.name.toLowerCase())
     );
 
+    const currency = product.currency || "GEL";
+    const exchangeRate = product.exchangeRate || 1;
+    const gelPurchasePrice = product.purchasePrice * exchangeRate;
+
     if (existing) {
-      const newQuantity = existing.quantity + product.quantity;
+      const oldProductQuantity = existing.quantity;
+      const totalQuantity = existing.quantity + product.quantity;
       const updates: any = {
-        quantity: newQuantity,
-        purchase_price: product.purchasePrice,
+        quantity: totalQuantity,
+        purchase_price: gelPurchasePrice,
         sale_price: product.salePrice,
+        wholesale_price: product.wholesalePrice || existing.wholesalePrice || product.salePrice,
         category_name: product.category || existing.category,
-        client: product.client || existing.client,
+        client: product.supplier || product.client || existing.client,
       };
 
       if (product.barcode) {
@@ -465,49 +710,74 @@ class WarehouseStore {
       }
 
       // Optimistic update
-      existing.quantity = newQuantity;
-      existing.purchasePrice = product.purchasePrice;
-      existing.salePrice = product.salePrice;
-      existing.category = product.category || existing.category;
-      existing.client = product.client || existing.client;
+      Object.assign(existing, {
+        quantity: updates.quantity,
+        purchasePrice: updates.purchase_price,
+        salePrice: updates.sale_price,
+        wholesalePrice: updates.wholesale_price,
+        category: updates.category_name,
+        client: updates.client,
+      });
       this.notify();
 
       // Supabase update
-      const { error } = await supabase
-        .from('products')
-        .update(updates)
-        .eq('id', existing.id);
+      supabase.from('products').update(updates).eq('id', existing.id).then(({ error }) => {
+        if (error) {
+          console.error("Error updating product:", error);
+          toast.error("შეცდომა პროდუქტის განახლებისას");
+        }
+      });
 
-      if (error) {
-        console.error("Error updating product:", error);
-        toast.error("შეცდომა პროდუქტის განახლებისას");
-        return;
-      }
+      // Log action
+      this.logAction({
+        actionType: 'UPDATE',
+        tableName: 'products',
+        recordId: existing.id,
+        newData: updates,
+        oldData: { quantity: oldProductQuantity, purchasePrice: existing.purchasePrice, salePrice: existing.salePrice }
+      });
 
       // Log purchase history for stock increase
       const purchaseHistoryEntry = {
         product_id: existing.id,
         product_name: existing.name,
         category_name: existing.category,
-        purchase_price: product.purchasePrice,
+        purchase_price: product.purchasePrice, // Store original
         sale_price: product.salePrice,
         quantity: product.quantity,
         paid_in_cash: product.paidInCash || 0,
         paid_in_card: product.paidInCard || 0,
         supplier: product.supplier || product.client || "",
+        currency: currency,
+        exchange_rate: exchangeRate,
         created_at: new Date().toISOString()
       };
 
-      await supabase.from('purchase_history').insert(purchaseHistoryEntry);
+      supabase.from('purchase_history').insert(purchaseHistoryEntry).then(({ error }) => {
+        if (error) console.error("Error logging purchase history:", error);
+      });
+
+      // Accounting: Purchase Entry
+      this.addJournalEntry({
+        date: purchaseHistoryEntry.created_at,
+        description: `საქონლის შესყიდვა: ${existing.name}`,
+        referenceId: existing.id,
+        referenceType: 'purchase',
+        transactions: [
+          { accountCode: '1610', debit: gelPurchasePrice * product.quantity, credit: 0 }, // Inventory (Asset) increases
+          { accountCode: product.paidInCash ? '1110' : '1210', debit: 0, credit: (product.paidInCash || product.paidInCard || 0) * exchangeRate } // Cash/Bank decreases
+        ]
+      });
     } else {
       const newProduct: any = {
         id: crypto.randomUUID(),
         name: product.name,
         category_name: product.category,
-        purchase_price: product.purchasePrice,
+        purchase_price: gelPurchasePrice, // Store in GEL
         sale_price: product.salePrice,
+        wholesale_price: product.wholesalePrice || product.salePrice,
         quantity: product.quantity,
-        client: product.client,
+        client: product.supplier || product.client,
         image_url: product.imageUrl || null,
         created_at: new Date().toISOString(),
       };
@@ -517,51 +787,69 @@ class WarehouseStore {
         newProduct.barcode = product.barcode;
       }
 
-      // Optimistic update - map to internal interface
+      // Optimistic update
       this.products.push({
-        ...product,
         id: newProduct.id,
+        name: product.name,
+        category: product.category,
+        barcode: product.barcode,
+        imageUrl: product.imageUrl,
+        purchasePrice: gelPurchasePrice,
+        salePrice: product.salePrice,
+        wholesalePrice: product.wholesalePrice || product.salePrice,
+        quantity: product.quantity,
+        client: product.supplier || product.client,
         createdAt: newProduct.created_at
       });
       this.notify();
 
       // Supabase insert
-      const { data: dbProduct, error } = await supabase
-        .from('products')
-        .insert(newProduct)
-        .select()
-        .single();
+      supabase.from('products').insert(newProduct).select().single().then(({ data: dbProduct, error }) => {
+        if (error) {
+          console.error("Error adding product:", error);
+          this.products = this.products.filter(p => p.id !== newProduct.id);
+          this.notify();
+          toast.error(error.message || "შეცდომა პროდუქტის დამატებისას");
+          return;
+        }
 
-      if (error) {
-        console.error("Error adding product:", JSON.stringify(error, null, 2));
-        this.products = this.products.filter(p => p.id !== newProduct.id);
-        this.notify();
-        toast.error(error.message || "შეცდომა პროდუქტის დამატებისას");
-        return;
-      }
+        if (dbProduct) {
+          // Log action
+          this.logAction({
+            actionType: 'INSERT',
+            tableName: 'products',
+            recordId: dbProduct.id,
+            newData: dbProduct
+          });
+          // Log to purchase_history
+          const purchaseHistoryEntry = {
+            product_id: dbProduct.id,
+            product_name: dbProduct.name,
+            category_name: dbProduct.category_name,
+            purchase_price: product.purchasePrice, // Original
+            sale_price: dbProduct.sale_price,
+            quantity: dbProduct.quantity,
+            paid_in_cash: product.paidInCash || 0,
+            paid_in_card: product.paidInCard || 0,
+            supplier: product.supplier || product.client || "",
+            currency: currency,
+            exchange_rate: exchangeRate,
+            created_at: new Date().toISOString()
+          };
 
-      // If successful, log to purchase_history WITH payment info
-      // We manually insert here to bypass the limited trigger
-      const purchaseHistoryEntry = {
-        product_id: dbProduct.id,
-        product_name: dbProduct.name,
-        category_name: dbProduct.category_name,
-        purchase_price: dbProduct.purchase_price,
-        sale_price: dbProduct.sale_price,
-        quantity: dbProduct.quantity,
-        paid_in_cash: product.paidInCash || 0,
-        paid_in_card: product.paidInCard || 0,
-        supplier: product.supplier || product.client || "",
-        created_at: new Date().toISOString()
-      };
-
-      await supabase.from('purchase_history').insert(purchaseHistoryEntry);
+          supabase.from('purchase_history').insert(purchaseHistoryEntry).then(({ error }) => {
+            if (error) console.error("Error logging purchase history:", error);
+          });
+        }
+      });
     }
   }
 
   async updateProduct(id: string, updates: Partial<Omit<Product, "id" | "createdAt">>) {
     const product = this.products.find((p) => p.id === id);
     if (!product) throw new Error("პროდუქცია ვერ მოიძებნა");
+
+    this.checkPeriodLocked(product.createdAt);
 
     const oldProduct = { ...product };
     // Optimistic update
@@ -597,6 +885,8 @@ class WarehouseStore {
     const oldProducts = [...this.products];
     const oldSales = [...this.sales];
     const oldPurchaseHistory = [...this.purchaseHistory];
+
+    this.checkPeriodLocked(new Date().toISOString());
 
     // Optimistic delete - remove product, related sales, and purchase history
     this.products = this.products.filter((p) => p.id !== id);
@@ -663,23 +953,22 @@ class WarehouseStore {
     return [...this.employees];
   }
 
-  async updateSale(id: string, updates: { quantity?: number; salePrice?: number; client?: string; paidInCash?: number; paidInCard?: number; status?: "paid" | "partial" | "unpaid" }) {
+  async updateSale(id: string, updates: Partial<Sale>) {
     const sale = this.sales.find((s) => s.id === id);
-    if (!sale) throw new Error("გაყიდვა ვერ მოიძებნა");
+    if (!sale) return;
 
-    const product = this.products.find((p) => p.id === sale.productId);
+    this.checkPeriodLocked(sale.createdAt);
+
     const oldSale = { ...sale };
+    const product = this.products.find((p) => p.id === sale.productId);
     const oldProductQuantity = product ? product.quantity : 0;
 
-    // Optimistic UI update for quantity change
-    if (updates.quantity !== undefined && updates.quantity !== sale.quantity) {
+    if (updates.quantity !== undefined && product) {
       const diff = updates.quantity - sale.quantity;
-      if (product) {
-        if (product.quantity < diff) {
-          throw new Error(`არასაკმარისი რაოდენობა. საწყობში არის: ${product.quantity}`);
-        }
-        product.quantity -= diff;
+      if (product.quantity < diff) {
+        throw new Error("არასაკმარისი რაოდენობა საწყობში");
       }
+      product.quantity -= diff;
       sale.quantity = updates.quantity;
     }
 
@@ -692,6 +981,15 @@ class WarehouseStore {
     sale.totalAmount = sale.salePrice * sale.quantity;
 
     this.notify();
+
+    // Log action
+    this.logAction({
+      actionType: 'UPDATE',
+      tableName: 'sales',
+      recordId: id,
+      oldData: oldSale,
+      newData: { ...sale, ...updates }
+    });
 
     // Supabase update - DB Trigger will handle product stock
     try {
@@ -722,6 +1020,8 @@ class WarehouseStore {
     const sale = this.sales.find((s) => s.id === id);
     if (!sale) return;
 
+    this.checkPeriodLocked(sale.createdAt);
+
     const product = this.products.find((p) => p.id === sale.productId);
     const oldSales = [...this.sales];
     const oldProductQuantity = product ? product.quantity : 0;
@@ -730,6 +1030,14 @@ class WarehouseStore {
     if (product) product.quantity += sale.quantity;
     this.sales = this.sales.filter((s) => s.id !== id);
     this.notify();
+
+    // Log action before delete
+    this.logAction({
+      actionType: 'DELETE',
+      tableName: 'sales',
+      recordId: id,
+      oldData: sale
+    });
 
     // Supabase delete - DB Trigger will handle product stock return
     try {
@@ -745,13 +1053,16 @@ class WarehouseStore {
   }
 
   async addSale(sale: Omit<Sale, "id" | "createdAt" | "totalAmount">) {
+    this.checkPeriodLocked(new Date().toISOString());
     const product = this.products.find((p) => p.id === sale.productId);
     if (!product) throw new Error("პროდუქცია ვერ მოიძებნა");
     if (product.quantity < sale.quantity)
       throw new Error(`არასაკმარისი რაოდენობა. საწყობში არის: ${product.quantity}`);
 
     const oldProductQuantity = product.quantity;
-    const newSale = {
+    const { currentUser } = authStore.getSnapshot();
+
+    const insertSaleData = {
       id: crypto.randomUUID(),
       product_id: sale.productId,
       product_name: sale.productName,
@@ -759,31 +1070,61 @@ class WarehouseStore {
       quantity: sale.quantity,
       sale_price: sale.salePrice,
       total_amount: sale.salePrice * sale.quantity,
-      paid_in_cash: sale.paidInCash,
-      paid_in_card: sale.paidInCard,
+      paid_amount: (sale.paidInCash || 0) + (sale.paidInCard || 0),
+      paid_in_cash: sale.paidInCash || 0,
+      paid_in_card: sale.paidInCard || 0,
       status: sale.status,
+      purchase_price_at_sale: product.purchasePrice,
       created_at: new Date().toISOString(),
-      client: sale.client
+      created_by: currentUser?.id,
+      client: sale.client || ''
     };
 
     // Optimistic update
     product.quantity -= sale.quantity;
-    this.sales.push({
+    const optimisticSale: Sale = {
       ...sale,
-      id: newSale.id,
-      totalAmount: newSale.total_amount,
-      createdAt: newSale.created_at
-    });
+      id: insertSaleData.id,
+      currency: sale.currency || "GEL",
+      exchangeRate: sale.exchangeRate || 1,
+      totalAmount: insertSaleData.total_amount,
+      createdAt: insertSaleData.created_at
+    };
+    this.sales.push(optimisticSale);
     this.notify();
 
     // Supabase insert - DB Trigger will handle product stock
     try {
-      const { error } = await supabase.from('sales').insert(newSale);
+      const { data: dbSale, error } = await supabase.from('sales').insert(insertSaleData).select().single();
       if (error) throw error;
+
+      if (dbSale) {
+        this.logAction({ actionType: 'INSERT', tableName: 'sales', recordId: dbSale.id, newData: dbSale });
+
+        // Accounting: Sale Entry
+        const saleAmount = dbSale.total_amount;
+        const cogsAmount = this.calculateFIFOCOG(dbSale.product_id, dbSale.quantity, dbSale.created_at);
+
+        this.addJournalEntry({
+          date: dbSale.created_at,
+          description: `რეალიზაცია: ${dbSale.product_name}`,
+          referenceId: dbSale.id,
+          referenceType: 'sale',
+          transactions: [
+            // 1. Revenue & Payment
+            { accountCode: dbSale.paid_in_cash ? '1110' : '1210', debit: saleAmount, credit: 0 }, // Cash/Bank increases
+            { accountCode: '6110', debit: 0, credit: saleAmount }, // Revenue increases
+
+            // 2. COGS & Inventory
+            { accountCode: '7110', debit: cogsAmount, credit: 0 }, // COGS increases
+            { accountCode: '1610', debit: 0, credit: cogsAmount } // Inventory decreases
+          ]
+        });
+      }
     } catch (error) {
       console.error("Error adding sale:", error);
       product.quantity = oldProductQuantity;
-      this.sales = this.sales.filter(s => s.id !== newSale.id);
+      this.sales = this.sales.filter(s => s.id !== insertSaleData.id);
       this.notify();
       toast.error("შეცდომა გაყიდვისას");
     }
@@ -791,6 +1132,7 @@ class WarehouseStore {
 
   // Expenses
   async addExpense(expense: Omit<Expense, "id" | "createdAt">) {
+    this.checkPeriodLocked(expense.date);
     const optimisticId = crypto.randomUUID();
     const optimisticCreatedAt = new Date().toISOString();
 
@@ -802,37 +1144,62 @@ class WarehouseStore {
     this.expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     this.notify();
 
+    const insertData = {
+      amount: Number(expense.amount),
+      category: expense.category || "",
+      description: expense.description || "",
+      payment_method: expense.paymentMethod || 'cash',
+      currency: expense.currency || 'GEL',
+      exchange_rate: expense.exchangeRate || 1,
+      date: expense.date || new Date().toISOString().split('T')[0]
+    };
+
     // Supabase insert
     try {
-      const { data, error } = await supabase
+      const { data: dbExpense, error } = await supabase
         .from('expenses')
-        .insert({
-          amount: Number(expense.amount),
-          category: expense.category || "",
-          description: expense.description || "",
-          payment_method: expense.paymentMethod || 'cash',
-          date: expense.date || new Date().toISOString().split('T')[0]
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
 
       // Update optimistic record with real ID from DB if necessary
-      if (data) {
+      if (dbExpense) {
+        this.logAction({ actionType: 'INSERT', tableName: 'expenses', recordId: dbExpense.id, newData: dbExpense });
+
         const idx = this.expenses.findIndex(e => e.id === optimisticId);
         if (idx !== -1) {
           this.expenses[idx] = {
-            id: data.id,
-            amount: Number(data.amount),
-            category: data.category || "",
-            description: data.description || "",
-            paymentMethod: data.payment_method || 'cash',
-            date: data.date,
-            createdAt: data.created_at
+            id: dbExpense.id,
+            amount: Number(dbExpense.amount),
+            category: dbExpense.category || "",
+            description: dbExpense.description || "",
+            paymentMethod: dbExpense.payment_method || "cash",
+            currency: (dbExpense.currency || "GEL") as "GEL" | "USD" | "EUR",
+            exchangeRate: Number(dbExpense.exchange_rate) || 1,
+            date: dbExpense.date || new Date().toISOString(),
+            createdAt: dbExpense.created_at || new Date().toISOString()
           };
           this.notify();
         }
+
+        // Accounting: Expense Entry
+        let accountCode = '8110'; // Default Operating
+        if (dbExpense.category === 'ხელფასი') accountCode = '8120';
+        else if (dbExpense.category === 'ქირა') accountCode = '8130';
+        else if (dbExpense.category === 'კომუნალური') accountCode = '8140';
+
+        this.addJournalEntry({
+          date: dbExpense.date,
+          description: dbExpense.description,
+          referenceId: dbExpense.id,
+          referenceType: 'expense',
+          transactions: [
+            { accountCode: accountCode, debit: Number(dbExpense.amount) * Number(dbExpense.exchange_rate), credit: 0 },
+            { accountCode: dbExpense.payment_method === 'cash' ? '1110' : '1210', debit: 0, credit: Number(dbExpense.amount) * Number(dbExpense.exchange_rate) }
+          ]
+        });
       }
     } catch (error: any) {
       console.error("Error adding expense:", error.message || JSON.stringify(error), error.details, error.hint);
@@ -843,9 +1210,22 @@ class WarehouseStore {
   }
 
   async deleteExpense(id: string) {
+    const expense = this.expenses.find(e => e.id === id);
+    if (!expense) return;
+
+    this.checkPeriodLocked(expense.date);
+
     const oldExpenses = [...this.expenses];
     this.expenses = this.expenses.filter(e => e.id !== id);
     this.notify();
+
+    // Log action
+    this.logAction({
+      actionType: 'DELETE',
+      tableName: 'expenses',
+      recordId: id,
+      oldData: expense
+    });
 
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', id);
@@ -969,6 +1349,11 @@ class WarehouseStore {
     this.notify();
   }
 
+  setClosedUntil(date: string | undefined) {
+    settingsStore.updateSettings({ closedUntil: date });
+    this.notify();
+  }
+
   // Analytics
   getTotalProducts(): number {
     return this.products.length;
@@ -994,14 +1379,81 @@ class WarehouseStore {
   }
 
   getTotalRevenue(): number {
-    return this.sales.reduce((acc, s) => acc + s.totalAmount, 0);
+    const settings = settingsStore.getSettings();
+    return this.sales.reduce((acc, s) => {
+      if (settings.accountingMethod === 'cash') {
+        return acc + (s.paidInCash + s.paidInCard);
+      }
+      return acc + s.totalAmount;
+    }, 0);
+  }
+
+  private calculateFIFOCOG(productId: string, quantity: number, saleDate: string): number {
+    // 1. Get all purchases for this product BEFORE or ON this sale date, sorted by date asc
+    const purchases = [...this.purchaseHistory]
+      .filter(p => p.productId === productId && p.createdAt <= saleDate)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+    // 2. Get all previous sales of this product BEFORE this sale date
+    const previousSalesTotal = this.sales
+      .filter(s => s.productId === productId && s.createdAt < saleDate)
+      .reduce((sum, s) => sum + s.quantity, 0);
+
+    // 3. Skip "consumed" purchases
+    let consumedQty = 0;
+    let totalCog = 0;
+    let remainingToCalculate = quantity;
+
+    for (const purchase of purchases) {
+      const pQty = purchase.quantity;
+      const pPrice = purchase.purchasePrice;
+
+      // If this purchase batch was partially or fully consumed by previous sales
+      if (consumedQty + pQty <= previousSalesTotal) {
+        consumedQty += pQty;
+        continue;
+      }
+
+      // Calculate how much of THIS purchase batch belongs to previous sales vs current sale
+      // usedOffset is how many units in this batch are ALREADY used by previous sales
+      const usedOffset = Math.max(0, previousSalesTotal - consumedQty);
+      const availableInThisBatch = pQty - usedOffset;
+      const usedFromThisBatchNow = Math.min(remainingToCalculate, availableInThisBatch);
+
+      if (usedFromThisBatchNow > 0) {
+        totalCog += usedFromThisBatchNow * pPrice;
+        remainingToCalculate -= usedFromThisBatchNow;
+      }
+
+      consumedQty += pQty;
+      if (remainingToCalculate <= 0) break;
+    }
+
+    // Fallback if not enough purchase history exists (use latest purchase price)
+    if (remainingToCalculate > 0) {
+      const product = this.products.find(p => p.id === productId);
+      totalCog += remainingToCalculate * (product?.purchasePrice || 0);
+    }
+
+    return totalCog;
   }
 
   getTotalProfit(): number {
+    const settings = settingsStore.getSettings();
     return this.sales.reduce((acc, s) => {
-      const product = this.products.find((p) => p.id === s.productId);
-      const purchasePrice = product?.purchasePrice ?? 0;
-      return acc + (s.salePrice - purchasePrice) * s.quantity;
+      const revenue = settings.accountingMethod === 'cash'
+        ? (s.paidInCash + s.paidInCard)
+        : s.totalAmount;
+
+      // For profit, we still usually want COGS of the units sold
+      // But in pure Cash Basis, some people only count expenses when paid.
+      // We will stick to FIFO COGS for operational profit regardless of accrual/cash toggle for revenue.
+      const cog = this.calculateFIFOCOG(s.productId, s.quantity, s.createdAt);
+
+      // If revenue is cash-basis, it might be less than totalAmount.
+      // We should probably pro-rate the COGS if we want true cash-basis profit (advanced!)
+      // For now: PROFIT = REVENUE (toggleable) - COGS (FIFO)
+      return acc + (revenue - cog);
     }, 0);
   }
 
@@ -1018,14 +1470,20 @@ class WarehouseStore {
 
   getSalesByMonth(): { month: string; revenue: number; profit: number }[] {
     const map = new Map<string, { revenue: number; profit: number }>();
+    const settings = settingsStore.getSettings();
     this.sales.forEach((s) => {
       const date = new Date(s.createdAt);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       const existing = map.get(key) || { revenue: 0, profit: 0 };
-      const product = this.products.find((p) => p.id === s.productId);
-      const purchasePrice = product?.purchasePrice ?? 0;
-      existing.revenue += s.totalAmount;
-      existing.profit += (s.salePrice - purchasePrice) * s.quantity;
+
+      const revenue = settings.accountingMethod === 'cash'
+        ? (s.paidInCash + s.paidInCard)
+        : s.totalAmount;
+
+      const cog = this.calculateFIFOCOG(s.productId, s.quantity, s.createdAt);
+
+      existing.revenue += revenue;
+      existing.profit += (revenue - cog);
       map.set(key, existing);
     });
     return Array.from(map.entries())
@@ -1155,6 +1613,8 @@ class WarehouseStore {
     const ph = this.purchaseHistory.find((p) => p.id === id);
     if (!ph) throw new Error("შესყიდვა ვერ მოიძებნა");
 
+    this.checkPeriodLocked(ph.createdAt);
+
     const oldPh = { ...ph };
     if (updates.paidInCash !== undefined) ph.paidInCash = updates.paidInCash;
     if (updates.paidInCard !== undefined) ph.paidInCard = updates.paidInCard;
@@ -1179,7 +1639,33 @@ class WarehouseStore {
     }
   }
 
+  async importWaybillToWarehouse(items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    barcode?: string;
+    category: string;
+    supplier: string;
+  }>) {
+    this.checkPeriodLocked(new Date().toISOString());
+
+    for (const item of items) {
+      await this.addProduct({
+        name: item.name,
+        category: item.category,
+        purchasePrice: item.price,
+        salePrice: item.price * 1.25, // Default 25% margin
+        quantity: item.quantity,
+        barcode: item.barcode,
+        supplier: item.supplier,
+      });
+    }
+  }
+
   async payoffDebts(transactions: any[], amount: number, method: 'cash' | 'bank', type: 'customer' | 'supplier') {
+    // Phase 5: Check if any transaction is in locked period?
+    // Usually payoff happens TODAY, so we check today's date
+    this.checkPeriodLocked(new Date().toISOString());
     let remainingAmount = amount;
     // Sort by date (oldest first - FIFO)
     const sorted = [...transactions].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());

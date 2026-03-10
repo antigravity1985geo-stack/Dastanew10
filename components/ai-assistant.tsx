@@ -155,7 +155,9 @@ export function AIAssistant() {
                         paidInCash: args.paidInCash || (args.salePrice * args.quantity),
                         paidInCard: args.paidInCard || 0,
                         status: (args.status as any) || "paid",
-                        client: args.client || "AI Assistant"
+                        client: args.client || "AI Assistant",
+                        currency: "GEL",
+                        exchangeRate: 1
                     });
                     toast.success("გაყიდვა დაფიქსირდა");
                     return { success: true, message: "Sale added successfully" };
@@ -171,7 +173,9 @@ export function AIAssistant() {
                         category: args.category || "AI Logged",
                         description: args.description,
                         date: args.date || new Date().toISOString().split('T')[0],
-                        paymentMethod: args.paymentMethod || "cash"
+                        paymentMethod: args.paymentMethod || "cash",
+                        currency: "GEL",
+                        exchangeRate: 1
                     });
                     toast.success("ხარჯი დაემატა");
                     return { success: true };
@@ -348,7 +352,7 @@ export function AIInsightsCard() {
                 ? `${store.lowStockProducts.length} სახეობის პროდუქტი იწურება.`
                 : "მარაგები ოპტიმალურ მდგომარეობაშია.",
             icon: AlertCircle,
-            color: store.lowStockProducts.length > 0 ? "text-destructive" : "text-chart-2",
+            color: store.lowStockProducts.length > 0 ? "text-destructive" : "text-emerald-400",
         },
         {
             title: "გაყიდვების დინამიკა",
@@ -356,47 +360,64 @@ export function AIInsightsCard() {
                 ? `ყველაზე მოთხოვნადია: ${store.topProducts[0].name}`
                 : "გაყიდვების ისტორია ჯერ არ არსებობს.",
             icon: TrendingUp,
-            color: "text-chart-1",
+            color: "text-sky-400",
         },
         {
             title: "ბიზნესის სტატუსი",
             description: `საწყობში ამჟამად არის ${store.totalStock} ერთეული.`,
             icon: Package,
-            color: "text-chart-3",
+            color: "text-amber-400",
         }
     ];
 
     return (
-        <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-lg rounded-2xl overflow-hidden relative group border-2">
-            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-                <Sparkles className="h-32 w-32 text-primary rotate-12" />
-            </div>
-            <CardHeader className="pb-2 relative">
-                <div className="flex items-center gap-2 mb-1">
-                    <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
-                        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        <div className="ai-insights-outer mb-8 group">
+            <div className="ai-insights-dot"></div>
+            <div className="ai-insights-card">
+                <div className="ai-insights-ray"></div>
+
+                <div className="flex items-center justify-between mb-6 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 shadow-xl backdrop-blur-sm">
+                            <Sparkles className="h-6 w-6 text-white animate-pulse" />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 block mb-0.5">
+                                System Intelligence
+                            </span>
+                            <h2 className="ai-insights-title-text">AI Insights</h2>
+                        </div>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-                        AI System Insights
-                    </span>
+                    <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
+                        <span className="text-[10px] font-black text-white/70 tracking-widest uppercase">
+                            Powered by <span className="text-white">Jabsona</span>
+                        </span>
+                    </div>
                 </div>
-                <CardTitle className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
-                    POWERED BY <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 shadow-sm">JABSONA</span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
                     {insights.map((insight, i) => (
-                        <div key={i} className="flex flex-col gap-1 p-3 rounded-lg bg-background/50 border border-primary/10 transition-all hover:border-primary/30">
-                            <div className="flex items-center gap-2">
-                                <insight.icon className={cn("h-4 w-4", insight.color)} />
-                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{insight.title}</span>
+                        <div key={i} className="flex flex-col gap-2 p-4 rounded-xl bg-white/5 border border-white/10 transition-all hover:bg-white/10 hover:border-white/20 group/item backdrop-blur-sm">
+                            <div className="flex items-center gap-3">
+                                <div className={cn("p-2 rounded-lg bg-black/20 border border-white/5", insight.color)}>
+                                    <insight.icon className="h-4 w-4" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-wider text-white/40 group-hover/item:text-white/60 transition-colors">
+                                    {insight.title}
+                                </span>
                             </div>
-                            <p className="text-sm font-medium">{insight.description}</p>
+                            <p className="text-sm font-bold text-white/90 leading-relaxed">
+                                {insight.description}
+                            </p>
                         </div>
                     ))}
                 </div>
-            </CardContent>
-        </Card>
+
+                <div className="ai-insights-line ai-insights-topl"></div>
+                <div className="ai-insights-line ai-insights-leftl"></div>
+                <div className="ai-insights-line ai-insights-bottoml"></div>
+                <div className="ai-insights-line ai-insights-rightl"></div>
+            </div>
+        </div>
     );
 }

@@ -40,6 +40,30 @@ export const fiscalService = {
         }
     },
 
+    /**
+     * Prints a Z-Report (End of Shift report).
+     */
+    async printZReport(): Promise<FiscalResponse> {
+        const settings = settingsStore.getSettings();
+
+        if (settings.fiscalType === "none" || !settings.fiscalType) {
+            toast.info("Z-რეპორტის ბეჭდვა გამოთიშულია პარამეტრებიდან.");
+            return { success: true };
+        }
+
+        try {
+            console.log("[Fiscal] Printing Z-Report...");
+            await new Promise(r => setTimeout(r, 2000));
+            const receiptNumber = `Z-${Math.floor(Math.random() * 90000 + 10000)}`;
+            toast.success(`Z-რეპორტი წარმატებით დაიბეჭდა: ${receiptNumber}`);
+            return { success: true, receiptNumber };
+        } catch (error: any) {
+            const errMsg = error.message || "შეცდომა Z-რეპორტის ბეჭდვისას.";
+            toast.error(errMsg);
+            return { success: false, error: errMsg };
+        }
+    },
+
     printDigital(sales: Sale[]): Promise<FiscalResponse> {
         console.log("[Fiscal] Printing digital receipt...", sales);
         return new Promise(async (resolve) => {
