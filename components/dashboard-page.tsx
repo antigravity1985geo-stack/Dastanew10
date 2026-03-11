@@ -28,6 +28,8 @@ import { useWarehouseStore } from "@/hooks/use-store";
 import { PageHeader } from "@/components/page-header";
 import { AIInsightsCard } from "@/components/ai-assistant";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const CHART_COLORS = [
   "#0ea5e9",
@@ -148,186 +150,23 @@ export function DashboardPage() {
           ))}
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Sales by Month */}
+        {/* Status Section: Low Stock & Recent Activity */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8 text-slate-800">
+           {/* Recent Inventory */}
           <Card className="border-border/50 shadow-md rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                გაყიდვები თვეების მიხედვით
-              </CardTitle>
-              <CardDescription>შემოსავლისა და მოგების ანალიზი</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {store.salesByMonth.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={store.salesByMonth}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748B', fontSize: 12, fontWeight: 600 }}
-                      dy={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748B', fontSize: 12 }}
-                      tickFormatter={(value) => `${value} ₾`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Bar
-                      dataKey="revenue"
-                      name="შემოსავალი"
-                      fill="#0ea5e9"
-                      radius={[6, 6, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="profit"
-                      name="მოგება"
-                      fill="#10b981"
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[280px] text-muted-foreground">
-                  <TrendingUp className="h-10 w-10 opacity-10 mb-3" />
-                  <p className="text-sm font-medium">გაყიდვების მონაცემები არ არის</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Category Distribution */}
-          <Card className="border-border/50 shadow-md rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                კატეგორიების განაწილება
-              </CardTitle>
-              <CardDescription>პროდუქტების რაოდენობა კატეგორიების მიხედვით</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {store.categoryDistribution.length > 0 ? (
-                <div className="flex items-center gap-6">
-                  <ResponsiveContainer width="50%" height={280}>
-                    <PieChart>
-                      <Pie
-                        data={store.categoryDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={4}
-                        dataKey="count"
-                        nameKey="category"
-                      >
-                        {store.categoryDistribution.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={CHART_COLORS[index % CHART_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex-1 space-y-2.5">
-                    {store.categoryDistribution.map((cat, index) => (
-                      <div
-                        key={cat.category}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="h-3 w-3 rounded-full"
-                            style={{
-                              backgroundColor:
-                                CHART_COLORS[index % CHART_COLORS.length],
-                            }}
-                          />
-                          <span className="text-card-foreground font-medium">{cat.category}</span>
-                        </div>
-                        <span className="font-black text-card-foreground">{cat.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[280px] text-muted-foreground">
-                  <Package className="h-10 w-10 opacity-10 mb-3" />
-                  <p className="text-sm font-medium">კატეგორიების მონაცემები არ არის</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Top Products & Recent Sales */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8">
-          {/* Top Products */}
-          <Card className="border-border/50 shadow-md rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                ტოპ პროდუქცია
-              </CardTitle>
-              <CardDescription>ყველაზე გაყიდვადი პროდუქცია</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {store.topProducts.length > 0 ? (
-                <div className="space-y-3">
-                  {store.topProducts.map((product, index) => (
-                    <div
-                      key={product.name}
-                      className="flex items-center justify-between rounded-xl border border-border/50 p-3.5 hover:bg-muted/20 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-black text-primary">
-                          {index + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-card-foreground">
-                            {product.name}
-                          </p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
-                            გაყიდული: {product.sold} ერთ.
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-black text-emerald-600">
-                        {product.revenue.toLocaleString()} ₾
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
-                  <TrendingUp className="h-10 w-10 opacity-10 mb-3" />
-                  <p className="text-sm font-medium">გაყიდვების მონაცემები არ არის</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Inventory */}
-          <Card className="border-border/50 shadow-md rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Boxes className="h-4 w-4 text-primary" />
-                საწყობის პროდუქცია
-              </CardTitle>
-              <CardDescription>ბოლო 5 პროდუქტი</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Boxes className="h-4 w-4 text-primary" />
+                  მარაგების სტატუსი
+                </CardTitle>
+                <CardDescription>ბოლო დამატებული პროდუქტები</CardDescription>
+              </div>
+              <Link href="/mobile-warehouse">
+                <Button variant="ghost" size="sm" className="text-primary font-bold text-xs h-8">
+                  ყველას ნახვა
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent>
               {store.products.length > 0 ? (
@@ -363,6 +202,22 @@ export function DashboardPage() {
                 </div>
               )}
             </CardContent>
+          </Card>
+
+          {/* Analytics Shortcut */}
+          <Card className="border-none bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm rounded-2xl flex flex-col items-center justify-center p-8 text-center border-2 border-primary/10">
+            <div className="h-16 w-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-black text-primary mb-2">დეტალური ანალიტიკა</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+              იხილეთ გაყიდვების დინამიკა, FIFO მოგება და ფინანსური რეპორტები ერთ გვერდზე.
+            </p>
+            <Link href="/analytics">
+              <Button className="rounded-xl px-8 h-12 font-bold shadow-lg shadow-primary/20">
+                ანალიტიკაზე გადასვლა
+              </Button>
+            </Link>
           </Card>
         </div>
 

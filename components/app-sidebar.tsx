@@ -40,6 +40,12 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
+    label: "ანალიტიკა",
+    href: "/analytics",
+    icon: TrendingUp,
+    requiresAdmin: true,
+  },
+  {
     label: "შესყიდვა",
     href: "/purchases",
     icon: ShoppingCart,
@@ -60,18 +66,6 @@ const navItems = [
     label: "ბუღალტერია",
     href: "/accounting",
     icon: BookOpen,
-    requiresAdmin: true,
-  },
-  {
-    label: "ანალიტიკა",
-    href: "/analytics",
-    icon: TrendingUp,
-    requiresAdmin: true,
-  },
-  {
-    label: "ხარჯები",
-    href: "/expenses",
-    icon: Wallet,
     requiresAdmin: true,
   },
   {

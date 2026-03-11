@@ -43,6 +43,8 @@ import { LogOut, User, PauseCircle, PlayCircle, ShieldAlert } from "lucide-react
 import { cn } from "@/lib/utils";
 import { ManagerAuthDialog } from "@/components/manager-auth-dialog";
 import { headerStore } from "@/lib/header-store";
+import { useCFDSync } from "@/hooks/use-cfd-sync";
+import { Monitor } from "lucide-react";
 
 // Held Receipt type
 interface HeldReceipt {
@@ -74,6 +76,9 @@ export function SalesPage() {
   const auth = useAuth();
   const [mounted, setMounted] = useState(false);
 
+  // CFD Synchronization Hook (Sender)
+  const { sendState: sendCFDState } = useCFDSync('sender');
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -85,6 +90,25 @@ export function SalesPage() {
   const [clientName, setClientName] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [productSearch, setProductSearch] = useState("");
+
+  // Sync to CFD whenever cart or totals change
+  const total = useMemo(() => {
+    return cart.reduce((acc, curr) => acc + (curr.quantity * (curr.discountPrice || (priceMode === "wholesale" && curr.wholesalePrice ? curr.wholesalePrice : curr.salePrice))), 0);
+  }, [cart, priceMode]);
+
+  useEffect(() => {
+    if (mounted) {
+      sendCFDState({
+        cart: cart.map(item => ({
+          ...item,
+          finalPrice: item.discountPrice || (priceMode === "wholesale" && item.wholesalePrice ? item.wholesalePrice : item.salePrice)
+        })),
+        total,
+        clientName,
+        isNisia: (parseFloat(paidAmount || "0") < total) && parseFloat(paidAmount || "0") > 0
+      });
+    }
+  }, [cart, total, clientName, paidAmount, priceMode, mounted, sendCFDState]);
 
   // RS.GE & Fiscal Toggles (Local overrides)
   const [sendToRSGE, setSendToRSGE] = useState(false);
@@ -804,12 +828,62 @@ export function SalesPage() {
 
     const headerActions = (
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Price Mode Toggle */}
+        <div className="flex bg-muted/50 p-0.5 rounded-lg border border-border/50 items-center mr-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 px-2 rounded-md text-[10px] font-bold transition-all",
+              priceMode === "retail" ? "bg-background shadow-xs text-primary" : "text-muted-foreground"
+            )}
+            onClick={() => setPriceMode("retail")}
+          >
+            საცალო
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-7 px-2 rounded-md text-[10px] font-bold transition-all",
+              priceMode === "wholesale" ? "bg-background shadow-xs text-primary" : "text-muted-foreground"
+            )}
+            onClick={() => setPriceMode("wholesale")}
+          >
+            საბითუმო
+          </Button>
+        </div>
+
+        {/* Open CFD Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 rounded-lg border-blue-500/20 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-all shrink-0 mr-1"
+          onClick={() => window.open('/display', '_blank', 'width=1024,height=768')}
+          title="კლიენტის ეკრანი (CFD)"
+        >
+          <Monitor className="h-3.5 w-3.5" />
+          <span className="hidden md:inline ml-1.5 text-[10px]">CFD ეკრანი</span>
+        </Button>
+
+        {/* Debts Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 rounded-lg border-primary/20 hover:bg-primary/5 text-primary font-bold transition-all shrink-0"
+          onClick={() => setDebtsOpen(true)}
+          title="ვალები"
+        >
+          <Wallet className="h-3.5 w-3.5" />
+          <span className="hidden lg:inline ml-1.5">ვალები</span>
+        </Button>
+
         {/* Shift Logic in Header */}
         <Button
           variant={store.currentShift ? "outline" : "default"}
           size="sm"
           className={cn(
-            "h-8 px-3 rounded-lg font-bold text-[11px] transition-all",
+            "h-8 px-3 rounded-lg font-bold text-[11px] transition-all shrink-0",
             store.currentShift
               ? "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-50"
               : "bg-primary text-primary-foreground"
@@ -820,22 +894,23 @@ export function SalesPage() {
             "h-1.5 w-1.5 rounded-full mr-1.5",
             store.currentShift ? "bg-emerald-500 animate-pulse" : "bg-white/50"
           )} />
-          {store.currentShift ? "ცვლა ღიაა" : "ცვლის გახსნა"}
+          <span className="hidden sm:inline">{store.currentShift ? "ცვლა ღიაა" : "ცვლის გახსნა"}</span>
+          <span className="sm:hidden">{store.currentShift ? "ღიაა" : "გახსნა"}</span>
         </Button>
 
         {/* Z-Report */}
         <Button
           variant="outline"
           size="sm"
-          className="h-8 px-2 rounded-lg border-primary/20 hover:bg-primary/5 text-primary font-bold transition-all hidden sm:flex"
+          className="h-8 px-2 rounded-lg border-border hover:bg-muted font-bold transition-all hidden md:flex"
           onClick={handleZReport}
+          title="Z-რეპორტი"
         >
-          <Printer className="h-3.5 w-3.5 mr-1.5" />
-          Z
+          <Printer className="h-3.5 w-3.5" />
         </Button>
 
         {/* History & Excel */}
-        <div className="flex bg-muted/40 p-0.5 rounded-lg border border-border/50 items-center">
+        <div className="flex bg-muted/40 p-0.5 rounded-lg border border-border/50 items-center hidden sm:flex">
           <Button
             variant="ghost"
             size="sm"
@@ -845,8 +920,8 @@ export function SalesPage() {
             )}
             onClick={() => setShowHistory(!showHistory)}
           >
-            <FileText className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">ისტორია</span>
+            <HistoryIcon className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden lg:inline">ისტორია</span>
           </Button>
           <Button
             variant="ghost"
@@ -855,7 +930,7 @@ export function SalesPage() {
             onClick={handleExportExcel}
           >
             <Download className="h-3.5 w-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Excel</span>
+            <span className="hidden lg:inline">Excel</span>
           </Button>
         </div>
 
@@ -865,12 +940,12 @@ export function SalesPage() {
             variant="ghost"
             size="sm"
             onClick={() => store.logoutEmployee()}
-            className="flex items-center gap-2 bg-primary/5 hover:bg-orange-50 border border-primary/10 hover:border-orange-200 px-2 py-0.5 h-8 rounded-lg transition-colors group"
+            className="flex items-center gap-2 bg-primary/5 hover:bg-orange-50 border border-primary/10 hover:border-orange-200 px-2 py-0.5 h-8 rounded-lg transition-colors group shrink-0"
             title="მოლარის შეცვლა"
           >
             <User className="h-3 w-3 text-primary/60 group-hover:text-orange-500" />
-            <span className="text-[11px] font-black group-hover:text-orange-600">{store.currentEmployee.name}</span>
-            <LogOut className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 text-orange-500 transition-opacity" />
+            <span className="text-[11px] font-black group-hover:text-orange-600 hidden sm:inline">{store.currentEmployee.name}</span>
+            <LogOut className="h-3 w-3 ml-1 opacity-40 group-hover:opacity-100 text-orange-500 transition-opacity" />
           </Button>
         )}
       </div>
@@ -896,114 +971,7 @@ export function SalesPage() {
         }}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* TOP HEADER */}
-        <div className="h-16 bg-[#8b1a1a] flex items-center justify-between px-6 text-white shadow-lg z-20 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-white/10">
-                <Package className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-black text-sm tracking-tighter leading-none">DASTA POS</span>
-                <span className="text-[9px] font-bold opacity-60 tracking-widest uppercase">Terminal v2.0</span>
-              </div>
-            </div>
-
-            <div className="h-8 w-[1px] bg-white/10 mx-1 hidden lg:block" />
-            
-            <div className="flex items-center gap-1">
-              <button 
-                className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white"
-                title="Dashboard"
-              >
-                <LayoutGrid className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => setShowHistory(!showHistory)}
-                className={cn("p-2 rounded-xl hover:bg-white/10 transition-colors", showHistory ? "bg-white/20 text-white" : "text-white/60")}
-                title="History"
-              >
-                <HistoryIcon className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => setDebtsOpen(true)}
-                className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
-                title="Debts"
-              >
-                <Wallet className="h-5 w-5" />
-              </button>
-              <button className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white" title="Settings">
-                <Settings className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex bg-white/10 p-1 rounded-xl items-center border border-white/10">
-              <button
-                onClick={() => setPriceMode("retail")}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-[10px] font-black transition-all",
-                  priceMode === "retail" ? "bg-white text-[#8b1a1a]" : "text-white/60 hover:text-white"
-                )}
-              >
-                საცალო
-              </button>
-              <button
-                onClick={() => setPriceMode("wholesale")}
-                className={cn(
-                  "px-3 py-1 rounded-lg text-[10px] font-black transition-all",
-                  priceMode === "wholesale" ? "bg-white text-[#8b1a1a]" : "text-white/60 hover:text-white"
-                )}
-              >
-                საბითუმო
-              </button>
-            </div>
-
-            <div className="h-8 w-[1px] bg-white/10 mx-1 hidden sm:block" />
-            
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="flex flex-col items-end">
-                <span className="text-[9px] font-bold opacity-50 uppercase leading-none mb-1">Cashier</span>
-                <span className="text-xs font-bold">{store.currentEmployee?.name || "No User"}</span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={cn(
-                  "h-8 px-3 rounded-xl text-[10px] font-black border border-white/20 transition-all",
-                  store.currentShift ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white"
-                )}
-                onClick={() => setShiftOpenModal(true)}
-              >
-                <div className={cn("h-1.5 w-1.5 rounded-full mr-2", store.currentShift ? "bg-emerald-400" : "bg-white/40")} />
-                {store.currentShift ? "SHIFT OPEN" : "OPEN SHIFT"}
-              </Button>
-              {store.currentEmployee && (
-                <button 
-                  onClick={() => store.logoutEmployee()}
-                  className="p-2 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
-                  title="Logout"
-                >
-                  <LogOut className="h-5 w-5" />
-                </button>
-              )}
-            </div>
-
-            <div className="h-8 w-[1px] bg-white/10 mx-1 hidden md:block" />
-            
-            <div className="flex flex-col items-end hidden md:flex">
-              <span className="text-sm font-black tracking-tight leading-none">{new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="text-[9px] font-bold opacity-50 uppercase mt-1">{new Date().toLocaleDateString('ka-GE')}</span>
-            </div>
-            <div className="flex items-center gap-3 opacity-60 ml-2">
-              <Wifi className="h-4 w-4" />
-              <Zap className="h-4 w-4" />
-            </div>
-          </div>
-        </div>
-
+      <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* WORK AREA */}
         <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[#eff1f3]">
           {/* LEFT: Product Grid / Categories */}
