@@ -1,26 +1,44 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Lock, Delete, ChevronRight, User } from "lucide-react";
+import { Lock, Delete, ChevronRight, User, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWarehouseStore } from "@/hooks/use-store";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+// Hashing function for initial PIN creation
+async function hashPIN(pin: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pin);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function PINLoginOverlay() {
     const store = useWarehouseStore();
+    const auth = useAuth();
     const [pin, setPin] = useState("");
     const [error, setError] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
 
     // If already logged in, don't show
     if (store.currentEmployee) return null;
+
+    const hasEmployees = store.employees.length > 0;
 
     const handleNumberClick = (num: string) => {
         if (pin.length < 6) {
             const newPin = pin + num;
             setPin(newPin);
             if (newPin.length === 6) {
-                handleLogin(newPin);
+                if (!hasEmployees) {
+                    handleCreateInitial(newPin);
+                } else {
+                    handleLogin(newPin);
+                }
             }
         }
     };
@@ -28,6 +46,27 @@ export function PINLoginOverlay() {
     const handleDelete = () => {
         setPin(pin.slice(0, -1));
         setError(false);
+    };
+
+    const handleCreateInitial = async (currentPin: string) => {
+        setIsCreating(true);
+        try {
+            const hashedPin = await hashPIN(currentPin);
+            await store.addEmployee({
+                name: auth.currentUser?.displayName || "ადმინისტრატორი",
+                position: "ადმინისტრატორი",
+                phone: auth.currentUser?.email || "",
+                pinCode: hashedPin,
+            });
+            toast.success("PIN კოდი წარმატებით შეიქმნა!");
+            await store.loginEmployee(currentPin);
+        } catch (err: any) {
+            toast.error(err.message || "შეცდომა PIN-ის შექმნისას");
+            setPin("");
+            setError(true);
+        } finally {
+            setIsCreating(false);
+        }
     };
 
     const handleLogin = async (currentPin: string) => {
@@ -45,11 +84,15 @@ export function PINLoginOverlay() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="w-full max-w-sm p-6 space-y-8 text-center animate-in zoom-in-95 duration-300">
                 <div className="space-y-2">
-                    <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                        <Lock className="w-8 h-8 text-primary" />
+                    <div className={cn("mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors", hasEmployees ? "bg-primary/10" : "bg-emerald-500/10")}>
+                        {hasEmployees ? <Lock className="w-8 h-8 text-primary" /> : <KeyRound className="w-8 h-8 text-emerald-500" />}
                     </div>
-                    <h2 className="text-2xl font-bold">თანამშრომლის ავტორიზაცია</h2>
-                    <p className="text-muted-foreground">შეიყვანეთ 6-ციფრიანი PIN კოდი მუშაობის დასაწყებად</p>
+                    <h2 className="text-2xl font-bold">
+                        {hasEmployees ? "თანამშრომლის ავტორიზაცია" : "პირველი PIN-ის შექმნა"}
+                    </h2>
+                    <p className="text-muted-foreground">
+                        {hasEmployees ? "შეიყვანეთ 6-ციფრიანი PIN კოდი მუშაობის დასაწყებად" : "რადგან ახალი მომხმარებელი ხართ, შექმენით 6-ციფრიანი სამუშაო PIN კოდი"}
+                    </p>
                 </div>
 
                 <div className="flex justify-center gap-4 mb-8">
