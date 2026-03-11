@@ -15,6 +15,7 @@ import {
   Link2,
   Tag,
   Wallet,
+  QrCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -89,6 +90,11 @@ const navItems = [
     href: "/rsge",
     icon: Link2,
     requiresAdmin: true,
+  },
+  {
+    label: "მობილური საწყობი",
+    href: "/mobile-warehouse",
+    icon: QrCode,
   },
 ];
 

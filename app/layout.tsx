@@ -19,6 +19,13 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'DASTA',
   },
+  themeColor: '#8b1a1a',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
   icons: {
     icon: [
       {
