@@ -46,9 +46,20 @@ import {
   downloadImportTemplate,
 } from "@/lib/excel";
 import { uploadProductImage } from "@/lib/image-upload";
+import { generateBarcodeDataURL, printBarcodeLabel, generateInternalBarcode } from "@/lib/barcode-utils";
+import { Tag, Zap, FileText, ArrowRight } from "lucide-react";
+import { 
+  calculateSalesVelocity, 
+  recommendOrderQuantity, 
+  generatePurchaseOrderPDF 
+} from "@/lib/purchase-orders";
+import { Badge } from "@/components/ui/badge";
+import { useSettings } from "@/hooks/use-settings";
+import { cn } from "@/lib/utils";
 
 export function PurchasesPage() {
   const store = useWarehouseStore();
+  const { companyName } = useSettings();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -72,6 +83,7 @@ export function PurchasesPage() {
     client: "", // Keep for compatibility
     paidInCash: "",
     paidInCard: "",
+    discountPrice: "",
     currency: "GEL" as "GEL" | "USD" | "EUR",
     exchangeRate: "1",
   });
@@ -81,6 +93,7 @@ export function PurchasesPage() {
     barcode: "",
     purchasePrice: "",
     salePrice: "",
+    discountPrice: "",
     wholesalePrice: "",
     quantity: "",
     client: "",
@@ -94,6 +107,34 @@ export function PurchasesPage() {
   const [uploading, setUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const editImageInputRef = useRef<HTMLInputElement>(null);
+  const lowStockThreshold = 10; // Default threshold
+
+  const recommendations = useMemo(() => {
+    return store.products.map(p => {
+      const velocity = calculateSalesVelocity(p.id, store.sales);
+      const recommendedQty = recommendOrderQuantity(p.quantity, velocity);
+      
+      return {
+        ...p,
+        velocity,
+        recommendedQty,
+        daysLeft: velocity > 0 ? Math.floor(p.quantity / velocity) : Infinity
+      };
+    }).filter(p => p.recommendedQty > 0 || p.quantity <= lowStockThreshold)
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [store.products, store.sales]);
+
+  const recommendationsBySupplier = useMemo(() => {
+    const groups: Record<string, typeof recommendations> = {};
+    recommendations.forEach(p => {
+      const supplier = p.supplier || "უცნობი მომწოდებელი";
+      if (!groups[supplier]) groups[supplier] = [];
+      groups[supplier].push(p);
+    });
+    return groups;
+  }, [recommendations]);
+
+  const [activeTab, setActiveTab] = useState("all");
 
   // Sorting and Pagination state
   const [sortColumn, setSortColumn] = useState<string>("createdAt");
@@ -218,6 +259,7 @@ export function PurchasesPage() {
         supplier: form.supplier.trim() || form.client.trim(),
         paidInCash: parseFloat(form.paidInCash || "0"),
         paidInCard: parseFloat(form.paidInCard || "0"),
+        discountPrice: form.discountPrice ? parseFloat(form.discountPrice) : undefined,
         imageUrl,
         currency: form.currency,
         exchangeRate: parseFloat(form.exchangeRate) || 1,
@@ -236,6 +278,7 @@ export function PurchasesPage() {
         client: "",
         paidInCash: "",
         paidInCard: "",
+        discountPrice: "",
         currency: "GEL",
         exchangeRate: "1",
       });
@@ -246,6 +289,26 @@ export function PurchasesPage() {
       toast.error(err instanceof Error ? err.message : "შეცდომა");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleGenerateBarcode = () => {
+    const existingBarcodes = store.products.map(p => p.barcode).filter(Boolean) as string[];
+    const newBarcode = generateInternalBarcode(existingBarcodes);
+    setForm({ ...form, barcode: newBarcode });
+    toast.success("ბარკოდი დაგენერირდა");
+  };
+
+  const handlePrintBarcode = async (product: Partial<Product>) => {
+    if (!product.barcode) {
+      toast.error("პროდუქტს არ აქვს ბარკოდი");
+      return;
+    }
+    try {
+      const dataURL = await generateBarcodeDataURL(product.barcode);
+      printBarcodeLabel(dataURL, product.name || "პროდუქტი", product.salePrice || 0);
+    } catch (error) {
+      toast.error("შეცდომა ბარკოდის გენერირებისას");
     }
   };
 
@@ -269,6 +332,7 @@ export function PurchasesPage() {
       barcode: product.barcode || "",
       purchasePrice: String(product.purchasePrice),
       salePrice: String(product.salePrice),
+      discountPrice: product.discountPrice !== undefined ? String(product.discountPrice) : "",
       wholesalePrice: product.wholesalePrice !== undefined ? String(product.wholesalePrice) : "",
       quantity: String(product.quantity),
       client: product.client || "",
@@ -297,6 +361,7 @@ export function PurchasesPage() {
         barcode: editForm.barcode.trim(),
         purchasePrice: parseFloat(editForm.purchasePrice),
         salePrice: parseFloat(editForm.salePrice),
+        discountPrice: editForm.discountPrice ? parseFloat(editForm.discountPrice) : null, // Use null to clear discount
         quantity: parseInt(editForm.quantity),
         client: editForm.client.trim(),
       };
@@ -543,8 +608,15 @@ export function PurchasesPage() {
                   />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <Label htmlFor="barcode" className="text-foreground">
-                    შტრიხკოდი
+                  <Label htmlFor="barcode" className="flex justify-between items-center text-foreground">
+                    <span>შტრიხკოდი</span>
+                    <button 
+                      type="button" 
+                      onClick={handleGenerateBarcode}
+                      className="text-[10px] font-bold text-primary hover:underline uppercase tracking-tighter"
+                    >
+                      ავტო-გენერაცია
+                    </button>
                   </Label>
                   <Input
                     id="barcode"
@@ -569,6 +641,7 @@ export function PurchasesPage() {
                             supplier: "",
                             paidInCash: "",
                             paidInCard: "",
+                            discountPrice: existingProduct.discountPrice !== undefined ? String(existingProduct.discountPrice) : "",
                             currency: "GEL",
                             exchangeRate: "1",
                           });
@@ -715,6 +788,23 @@ export function PurchasesPage() {
                     className="mt-1.5"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="discountPrice" className="text-foreground text-red-500 font-bold">
+                    აქციის (ახალი) ფასი
+                  </Label>
+                  <Input
+                    id="discountPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.discountPrice}
+                    onChange={(e) =>
+                      setForm({ ...form, discountPrice: e.target.value })
+                    }
+                    placeholder="დროებითი ფასი"
+                    className="mt-1.5 border-red-100 bg-red-50/20"
+                  />
+                </div>
                 <div className="col-span-2">
                   <Label htmlFor="quantity" className="text-foreground">
                     რაოდენობა *
@@ -750,11 +840,23 @@ export function PurchasesPage() {
         </Dialog>
       </PageHeader>
       <div id="print-area" className="animate-in fade-in duration-700">
-        <Tabs defaultValue="stock" className="space-y-8">
-          <TabsList className="bg-muted/40 p-1 rounded-2xl border border-border/50 mb-8 max-w-md">
-            <TabsTrigger value="stock" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">მიმდინარე ნაშთი</TabsTrigger>
-            <TabsTrigger value="history" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">შესყიდვების ისტორია</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="stock" className="space-y-8" onValueChange={setActiveTab}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+            <TabsList className="bg-muted/40 p-1 rounded-2xl border border-border/50 max-w-md">
+              <TabsTrigger value="stock" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">
+                <Package className="h-4 w-4 mr-2" />
+                მიმდინარე ნაშთი
+              </TabsTrigger>
+              <TabsTrigger value="history" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                შესყიდვების ისტორია
+              </TabsTrigger>
+              <TabsTrigger value="recommended" className="rounded-xl data-[state=active]:shadow-md data-[state=active]:bg-background font-bold px-6">
+                <Zap className="h-4 w-4 mr-2 text-amber-500" />
+                რეკომენდირებული
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="stock">
             <div id="print-area">
@@ -1002,6 +1104,15 @@ export function PurchasesPage() {
                                   variant="outline"
                                   size="icon"
                                   className="h-9 w-9 text-slate-600 hover:text-primary hover:bg-primary/5 border-border/50 rounded-xl transition-all shadow-sm"
+                                  title="ბარკოდის ბეჭდვა"
+                                  onClick={() => handlePrintBarcode(product)}
+                                >
+                                  <Tag className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-9 w-9 text-slate-600 hover:text-primary hover:bg-primary/5 border-border/50 rounded-xl transition-all shadow-sm"
                                   onClick={() => handleEditOpen(product.id)}
                                 >
                                   <Pencil className="h-4 w-4" />
@@ -1213,6 +1324,92 @@ export function PurchasesPage() {
               )}
             </div>
           </TabsContent>
+        <TabsContent value="recommended" className="animate-in slide-in-from-bottom-2 duration-500">
+          <div className="grid grid-cols-1 gap-6">
+            {Object.keys(recommendationsBySupplier).length === 0 ? (
+              <Card className="border-none shadow-sm py-12">
+                <CardContent className="flex flex-col items-center justify-center text-muted-foreground">
+                  <Zap className="h-12 w-12 opacity-10 mb-4" />
+                  <p>შესასყიდი პროდუქცია არ არის (ყველაფერი საკმარისია)</p>
+                </CardContent>
+              </Card>
+            ) : (
+              Object.entries(recommendationsBySupplier).map(([supplier, items]) => (
+                <Card key={supplier} className="border-none shadow-sm rounded-2xl overflow-hidden mb-6">
+                  <CardHeader className="bg-muted/30 flex flex-row items-center justify-between py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Zap className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base font-bold">{supplier}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{items.length} პროდუქტი საჭიროებს შევსებას</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-xl gap-2 font-bold border-primary/20 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+                      onClick={() => generatePurchaseOrderPDF(
+                        supplier, 
+                        items.map(i => ({ name: i.name, quantity: i.recommendedQty, currentStock: i.quantity })),
+                        companyName || "My Store"
+                      )}
+                    >
+                      <FileText className="h-4 w-4" />
+                      PDF ორდერი
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader className="bg-muted/10">
+                        <TableRow className="hover:bg-transparent border-none">
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest pl-6 py-4">პროდუქტი</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">ნაშთი</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">დღიური გაყიდვა</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">პროგნოზი</TableHead>
+                          <TableHead className="text-[10px] font-black uppercase tracking-widest py-4 text-right pr-6">რეკომენდირებული</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item) => (
+                          <TableRow key={item.id} className="hover:bg-muted/20 transition-colors border-b border-border/50">
+                            <TableCell className="font-bold pl-6 py-4">{item.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={item.quantity <= 5 ? "destructive" : "outline"} className="rounded-lg">
+                                {item.quantity} ერთ.
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-medium">
+                              {item.velocity.toFixed(2)} ერთ/დღე
+                            </TableCell>
+                            <TableCell>
+                              {item.daysLeft === Infinity ? (
+                                <span className="text-xs text-muted-foreground">მონაცემები არ არის</span>
+                              ) : (
+                                <span className={cn(
+                                  "text-xs font-bold",
+                                  item.daysLeft < 3 ? "text-rose-600 font-black" : "text-amber-600"
+                                )}>
+                                  {item.daysLeft} დღის მარაგი
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-lg font-black text-primary">{item.recommendedQty}</span>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground/30" />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
         </Tabs>
 
         {/* Edit Dialog */}
@@ -1253,9 +1450,39 @@ export function PurchasesPage() {
                     className="mt-1.5"
                   />
                 </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <Label htmlFor="editBarcode" className="text-foreground">
-                    შტრიხკოდი
+                 <div className="col-span-2 sm:col-span-1">
+                  <Label htmlFor="editBarcode" className="flex justify-between items-center text-foreground">
+                    <span>შტრიხკოდი</span>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const existingBarcodes = store.products.map(p => p.barcode).filter(Boolean) as string[];
+                          const newBarcode = generateInternalBarcode(existingBarcodes);
+                          setEditForm({ ...editForm, barcode: newBarcode });
+                          toast.success("ბარკოდი დაგენერირდა");
+                        }}
+                        className="text-[10px] font-bold text-primary hover:underline uppercase tracking-tighter"
+                      >
+                        გენერაცია
+                      </button>
+                      {editForm.barcode && (
+                        <button 
+                          type="button" 
+                          onClick={async () => {
+                            try {
+                              const dataURL = await generateBarcodeDataURL(editForm.barcode);
+                              printBarcodeLabel(dataURL, editForm.name || "პროდუქტი", parseFloat(editForm.salePrice) || 0);
+                            } catch (error) {
+                              toast.error("შეცდომა ბეჭდვისას");
+                            }
+                          }}
+                          className="text-[10px] font-bold text-emerald-600 hover:underline uppercase tracking-tighter border-l pl-2 border-border"
+                        >
+                          ბეჭდვა
+                        </button>
+                      )}
+                    </div>
                   </Label>
                   <Input
                     id="editBarcode"
@@ -1383,6 +1610,23 @@ export function PurchasesPage() {
                       setEditForm({ ...editForm, wholesalePrice: e.target.value })
                     }
                     className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editDiscountPrice" className="text-foreground text-red-500 font-bold">
+                    აქციის (ახალი) ფასი
+                  </Label>
+                  <Input
+                    id="editDiscountPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.discountPrice}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, discountPrice: e.target.value })
+                    }
+                    placeholder="ცარიელი ნიშნავს აქციის გარეშე"
+                    className="mt-1.5 border-red-100 bg-red-50/20"
                   />
                 </div>
                 <div className="col-span-2">

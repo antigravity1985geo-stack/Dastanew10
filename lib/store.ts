@@ -30,9 +30,11 @@ export interface Product {
   imageUrl?: string;
   purchasePrice: number;
   salePrice: number;
+  discountPrice?: number; // New: Promotional/Sale price
   wholesalePrice?: number;
   quantity: number;
   minStockLevel?: number; // Fix #4: Low Stock Alerts
+  supplier?: string;
   client?: string;
   createdAt: string;
 }
@@ -411,6 +413,7 @@ class WarehouseStore {
       imageUrl: p.image_url || "",
       purchasePrice: Number(p.purchase_price) || 0,
       salePrice: Number(p.sale_price) || 0,
+      discountPrice: p.discount_price != null ? Number(p.discount_price) : undefined,
       wholesalePrice: Number(p.wholesale_price) || 0,
       quantity: p.quantity || 0,
       minStockLevel: p.min_stock_level != null ? Number(p.min_stock_level) : undefined,
@@ -768,6 +771,7 @@ class WarehouseStore {
         quantity: totalQuantity,
         purchase_price: gelPurchasePrice,
         sale_price: product.salePrice,
+        discount_price: product.discountPrice,
         wholesale_price: product.wholesalePrice || existing.wholesalePrice || product.salePrice,
         category_name: product.category || existing.category,
         client: product.supplier || product.client || existing.client,
@@ -788,6 +792,7 @@ class WarehouseStore {
         quantity: updates.quantity,
         purchasePrice: updates.purchase_price,
         salePrice: updates.sale_price,
+        discountPrice: updates.discount_price,
         wholesalePrice: updates.wholesale_price,
         category: updates.category_name,
         client: updates.client,
@@ -854,6 +859,7 @@ class WarehouseStore {
         category_name: product.category,
         purchase_price: gelPurchasePrice,
         sale_price: product.salePrice,
+        discount_price: product.discountPrice,
         wholesale_price: gelWholesalePrice,
         quantity: product.quantity,
         client: product.supplier || product.client,
@@ -874,6 +880,7 @@ class WarehouseStore {
         imageUrl: product.imageUrl,
         purchasePrice: gelPurchasePrice,
         salePrice: product.salePrice,
+        discountPrice: product.discountPrice,
         wholesalePrice: gelWholesalePrice,
         quantity: product.quantity,
         client: product.supplier || product.client,
@@ -949,6 +956,7 @@ class WarehouseStore {
     if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
     if (updates.salePrice !== undefined) dbUpdates.sale_price = updates.salePrice;
+    if (updates.discountPrice !== undefined) dbUpdates.discount_price = updates.discountPrice;
     if (updates.wholesalePrice !== undefined) dbUpdates.wholesale_price = updates.wholesalePrice;
     if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
     if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;

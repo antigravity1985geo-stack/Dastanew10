@@ -62,6 +62,7 @@ interface CartItem {
   quantity: number;
   salePrice: number;
   retailPrice: number;
+  discountPrice?: number;
   wholesalePrice?: number;
   maxStock: number;
   imageUrl?: string;
@@ -235,16 +236,24 @@ export function SalesPage() {
         toast.error(`${product.name} — ამოწურულია!`);
         return prevCart;
       }
+
+      // Determine the price based on mode and potential discount
+      let effectivePrice = product.salePrice;
+      if (priceMode === "wholesale" && product.wholesalePrice !== undefined) {
+        effectivePrice = product.wholesalePrice;
+      } else if (priceMode === "retail" && product.discountPrice !== undefined) {
+        effectivePrice = product.discountPrice;
+      }
+
       return [...prevCart, {
         productId: product.id,
         productName: product.name,
         category: product.category,
         quantity: 1,
         retailPrice: product.salePrice,
+        discountPrice: product.discountPrice,
         wholesalePrice: product.wholesalePrice,
-        salePrice: priceMode === "wholesale" && product.wholesalePrice !== undefined
-          ? product.wholesalePrice
-          : product.salePrice,
+        salePrice: effectivePrice,
         maxStock: product.quantity,
         imageUrl: product.imageUrl,
       }];
@@ -269,12 +278,15 @@ export function SalesPage() {
 
   // Update cart prices when mode changes
   useEffect(() => {
-    setCart(prev => prev.map(item => ({
-      ...item,
-      salePrice: priceMode === "wholesale" && item.wholesalePrice !== undefined
-        ? item.wholesalePrice
-        : item.retailPrice
-    })));
+    setCart(prev => prev.map(item => {
+      let effectivePrice = item.retailPrice;
+      if (priceMode === "wholesale" && item.wholesalePrice !== undefined) {
+        effectivePrice = item.wholesalePrice;
+      } else if (priceMode === "retail" && item.discountPrice !== undefined) {
+        effectivePrice = item.discountPrice;
+      }
+      return { ...item, salePrice: effectivePrice };
+    }));
   }, [priceMode]);
 
   const clearCart = useCallback(() => {
@@ -884,55 +896,51 @@ export function SalesPage() {
         }}
       />
 
-      {/* LEFT SIDEBAR */}
-      <div className="w-16 bg-[#2c3e50] flex flex-col items-center py-6 gap-8 text-white/60 flex-shrink-0 border-r border-slate-700/50">
-        <div className="p-2 rounded-xl bg-primary/10 mb-4">
-          <Package className="h-6 w-6 text-primary" />
-        </div>
-        <button className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white">
-          <LayoutGrid className="h-6 w-6" />
-        </button>
-        <button className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-          <ShoppingCart className="h-6 w-6" />
-        </button>
-        <button 
-          onClick={() => setShowHistory(!showHistory)}
-          className={cn("p-2 rounded-xl hover:bg-white/10 transition-colors", showHistory && "bg-white/10 text-white")}
-        >
-          <HistoryIcon className="h-6 w-6" />
-        </button>
-        <button 
-          onClick={() => setDebtsOpen(true)}
-          className="p-2 rounded-xl hover:bg-white/10 transition-colors"
-        >
-          <Wallet className="h-6 w-6" />
-        </button>
-        <div className="mt-auto flex flex-col gap-6 items-center">
-          <button className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-            <Settings className="h-6 w-6" />
-          </button>
-          {store.currentEmployee && (
-            <button 
-              onClick={() => store.logoutEmployee()}
-              className="p-2 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
-            >
-              <LogOut className="h-6 w-6" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* TOP HEADER */}
-        <div className="h-14 bg-[#8b1a1a] flex items-center justify-between px-6 text-white shadow-lg z-10 flex-shrink-0">
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-              <span className="font-black text-sm tracking-tighter leading-none">DASTA POS</span>
-              <span className="text-[9px] font-bold opacity-60 tracking-widest uppercase">Terminal v2.0</span>
+        <div className="h-16 bg-[#8b1a1a] flex items-center justify-between px-6 text-white shadow-lg z-20 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-white/10">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-sm tracking-tighter leading-none">DASTA POS</span>
+                <span className="text-[9px] font-bold opacity-60 tracking-widest uppercase">Terminal v2.0</span>
+              </div>
             </div>
-            <div className="h-8 w-[1px] bg-white/10 mx-2 hidden lg:block" />
-            <div className="hidden lg:flex bg-white/10 p-1 rounded-xl items-center border border-white/10">
+
+            <div className="h-8 w-[1px] bg-white/10 mx-1 hidden lg:block" />
+            
+            <div className="flex items-center gap-1">
+              <button 
+                className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white"
+                title="Dashboard"
+              >
+                <LayoutGrid className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => setShowHistory(!showHistory)}
+                className={cn("p-2 rounded-xl hover:bg-white/10 transition-colors", showHistory ? "bg-white/20 text-white" : "text-white/60")}
+                title="History"
+              >
+                <HistoryIcon className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => setDebtsOpen(true)}
+                className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                title="Debts"
+              >
+                <Wallet className="h-5 w-5" />
+              </button>
+              <button className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white" title="Settings">
+                <Settings className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex bg-white/10 p-1 rounded-xl items-center border border-white/10">
               <button
                 onClick={() => setPriceMode("retail")}
                 className={cn(
@@ -952,9 +960,11 @@ export function SalesPage() {
                 საბითუმო
               </button>
             </div>
-            <div className="h-8 w-[1px] bg-white/10 mx-2 hidden sm:block" />
+
+            <div className="h-8 w-[1px] bg-white/10 mx-1 hidden sm:block" />
+            
             <div className="hidden sm:flex items-center gap-3">
-              <div className="flex flex-col">
+              <div className="flex flex-col items-end">
                 <span className="text-[9px] font-bold opacity-50 uppercase leading-none mb-1">Cashier</span>
                 <span className="text-xs font-bold">{store.currentEmployee?.name || "No User"}</span>
               </div>
@@ -962,7 +972,7 @@ export function SalesPage() {
                 variant="ghost" 
                 size="sm" 
                 className={cn(
-                  "h-7 px-3 rounded-full text-[10px] font-bold border border-white/20 transition-all",
+                  "h-8 px-3 rounded-xl text-[10px] font-black border border-white/20 transition-all",
                   store.currentShift ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white"
                 )}
                 onClick={() => setShiftOpenModal(true)}
@@ -970,28 +980,35 @@ export function SalesPage() {
                 <div className={cn("h-1.5 w-1.5 rounded-full mr-2", store.currentShift ? "bg-emerald-400" : "bg-white/40")} />
                 {store.currentShift ? "SHIFT OPEN" : "OPEN SHIFT"}
               </Button>
+              {store.currentEmployee && (
+                <button 
+                  onClick={() => store.logoutEmployee()}
+                  className="p-2 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              )}
             </div>
-          </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 opacity-60">
+            <div className="h-8 w-[1px] bg-white/10 mx-1 hidden md:block" />
+            
+            <div className="flex flex-col items-end hidden md:flex">
+              <span className="text-sm font-black tracking-tight leading-none">{new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-[9px] font-bold opacity-50 uppercase mt-1">{new Date().toLocaleDateString('ka-GE')}</span>
+            </div>
+            <div className="flex items-center gap-3 opacity-60 ml-2">
               <Wifi className="h-4 w-4" />
               <Zap className="h-4 w-4" />
-              <Bell className="h-4 w-4" />
-            </div>
-            <div className="h-8 w-[1px] bg-white/10 mx-2" />
-            <div className="flex flex-col items-end">
-              <span className="text-sm font-black tracking-tight">{new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="text-[9px] font-bold opacity-50 uppercase">{new Date().toLocaleDateString('ka-GE')}</span>
             </div>
           </div>
         </div>
 
         {/* WORK AREA */}
-        <div className="flex-1 flex p-3 gap-3 overflow-hidden bg-[#eff1f3]">
+        <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[#eff1f3]">
           {/* LEFT: Product Grid / Categories */}
-          <div className="w-[30%] lg:w-[35%] flex flex-col gap-3 h-full">
-            <div className="bg-white rounded-2xl shadow-sm p-3 flex-shrink-0">
+          <div className="w-[35%] lg:w-[40%] flex flex-col gap-4 h-full">
+            <div className="bg-white rounded-2xl shadow-sm p-4 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
@@ -999,13 +1016,13 @@ export function SalesPage() {
                   placeholder="პროდუქტის ძებნა..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="pl-10 h-10 bg-slate-50 border-none rounded-xl focus-visible:ring-primary/20"
+                  className="pl-10 h-11 bg-slate-50 border-none rounded-xl focus-visible:ring-primary/20 font-medium"
                 />
               </div>
             </div>
             
-            <div className="flex-1 bg-white rounded-2xl shadow-sm p-3 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredProducts.map((product) => {
                   const inCart = cart.find(item => item.productId === product.id);
                   const isOutOfStock = product.quantity <= 0;
@@ -1033,7 +1050,24 @@ export function SalesPage() {
                         )}
                       </div>
                       <span className="text-[10px] font-bold text-slate-600 line-clamp-1 text-center w-full uppercase">{product.name}</span>
-                      <span className="text-xs font-black text-primary">{product.salePrice.toLocaleString()} ₾</span>
+                      <div className="flex flex-col items-center">
+                        {priceMode === "retail" && product.discountPrice !== undefined ? (
+                          <>
+                            <span className="text-[10px] font-bold text-slate-400 line-through leading-none">
+                              {product.salePrice.toLocaleString()} ₾
+                            </span>
+                            <span className="text-xs font-black text-red-500 animate-pulse">
+                              {product.discountPrice.toLocaleString()} ₾
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs font-black text-primary">
+                            {(priceMode === "wholesale" && product.wholesalePrice !== undefined 
+                              ? product.wholesalePrice 
+                              : product.salePrice).toLocaleString()} ₾
+                          </span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
@@ -1104,9 +1138,18 @@ export function SalesPage() {
               ) : (
                 cart.map(item => (
                   <div key={item.productId} className="grid grid-cols-6 items-center py-2.5 border-b border-slate-100 group animate-in slide-in-from-left-2 transition-all">
-                    <div className="col-span-3">
-                      <p className="text-xs font-bold text-slate-800 line-clamp-1">{item.productName}</p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase">{item.category || "General"}</p>
+                    <div className="col-span-3 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} className="h-full w-full object-cover" alt="" />
+                        ) : (
+                          <Package className="h-5 w-5 text-slate-300" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 line-clamp-1">{item.productName}</p>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.category || "General"}</p>
+                      </div>
                     </div>
                     <div className="flex items-center justify-center gap-1">
                        <button 

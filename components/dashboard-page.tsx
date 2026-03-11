@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   AlertTriangle,
   Users,
+  TrendingDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -96,6 +97,22 @@ export function DashboardPage() {
       bgColor: "bg-primary/5",
       borderColor: "border-t-primary",
     },
+    {
+      label: "ჯამური ხარჯი",
+      value: `${store.totalExpenses.toLocaleString()} ₾`,
+      icon: TrendingDown,
+      color: "text-rose-600",
+      bgColor: "bg-rose-50/50",
+      borderColor: "border-t-rose-500",
+    },
+    {
+      label: "წმინდა მოგება",
+      value: `${(store.totalProfit - store.totalExpenses).toLocaleString()} ₾`,
+      icon: DollarSign,
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100/30",
+      borderColor: "border-t-emerald-600",
+    },
   ];
 
   return (
@@ -109,7 +126,7 @@ export function DashboardPage() {
       <div id="print-area">
         <AIInsightsCard />
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
           {stats.map((stat) => (
             <Card key={stat.label} className={cn("border-border/50 shadow-sm hover:shadow-md transition-all overflow-hidden relative group border-t-4", stat.bgColor, stat.borderColor)}>
               <CardContent className="p-5">

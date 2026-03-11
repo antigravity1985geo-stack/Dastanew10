@@ -12,8 +12,9 @@ import {
   LogOut,
   User,
   Users,
-  Lock,
   Link2,
+  Tag,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -49,9 +50,21 @@ const navItems = [
     icon: TrendingUp,
   },
   {
+    label: "აქციები",
+    href: "/promotions",
+    icon: Tag,
+    requiresAdmin: true,
+  },
+  {
     label: "ბუღალტერია",
     href: "/accounting",
     icon: BookOpen,
+    requiresAdmin: true,
+  },
+  {
+    label: "ხარჯები",
+    href: "/expenses",
+    icon: Wallet,
     requiresAdmin: true,
   },
   {
