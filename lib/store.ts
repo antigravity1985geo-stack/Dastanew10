@@ -815,7 +815,7 @@ class WarehouseStore {
         product_id: existing.id,
         product_name: existing.name,
         category_name: existing.category,
-        purchase_price: product.purchasePrice, // Store original
+        purchase_price: product.purchasePrice,
         sale_price: product.salePrice,
         quantity: product.quantity,
         paid_in_cash: product.paidInCash || 0,
@@ -826,9 +826,14 @@ class WarehouseStore {
         created_at: new Date().toISOString()
       };
 
-      supabase.from('purchase_history').insert(purchaseHistoryEntry).then(({ error }) => {
-        if (error) console.error("Error logging purchase history:", error);
-      });
+      try {
+        const { error: historyError } = await supabase.from('purchase_history').insert(purchaseHistoryEntry);
+        if (historyError) {
+          console.error("Error logging purchase history:", historyError.message);
+        }
+      } catch (err) {
+        console.error("Critical error in purchase history log:", err);
+      }
 
       // Accounting: Purchase Entry
       this.addJournalEntry({
@@ -842,20 +847,20 @@ class WarehouseStore {
         ]
       });
     } else {
+      const gelWholesalePrice = (product.wholesalePrice || product.salePrice) * exchangeRate;
       const newProduct: any = {
         id: crypto.randomUUID(),
         name: product.name,
         category_name: product.category,
-        purchase_price: gelPurchasePrice, // Store in GEL
+        purchase_price: gelPurchasePrice,
         sale_price: product.salePrice,
-        wholesale_price: product.wholesalePrice || product.salePrice,
+        wholesale_price: gelWholesalePrice,
         quantity: product.quantity,
         client: product.supplier || product.client,
         image_url: product.imageUrl || null,
         created_at: new Date().toISOString(),
       };
 
-      // Only include barcode if it has a value
       if (product.barcode) {
         newProduct.barcode = product.barcode;
       }
@@ -869,37 +874,37 @@ class WarehouseStore {
         imageUrl: product.imageUrl,
         purchasePrice: gelPurchasePrice,
         salePrice: product.salePrice,
-        wholesalePrice: product.wholesalePrice || product.salePrice,
+        wholesalePrice: gelWholesalePrice,
         quantity: product.quantity,
         client: product.supplier || product.client,
         createdAt: newProduct.created_at
       });
       this.notify();
 
-      // Supabase insert
-      supabase.from('products').insert(newProduct).select().single().then(({ data: dbProduct, error }) => {
-        if (error) {
-          console.error("Error adding product:", error);
-          this.products = this.products.filter(p => p.id !== newProduct.id);
-          this.notify();
-          toast.error(error.message || "შეცდომა პროდუქტის დამატებისას");
-          return;
-        }
+      try {
+        // Supabase insert - avoid .select() to prevent schema cache errors
+        const { error } = await supabase
+          .from('products')
+          .insert(newProduct);
+
+        if (error) throw error;
+
+        // Use the local data we just sent as the "dbProduct"
+        const dbProduct = newProduct;
 
         if (dbProduct) {
-          // Log action
           this.logAction({
             actionType: 'INSERT',
             tableName: 'products',
             recordId: dbProduct.id,
             newData: dbProduct
           });
-          // Log to purchase_history
+
           const purchaseHistoryEntry = {
             product_id: dbProduct.id,
             product_name: dbProduct.name,
             category_name: dbProduct.category_name,
-            purchase_price: product.purchasePrice, // Original
+            purchase_price: product.purchasePrice,
             sale_price: dbProduct.sale_price,
             quantity: dbProduct.quantity,
             paid_in_cash: product.paidInCash || 0,
@@ -910,11 +915,17 @@ class WarehouseStore {
             created_at: new Date().toISOString()
           };
 
-          supabase.from('purchase_history').insert(purchaseHistoryEntry).then(({ error }) => {
-            if (error) console.error("Error logging purchase history:", error);
-          });
+          const { error: historyError } = await supabase.from('purchase_history').insert(purchaseHistoryEntry);
+          if (historyError) console.error("Error logging purchase history:", historyError.message);
         }
-      });
+      } catch (error: any) {
+        console.error("Error adding product:", error);
+        this.products = this.products.filter(p => p.id !== newProduct.id);
+        this.notify();
+        const msg = error.message || "შეცდომა პროდუქტის დამატებისას";
+        toast.error(msg);
+        throw new Error(msg);
+      }
     }
   }
 
@@ -922,7 +933,8 @@ class WarehouseStore {
     const product = this.products.find((p) => p.id === id);
     if (!product) throw new Error("პროდუქცია ვერ მოიძებნა");
 
-    this.checkPeriodLocked(product.createdAt);
+    // Only block if the CURRENT date is locked, metadata updates shouldn't be blocked by past closures
+    this.checkPeriodLocked(new Date().toISOString());
 
     const oldProduct = { ...product };
     // Optimistic update
@@ -952,7 +964,8 @@ class WarehouseStore {
       console.error("Error updating product:", error);
       Object.assign(product, oldProduct);
       this.notify();
-      toast.error("შეცდომა განახლებისას");
+      toast.error("შეცდომა განახლებისას: " + (error.message || "უცნობი შეცდომა"));
+      throw error;
     }
   }
 
@@ -977,7 +990,8 @@ class WarehouseStore {
         .eq('product_id', id);
 
       if (salesError) {
-        console.error("Error deleting related sales:", salesError.message);
+        console.error("Related sales deletion failed:", salesError.message);
+        throw new Error(`გაყიდვების წაშლა ვერ მოხერხდა: ${salesError.message}. სავარაუდოდ არ გაქვთ წაშლის უფლება (RLS).`);
       }
 
       // Then delete related purchase history
@@ -987,7 +1001,7 @@ class WarehouseStore {
         .eq('product_id', id);
 
       if (historyError) {
-        console.error("Error deleting purchase history:", historyError.message);
+        console.warn("Purchase history deletion failed or no history found:", historyError.message);
       }
 
       // Finally delete the product
@@ -997,21 +1011,18 @@ class WarehouseStore {
         .eq('id', id);
 
       if (error) {
-        console.error("Error deleting product:", error.message);
-        // Rollback
-        this.products = oldProducts;
-        this.sales = oldSales;
-        this.purchaseHistory = oldPurchaseHistory;
-        this.notify();
-        toast.error(error.message || "შეცდომა წაშლისას");
+        throw error;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Delete error:", err);
+      // Rollback
       this.products = oldProducts;
       this.sales = oldSales;
       this.purchaseHistory = oldPurchaseHistory;
       this.notify();
-      toast.error("შეცდომა წაშლისას");
+      const msg = err?.message || "შეცდომა წაშლისას";
+      toast.error(msg);
+      throw new Error(msg);
     }
   }
 
@@ -1170,8 +1181,14 @@ class WarehouseStore {
 
     // Supabase insert - DB Trigger will handle product stock
     try {
-      const { data: dbSale, error } = await supabase.from('sales').insert(insertSaleData).select().single();
+      const { error } = await supabase.from('sales').insert(insertSaleData);
       if (error) throw error;
+
+      // Use local data instead of waiting for SELECT (prevents schema cache issues)
+      const dbSale: any = {
+        ...insertSaleData,
+        total_amount: insertSaleData.total_amount
+      };
 
       if (dbSale) {
         this.logAction({ actionType: 'INSERT', tableName: 'sales', recordId: dbSale.id, newData: dbSale });
@@ -1222,6 +1239,7 @@ class WarehouseStore {
     this.notify();
 
     const insertData = {
+      id: optimisticId,
       amount: Number(expense.amount),
       category: expense.category || "",
       description: expense.description || "",
@@ -1233,13 +1251,19 @@ class WarehouseStore {
 
     // Supabase insert
     try {
-      const { data: dbExpense, error } = await supabase
+      const { error } = await supabase
         .from('expenses')
-        .insert(insertData)
-        .select()
-        .single();
+        .insert(insertData);
 
       if (error) throw error;
+
+      // Use local data instead of waiting for SELECT
+      const dbExpense: any = {
+        ...insertData,
+        id: optimisticId, // We used a local UUID, but if DB generates one we might need to be careful.
+        // Actually, we should probably generate UUID for expenses too if we want this pattern.
+        created_at: optimisticCreatedAt
+      };
 
       // Update optimistic record with real ID from DB if necessary
       if (dbExpense) {

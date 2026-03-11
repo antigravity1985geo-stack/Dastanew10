@@ -250,8 +250,13 @@ export function PurchasesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    await store.deleteProduct(id);
-    toast.success("პროდუქცია წაიშალა");
+    if (!confirm("ნამდვილად გსურთ წაშლა?")) return;
+    try {
+      await store.deleteProduct(id);
+      toast.success("პროდუქცია წაიშალა");
+    } catch (err: any) {
+      toast.error(err instanceof Error ? err.message : "შეცდომა წაშლისას");
+    }
   };
 
   const handleEditOpen = (id: string) => {
@@ -992,20 +997,20 @@ export function PurchasesPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  className="h-9 w-9 text-slate-600 hover:text-primary hover:bg-primary/5 border-border/50 rounded-xl transition-all shadow-sm"
                                   onClick={() => handleEditOpen(product.id)}
                                 >
                                   <Pencil className="h-4 w-4" />
                                   <span className="sr-only">რედაქტირება</span>
                                 </Button>
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  className="h-9 w-9 text-rose-600 hover:text-white hover:bg-rose-500 border-rose-100 bg-rose-50/30 rounded-xl transition-all shadow-sm"
                                   onClick={() => handleDelete(product.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
