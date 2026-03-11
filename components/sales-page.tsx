@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Plus, Minus, ShoppingCart, Trash2, Package, Download, FileText, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Search, AlertCircle, Wallet, CreditCard, Eye, ChevronRight, Printer, CheckCircle2 } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Trash2, Package, Download, FileText, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Search, AlertCircle, Wallet, CreditCard, Eye, ChevronRight, Printer, CheckCircle2, Home, LayoutGrid, Settings, Wifi, Zap, Bell, History as HistoryIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -872,7 +872,7 @@ export function SalesPage() {
   }, [mounted, store.currentShift, store.currentEmployee, showHistory, store.sales.length]);
 
   return (
-    <div id="print-area" className="flex flex-col h-full max-w-full overflow-x-hidden space-y-3 pt-0 p-4 sm:p-4 animate-in fade-in duration-700">
+    <div className="flex h-screen w-full bg-[#f8f9fa] overflow-hidden font-sans text-slate-800">
       <PINLoginOverlay />
 
       <ManagerAuthDialog
@@ -884,390 +884,384 @@ export function SalesPage() {
         }}
       />
 
-      {/* POS Layout: Products Grid + Cart Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* LEFT: Product Grid */}
-        <div className="lg:col-span-1">
-          {/* Search */}
-          <div className="relative mb-4 max-w-lg">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={productSearchRef}
-              placeholder="ძებნა (Space) — (სახელი, კატეგორია, შტრიხკოდი)..."
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              className="pl-10 h-11 border-primary/10 focus-visible:ring-primary/20"
-            />
-          </div>
-
-          {/* Product Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {filteredProducts.length === 0 ? (
-              <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-xl">
-                <Package className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p>პროდუქტები ვერ მოიძებნა</p>
-              </div>
-            ) : (
-              filteredProducts.map((product: Product) => {
-                const inCart = cart.find(item => item.productId === product.id);
-                const isOutOfStock = product.quantity <= 0;
-
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => !isOutOfStock && addToCart(product)}
-                    disabled={isOutOfStock}
-                    className={cn(
-                      "relative text-left rounded-2xl border p-3 transition-all duration-300 group overflow-hidden",
-                      inCart
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/10 shadow-lg"
-                        : "border-border/50 bg-card hover:border-primary/40 hover:shadow-xl hover:-translate-y-1",
-                      isOutOfStock ? "opacity-40 cursor-not-allowed grayscale" : "cursor-pointer active:scale-95"
-                    )}
-                  >
-                    {/* Cart badge */}
-                    {inCart && (
-                      <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-black rounded-full h-6 w-6 flex items-center justify-center shadow-lg border-2 border-background animate-in zoom-in">
-                        {inCart.quantity}
-                      </span>
-                    )}
-
-                    <div className="flex items-center gap-2 mb-3">
-                      {product.imageUrl ? (
-                        <div className={cn(
-                          "h-10 w-10 rounded-lg overflow-hidden shadow-sm border",
-                          inCart ? "border-primary" : "border-transparent"
-                        )}>
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className={cn(
-                          "h-10 w-10 rounded-lg flex items-center justify-center transition-colors shadow-sm",
-                          inCart ? "bg-primary text-primary-foreground" : "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                        )}>
-                          <Package className="h-5 w-5" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                        {product.name}
-                      </h3>
-                      <div className="flex items-center justify-between gap-2 overflow-hidden">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded truncate">
-                          {product.category || "სხვა"}
-                        </span>
-                        <span className={cn(
-                          "text-[9px] font-black uppercase tracking-widest whitespace-nowrap",
-                          isOutOfStock ? "text-destructive" : "text-primary/60"
-                        )}>
-                          სტოკი: {product.quantity}
-                        </span>
-                      </div>
-                      <div className="pt-2 flex items-baseline justify-between border-t border-border/50 mt-2">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-black tracking-tighter text-foreground">
-                            {product.salePrice.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] font-black text-primary/80 uppercase tracking-widest">
-                            {settings.currency}
-                          </span>
-                        </div>
-                        {inCart && (
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
+      {/* LEFT SIDEBAR */}
+      <div className="w-16 bg-[#2c3e50] flex flex-col items-center py-6 gap-8 text-white/60 flex-shrink-0 border-r border-slate-700/50">
+        <div className="p-2 rounded-xl bg-primary/10 mb-4">
+          <Package className="h-6 w-6 text-primary" />
         </div>
-
-        {/* RIGHT: Cart Sidebar */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
-
-          {/* Held Receipts UI */}
-          {heldReceipts.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-              {heldReceipts.map(receipt => (
-                <div key={receipt.id} className="flex flex-col bg-amber-50 border border-amber-200 rounded-xl p-2 min-w-[140px] shadow-sm relative group animate-in zoom-in slide-in-from-left-2 transition-all">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-amber-900 truncate pr-4">{receipt.clientName}</span>
-                    <button
-                      onClick={() => removeHeldReceipt(receipt.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-amber-700/50 hover:text-red-500 hover:bg-red-50 rounded"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between mt-auto pt-2">
-                    <span className="text-sm font-black text-amber-700">{receipt.total.toFixed(2)} ₾</span>
-                    <button
-                      onClick={() => recallReceipt(receipt.id)}
-                      className="h-6 w-6 rounded-full bg-amber-200 text-amber-700 flex items-center justify-center hover:bg-amber-300 transition-colors shadow-sm"
-                    >
-                      <PlayCircle className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <button className="p-2 rounded-xl hover:bg-white/10 transition-colors text-white">
+          <LayoutGrid className="h-6 w-6" />
+        </button>
+        <button className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+          <ShoppingCart className="h-6 w-6" />
+        </button>
+        <button 
+          onClick={() => setShowHistory(!showHistory)}
+          className={cn("p-2 rounded-xl hover:bg-white/10 transition-colors", showHistory && "bg-white/10 text-white")}
+        >
+          <HistoryIcon className="h-6 w-6" />
+        </button>
+        <button 
+          onClick={() => setDebtsOpen(true)}
+          className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+        >
+          <Wallet className="h-6 w-6" />
+        </button>
+        <div className="mt-auto flex flex-col gap-6 items-center">
+          <button className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+            <Settings className="h-6 w-6" />
+          </button>
+          {store.currentEmployee && (
+            <button 
+              onClick={() => store.logoutEmployee()}
+              className="p-2 rounded-xl hover:bg-red-500/20 text-red-400 transition-colors"
+            >
+              <LogOut className="h-6 w-6" />
+            </button>
           )}
-          <Card className="sticky top-4 border-primary/20 shadow-xl overflow-hidden rounded-2xl flex flex-col h-max">
-            <div className="h-1.5 w-full bg-primary flex-shrink-0" />
-            <CardHeader className="pb-4 bg-muted/30 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                    <ShoppingCart className="h-4 w-4 text-primary-foreground" />
-                  </div>
-                  კალათა
-                  <span className="ml-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-                    {cartItemCount}
-                  </span>
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <div className="bg-muted/50 p-1 rounded-xl flex items-center text-xs font-bold border border-border/50">
-                    <button
-                      onClick={() => setPriceMode("retail")}
-                      className={cn("px-3 py-1.5 rounded-lg transition-all", priceMode === "retail" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
-                    >
-                      საცალო
-                    </button>
-                    <button
-                      onClick={() => setPriceMode("wholesale")}
-                      className={cn("px-3 py-1.5 rounded-lg transition-all", priceMode === "wholesale" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-primary")}
-                    >
-                      საბითუმო
-                    </button>
-                  </div>
-                  {cart.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/5 h-8 text-xs font-bold px-2 ml-1"
-                      onClick={clearCart}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {cart.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <div className="relative mx-auto w-20 h-20 mb-4">
-                    <ShoppingCart className="h-20 w-20 opacity-5" />
-                    <Search className="absolute inset-0 h-8 w-8 m-auto opacity-20" />
-                  </div>
-                  <p className="text-sm font-medium">კალათა ცარიელია</p>
-                  <p className="text-xs mt-1 opacity-60">დაასკანერეთ ან აირჩიეთ პროდუქტი</p>
-                </div>
-              ) : (
-                <div className="flex flex-col">
-                  {/* Cart Items List */}
-
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {cart.map((item) => (
-                      <div
-                        key={item.productId}
-                        className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm group animate-in slide-in-from-right-2 duration-200"
-                      >
-                        {/* Product thumbnail */}
-                        {item.imageUrl ? (
-                          <div className="h-10 w-10 rounded-lg overflow-hidden border border-border/50 flex-shrink-0">
-                            <img
-                              src={item.imageUrl}
-                              alt={item.productName}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 w-10 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0">
-                            <Package className="h-5 w-5 text-primary/40" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-foreground leading-snug mb-1">
-                            {item.productName}
-                          </p>
-                          <p className="text-xs text-muted-foreground font-medium">
-                            {item.salePrice.toFixed(2)} ₾
-                          </p>
-                        </div>
-
-                        {/* Quantity Controls */}
-                        <div className="flex items-center bg-muted/50 rounded-lg p-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-background"
-                            onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
-                          >
-                            <Minus className="h-3.5 w-3.5" />
-                          </Button>
-                          <span className="text-sm font-black w-8 text-center text-primary">
-                            {item.quantity}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-background"
-                            onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
-                            disabled={item.quantity >= item.maxStock}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-
-                        {/* Item total + delete */}
-                        <div className="flex flex-col items-end gap-1 min-w-[60px]">
-                          <span className="text-sm font-black text-primary">
-                            {(item.quantity * item.salePrice).toFixed(2)} ₾
-                          </span>
-                          <button
-                            className="text-muted-foreground hover:text-destructive p-1 transition-colors hover:bg-destructive/5 rounded-md"
-                            onClick={() => removeFromCart(item.productId)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Footer / Summary */}
-                  <div className="p-3 bg-muted/20 border-t space-y-3">
-                    {/* Client Selection */}
-                    <div className="space-y-1">
-                      <Label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest ml-1">მყიდველი</Label>
-                      <Input
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        placeholder="მყიდველის სახელი"
-                        className="h-9 text-xs border-transparent focus-visible:ring-primary/10 bg-card rounded-lg"
-                      />
-                    </div>
-
-                    {/* Financial Summary */}
-                    <div className="p-3 rounded-xl bg-primary/5 space-y-2 border border-primary/10">
-                      <div className="flex justify-between items-center text-muted-foreground">
-                        <span className="text-[10px] font-bold uppercase tracking-wider">ჯამი</span>
-                        <span className="text-base font-black text-foreground">
-                          {cartTotal.toFixed(2)} ₾
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center ml-1">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-primary/70">გადახდილი თანხა</Label>
-                          {paidAmount && (
-                            <span className={cn(
-                              "text-[9px] font-bold px-1.5 py-0.5 rounded-full",
-                              parseFloat(paidAmount) >= cartTotal ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                            )}>
-                              {parseFloat(paidAmount) >= cartTotal
-                                ? `ხურდა: ${(parseFloat(paidAmount) - cartTotal).toFixed(2)}`
-                                : `ნისია: ${(cartTotal - parseFloat(paidAmount)).toFixed(2)}`
-                              }
-                            </span>
-                          )}
-                        </div>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={paidAmount}
-                          onChange={(e) => setPaidAmount(e.target.value)}
-                          placeholder={cartTotal.toFixed(2)}
-                          className="h-9 text-sm font-black border-transparent focus-visible:ring-primary/20 bg-card rounded-lg text-primary"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Settings Toggles */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div
-                        onClick={() => setSendToRSGE(!sendToRSGE)}
-                        className={cn(
-                          "flex items-center justify-center gap-2 py-2 rounded-lg border-2 cursor-pointer transition-all",
-                          sendToRSGE ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm" : "border-border bg-card text-muted-foreground hover:bg-muted/50"
-                        )}
-                      >
-                        <span className="text-[11px] font-black tracking-widest leading-none">RS.GE</span>
-                      </div>
-                      <div
-                        onClick={() => setPrintFiscal(!printFiscal)}
-                        className={cn(
-                          "flex items-center justify-center gap-2 py-1.5 rounded-lg border-2 cursor-pointer transition-all",
-                          printFiscal ? "border-primary bg-primary/5 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted/50"
-                        )}
-                      >
-                        <span className="text-[9px] font-bold">ფისკალური</span>
-                      </div>
-                    </div>
-
-                    {/* RS.GE extra fields (visible when toggle is ON) */}
-                    {sendToRSGE && (
-                      <div className="flex flex-col gap-2 p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">ზედნადების პარამეტრები</p>
-                        <input
-                          className="h-8 w-full rounded-lg bg-white border border-emerald-200 px-3 text-sm font-medium"
-                          placeholder="მყიდველის ს/ნ (TIN) — არასავალდებული"
-                          value={rsgeBuyerTin}
-                          onChange={(e) => setRsgeBuyerTin(e.target.value)}
-                        />
-                        <select
-                          value={rsgeWaybillType}
-                          onChange={(e) => setRsgeWaybillType(Number(e.target.value) as 1 | 2 | 3)}
-                          className="h-8 w-full rounded-lg bg-white border border-emerald-200 px-3 text-sm font-medium"
-                        >
-                          <option value={1}>შიდა (ინტერნალ)</option>
-                          <option value={2}>გარე (ექსტერნალ)</option>
-                          <option value={3}>გადაადგილება</option>
-                        </select>
-                      </div>
-                    )}
-
-
-                    {/* Final Action Buttons */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="gap-1 h-11 text-xs font-bold border-amber-500/30 text-amber-700 bg-amber-50 hover:bg-amber-100 hover:border-amber-500/50 transition-all rounded-xl w-1/3"
-                        onClick={holdCurrentReceipt}
-                      >
-                        <PauseCircle className="h-4 w-4" />
-                        გადადება (F9)
-                      </Button>
-                      <Button
-                        className="flex-1 gap-2 h-11 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-xl transition-all rounded-xl"
-                        size="lg"
-                        onClick={() => {
-                          if (cart.length === 0) return;
-                          setCashPaid(cartTotal.toFixed(2));
-                          setCardPaid("");
-                          setCheckoutOpen(true);
-                        }}
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                        გაყიდვა (Enter)
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* TOP HEADER */}
+        <div className="h-14 bg-[#8b1a1a] flex items-center justify-between px-6 text-white shadow-lg z-10 flex-shrink-0">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col">
+              <span className="font-black text-sm tracking-tighter leading-none">DASTA POS</span>
+              <span className="text-[9px] font-bold opacity-60 tracking-widest uppercase">Terminal v2.0</span>
+            </div>
+            <div className="h-8 w-[1px] bg-white/10 mx-2 hidden lg:block" />
+            <div className="hidden lg:flex bg-white/10 p-1 rounded-xl items-center border border-white/10">
+              <button
+                onClick={() => setPriceMode("retail")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-[10px] font-black transition-all",
+                  priceMode === "retail" ? "bg-white text-[#8b1a1a]" : "text-white/60 hover:text-white"
+                )}
+              >
+                საცალო
+              </button>
+              <button
+                onClick={() => setPriceMode("wholesale")}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-[10px] font-black transition-all",
+                  priceMode === "wholesale" ? "bg-white text-[#8b1a1a]" : "text-white/60 hover:text-white"
+                )}
+              >
+                საბითუმო
+              </button>
+            </div>
+            <div className="h-8 w-[1px] bg-white/10 mx-2 hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold opacity-50 uppercase leading-none mb-1">Cashier</span>
+                <span className="text-xs font-bold">{store.currentEmployee?.name || "No User"}</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn(
+                  "h-7 px-3 rounded-full text-[10px] font-bold border border-white/20 transition-all",
+                  store.currentShift ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white"
+                )}
+                onClick={() => setShiftOpenModal(true)}
+              >
+                <div className={cn("h-1.5 w-1.5 rounded-full mr-2", store.currentShift ? "bg-emerald-400" : "bg-white/40")} />
+                {store.currentShift ? "SHIFT OPEN" : "OPEN SHIFT"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 opacity-60">
+              <Wifi className="h-4 w-4" />
+              <Zap className="h-4 w-4" />
+              <Bell className="h-4 w-4" />
+            </div>
+            <div className="h-8 w-[1px] bg-white/10 mx-2" />
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-black tracking-tight">{new Date().toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-[9px] font-bold opacity-50 uppercase">{new Date().toLocaleDateString('ka-GE')}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* WORK AREA */}
+        <div className="flex-1 flex p-3 gap-3 overflow-hidden bg-[#eff1f3]">
+          {/* LEFT: Product Grid / Categories */}
+          <div className="w-[30%] lg:w-[35%] flex flex-col gap-3 h-full">
+            <div className="bg-white rounded-2xl shadow-sm p-3 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  ref={productSearchRef}
+                  placeholder="პროდუქტის ძებნა..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="pl-10 h-10 bg-slate-50 border-none rounded-xl focus-visible:ring-primary/20"
+                />
+              </div>
+            </div>
+            
+            <div className="flex-1 bg-white rounded-2xl shadow-sm p-3 overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                {filteredProducts.map((product) => {
+                  const inCart = cart.find(item => item.productId === product.id);
+                  const isOutOfStock = product.quantity <= 0;
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => !isOutOfStock && addToCart(product)}
+                      disabled={isOutOfStock}
+                      className={cn(
+                        "aspect-square p-2 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all active:scale-95 group relative",
+                        inCart ? "bg-primary/5 border-primary shadow-sm" : "bg-slate-50 border-slate-100 hover:border-primary/40",
+                        isOutOfStock && "opacity-40 grayscale grayscale-[0.8]"
+                      )}
+                    >
+                      {inCart && (
+                        <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm z-10">
+                          {inCart.quantity}
+                        </div>
+                      )}
+                      <div className="h-10 w-10 flex items-center justify-center">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} className="h-full w-full object-cover rounded-lg" alt="" />
+                        ) : (
+                          <Package className="h-6 w-6 text-slate-300 group-hover:text-primary transition-colors" />
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-600 line-clamp-1 text-center w-full uppercase">{product.name}</span>
+                      <span className="text-xs font-black text-primary">{product.salePrice.toLocaleString()} ₾</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* CENTER: Receipt / Order View */}
+          <div className="flex-1 bg-white rounded-2xl shadow-md border-2 border-slate-200 flex flex-col overflow-hidden">
+            {/* Held Receipts Bar */}
+            {heldReceipts.length > 0 && (
+              <div className="bg-amber-50/50 border-b border-amber-100 p-2 flex gap-2 overflow-x-auto custom-scrollbar">
+                {heldReceipts.map(receipt => (
+                  <button
+                    key={receipt.id}
+                    onClick={() => recallReceipt(receipt.id)}
+                    className="flex items-center gap-2 bg-white border border-amber-200 px-3 py-1.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 group shrink-0"
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="text-[9px] font-black text-amber-600 uppercase leading-none">Held Receipt</span>
+                      <span className="text-xs font-bold text-slate-700">{receipt.clientName || "Unknown"}</span>
+                    </div>
+                    <div className="h-6 w-[1px] bg-amber-100 mx-1" />
+                    <span className="text-xs font-black text-slate-900">{receipt.total.toLocaleString()} ₾</span>
+                    <div 
+                      onClick={(e) => { e.stopPropagation(); removeHeldReceipt(receipt.id); }}
+                      className="ml-1 p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <X className="h-3 w-3" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="bg-slate-50/80 p-3 flex items-center justify-between border-b">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-[#8b1a1a] flex items-center justify-center">
+                  <ShoppingCart className="h-4 w-4 text-white" />
+                </div>
+                <span className="font-black text-sm uppercase tracking-tight">აქტიური შეკვეთა</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  className="h-8 px-3 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors"
+                  onClick={clearCart}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  გასუფთავება
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-100/50 px-4 py-2 grid grid-cols-6 text-[9px] font-black text-slate-400 uppercase tracking-widest flex-shrink-0">
+              <div className="col-span-3">დასახელება</div>
+              <div className="text-center">რაოდ.</div>
+              <div className="text-right">ფასი</div>
+              <div className="text-right pr-2">ჯამი</div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-60">
+                   <ShoppingCart className="h-16 w-16 mb-2 opacity-10" />
+                   <p className="text-sm font-bold">Your cart is empty</p>
+                   <p className="text-[10px] font-medium">Scan items or select from the list</p>
+                </div>
+              ) : (
+                cart.map(item => (
+                  <div key={item.productId} className="grid grid-cols-6 items-center py-2.5 border-b border-slate-100 group animate-in slide-in-from-left-2 transition-all">
+                    <div className="col-span-3">
+                      <p className="text-xs font-bold text-slate-800 line-clamp-1">{item.productName}</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">{item.category || "General"}</p>
+                    </div>
+                    <div className="flex items-center justify-center gap-1">
+                       <button 
+                         onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                         className="h-5 w-5 rounded bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary flex items-center justify-center"
+                       >
+                         <Minus className="h-3 w-3" />
+                       </button>
+                       <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                       <button 
+                         onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                         className="h-5 w-5 rounded bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary flex items-center justify-center"
+                       >
+                         <Plus className="h-3 w-3" />
+                       </button>
+                    </div>
+                    <div className="text-right text-xs font-bold text-slate-500">{item.salePrice.toLocaleString()}</div>
+                    <div className="text-right text-xs font-black text-slate-900 pr-2">{(item.quantity * item.salePrice).toLocaleString()}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="bg-[#fdfdfd] border-t-2 border-slate-100 p-5 mt-auto flex-shrink-0">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">სულ რაოდენობა</span>
+                  <span className="text-lg font-black text-slate-800">{cartItemCount}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ჯამური თანხა</span>
+                  <span className="text-4xl font-black text-slate-1000 tracking-tighter leading-none">{cartTotal.toLocaleString()} ₾</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: Keypad & Quick Actions */}
+          <div className="w-[300px] flex flex-col gap-2 flex-shrink-0">
+            {/* Input Overlay */}
+            <div className="bg-white rounded-2xl shadow-md p-3 flex flex-col gap-1.5">
+              <div className="flex justify-between items-center mb-1">
+                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">მყიდველი</span>
+                 {clientName && <button onClick={() => setClientName("")} className="text-[9px] text-red-500 font-bold uppercase">წაშლა</button>}
+              </div>
+              <Input 
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="საცალო მყიდველი"
+                className="h-10 bg-slate-50 border-none font-bold text-sm tracking-tight rounded-xl"
+              />
+              <div className="flex justify-between items-center mt-2 mb-1">
+                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">მიღებული თანხა</span>
+                 {receivedAmount && <button onClick={() => setReceivedAmount("")} className="text-[9px] text-red-500 font-bold uppercase">წაშლა</button>}
+              </div>
+              <div className="h-12 bg-emerald-50 rounded-2xl border-2 border-emerald-100 flex items-center px-4 justify-between">
+                <span className="text-2xl font-black text-emerald-700">{receivedAmount || "0"}</span>
+                <span className="text-sm font-black text-emerald-300">₾</span>
+              </div>
+              {receivedAmount && parseFloat(receivedAmount) > cartTotal && (
+                <div className="flex justify-between items-center px-1 animate-in zoom-in duration-300 mt-0.5">
+                  <span className="text-[9px] font-black text-emerald-600 uppercase">ხურდა</span>
+                  <span className="text-lg font-black text-emerald-600">{(parseFloat(receivedAmount) - cartTotal).toLocaleString()} ₾</span>
+                </div>
+              )}
+            </div>
+
+            {/* Numeric Keypad */}
+            <div className="bg-white rounded-2xl shadow-md p-1.5 grid grid-cols-3 gap-1.5 h-[210px]">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0].map(val => (
+                <button
+                  key={val}
+                  onClick={() => {
+                    if (val === "." && receivedAmount.includes(".")) return;
+                    setReceivedAmount(prev => prev + String(val));
+                  }}
+                  className="h-full rounded-xl bg-[#fdfaf5] hover:bg-[#f7f0e4] border border-[#f3e5ca] text-xl font-bold transition-colors active:scale-95 flex items-center justify-center text-slate-700"
+                >
+                  {val}
+                </button>
+              ))}
+              <button
+                onClick={() => setReceivedAmount("")}
+                className="h-full rounded-xl bg-orange-100 hover:bg-orange-200 border border-orange-200 text-xl font-black text-orange-600 transition-colors active:scale-95 flex items-center justify-center"
+              >
+                C
+              </button>
+            </div>
+
+            {/* Quick Settings */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setSendToRSGE(!sendToRSGE)}
+                className={cn(
+                  "h-10 rounded-xl border-2 flex items-center justify-center gap-2 transition-all text-[10px] font-black tracking-widest",
+                  sendToRSGE ? "bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-white border-slate-100 text-slate-400 hover:bg-slate-50"
+                )}
+              >
+                RS.GE
+                {sendToRSGE && <CheckCircle2 className="h-3 w-3" />}
+              </button>
+              <button
+                onClick={() => setPrintFiscal(!printFiscal)}
+                className={cn(
+                  "h-10 rounded-xl border-2 flex items-center justify-center gap-2 transition-all text-[10px] font-black tracking-widest",
+                  printFiscal ? "bg-[#8b1a1a] border-[#6b1414] text-white shadow-lg shadow-red-100" : "bg-white border-slate-100 text-slate-400 hover:bg-slate-50"
+                )}
+              >
+                ფისკალური
+                {printFiscal && <CheckCircle2 className="h-3 w-3" />}
+              </button>
+            </div>
+
+            {/* Final Actions */}
+            <div className="flex flex-col gap-1.5 mt-auto">
+              <div className="grid grid-cols-2 gap-2">
+                 <Button 
+                    variant="outline" 
+                    className="h-12 bg-blue-50 border-blue-200 text-blue-600 font-black rounded-xl hover:bg-blue-100 text-xs tracking-widest"
+                    onClick={() => {
+                       setPayMode("card");
+                       handleSellAll({ cash: 0, card: cartTotal, client: clientName });
+                    }}
+                 >
+                    ბარათი
+                 </Button>
+                 <Button 
+                    variant="outline" 
+                    className="h-12 bg-amber-50 border-amber-200 text-amber-600 font-black rounded-xl hover:bg-amber-100 text-xs tracking-widest"
+                    onClick={holdCurrentReceipt}
+                 >
+                    გადადება (F9)
+                 </Button>
+              </div>
+              <Button 
+                onClick={() => {
+                  if (cart.length === 0) return;
+                  setPayMode("cash");
+                  const cashVal = receivedAmount ? parseFloat(receivedAmount) : cartTotal;
+                  handleSellAll({ cash: cashVal, card: 0, client: clientName });
+                }}
+                className="h-16 bg-[#2ecc71] hover:bg-[#27ae60] text-white font-black text-xl rounded-2xl shadow-lg shadow-emerald-200/50 flex flex-col items-center justify-center gap-0.5 group transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-2">
+                   <span>ნაღდი</span>
+                   <CheckCircle2 className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-[10px] font-bold opacity-60 tracking-widest">(ENTER)</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* REMAINDER OF DIALOGS (kept from original) */}
 
       {/* Checkout Modal */}
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
