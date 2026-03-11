@@ -130,246 +130,52 @@ interface UsersTabProps {
 }
 
 function UsersTab({ auth }: UsersTabProps) {
-  const [addOpen, setAddOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [newUsername, setNewUsername] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [newDisplayName, setNewDisplayName] = useState("");
-  const [editDisplayName, setEditDisplayName] = useState("");
-  const [editPassword, setEditPassword] = useState("");
-
-  const handleAddUser = async () => {
-    const result = await auth.addUser(newUsername, newPassword, newDisplayName);
-    if (result.success) {
-      toast.success("მომხმარებელი დაემატა");
-      setNewUsername("");
-      setNewPassword("");
-      setNewDisplayName("");
-      setAddOpen(false);
-    } else {
-      toast.error(result.error);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    const result = await auth.deleteUser(userId);
-    if (result.success) {
-      toast.success("მომხმარებელი წაიშალა");
-    } else {
-      toast.error(result.error);
-    }
-  };
-
-  const handleEditUser = async () => {
-    if (!editUserId) return;
-    const updates: { displayName?: string; password?: string } = {};
-    if (editDisplayName.trim()) updates.displayName = editDisplayName;
-    if (editPassword.trim()) updates.password = editPassword;
-    const result = await auth.updateUser(editUserId, updates);
-    if (result.success) {
-      toast.success("მომხმარებელი განახლდა");
-      setEditOpen(false);
-      setEditUserId(null);
-      setEditDisplayName("");
-      setEditPassword("");
-    } else {
-      toast.error(result.error);
-    }
-  };
-
-  const openEditDialog = (user: (typeof auth.users)[0]) => {
-    setEditUserId(user.id);
-    setEditDisplayName(user.displayName);
-    setEditPassword("");
-    setEditOpen(true);
-  };
-
   return (
     <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 bg-muted/10 pb-4">
+      <CardHeader className="border-b border-border/50 bg-muted/10 pb-4">
         <div>
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            მომხმარებლების მართვა
+            ჩემი პროფილი
           </CardTitle>
           <CardDescription>
-            დაამატეთ, შეცვალეთ ან წაშალეთ მომხმარებლები
+            Supabase Auth-ით მართული ანგარიში
           </CardDescription>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-lg shadow-primary/20">
-              <UserPlus className="h-4 w-4" />
-              დამატება
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-primary" />
-                ახალი მომხმარებელი
-              </DialogTitle>
-              <DialogDescription>
-                შეიყვანეთ ახალი მომხმარებლის მონაცემები
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 py-5">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">მომხმარებლის სახელი</Label>
-                <Input
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  placeholder="username"
-                  className="h-11 rounded-xl bg-muted/30 border-none font-medium"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">სახელი</Label>
-                <Input
-                  value={newDisplayName}
-                  onChange={(e) => setNewDisplayName(e.target.value)}
-                  placeholder="სახელი გვარი"
-                  className="h-11 rounded-xl bg-muted/30 border-none font-medium"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">პაროლი</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="მინიმუმ 4 სიმბოლო"
-                  className="h-11 rounded-xl bg-muted/30 border-none font-medium"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={handleAddUser} className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">დამატება</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">მომხმარებელი</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">სახელი</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest">შექმნის თარიღი</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-right">მოქმედება</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {auth.users.map((user) => (
-              <TableRow key={user.id} className="hover:bg-muted/20 transition-colors">
-                <TableCell className="font-bold text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center">
-                      <Users className="h-3 w-3 text-primary" />
-                    </div>
-                    {user.username}
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium text-muted-foreground">{user.displayName}</TableCell>
-                <TableCell className="text-sm">
-                  {new Date(user.createdAt).toLocaleDateString("ka-GE")}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-lg"
-                      onClick={() => openEditDialog(user)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {user.id !== auth.currentUser?.id && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive rounded-lg"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-2xl border-none">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="font-bold">
-                              მომხმარებლის წაშლა
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {"ნამდვილად გსურთ "}
-                              <strong className="text-foreground">{user.displayName}</strong>
-                              {"-ის წაშლა?"}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="rounded-xl border-none bg-muted/50 font-bold tracking-tight">გაუქმება</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold tracking-tight"
-                            >
-                              წაშლა
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-              მომხმარებლის რედაქტირება
-            </DialogTitle>
-            <DialogDescription>
-              შეცვალეთ სახელი ან პაროლი
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-5">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">სახელი</Label>
-              <Input
-                value={editDisplayName}
-                onChange={(e) => setEditDisplayName(e.target.value)}
-                className="h-11 rounded-xl bg-muted/30 border-none font-medium"
-              />
+      <CardContent className="p-6">
+        {auth.currentUser ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-bold text-lg">{auth.currentUser.displayName}</p>
+                <p className="text-sm text-muted-foreground">{auth.currentUser.email}</p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                ახალი პაროლი (ცარიელი = არ შეიცვლება)
-              </Label>
-              <Input
-                type="password"
-                value={editPassword}
-                onChange={(e) => setEditPassword(e.target.value)}
-                placeholder="ახალი პაროლი"
-                className="h-11 rounded-xl bg-muted/30 border-none font-medium"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-muted/20 rounded-xl">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">როლი</p>
+                <p className="font-bold capitalize">{auth.currentUser.role || 'owner'}</p>
+              </div>
+              <div className="p-3 bg-muted/20 rounded-xl">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Tenant ID</p>
+                <p className="font-mono text-xs truncate">{auth.tenantId || 'N/A'}</p>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={handleEditUser} className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">შენახვა</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        ) : (
+          <p className="text-muted-foreground">მომხმარებელი არ არის ავტორიზებული</p>
+        )}
+      </CardContent>
     </Card>
   );
 }
 
 // ========== Settings Tab ==========
+
 
 interface SettingsTabProps {
   settings: ReturnType<typeof useSettings>;
@@ -717,7 +523,6 @@ function DataTab({ store }: DataTabProps) {
     const data = {
       products: store.products,
       sales: store.sales,
-      users: authStore.getAllUsersRaw(),
       settings: settingsStore.getSettings(),
       exportedAt: new Date().toISOString(),
     };
@@ -742,7 +547,6 @@ function DataTab({ store }: DataTabProps) {
       try {
         const data = JSON.parse(ev.target?.result as string);
         if (data.products) await warehouseStore.importData(data.products, data.sales || []);
-        if (data.users) await authStore.importUsers(data.users);
         if (data.settings) settingsStore.importSettings(data.settings);
         toast.success("მონაცემები იმპორტირდა წარმატებით");
       } catch {

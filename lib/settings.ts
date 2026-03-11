@@ -1,6 +1,7 @@
 // Settings Store - Supabase-synced with localStorage fallback
 
 import { supabase } from "./supabase";
+import { authStore } from "./auth";
 
 export interface Settings {
   companyName: string;
@@ -23,6 +24,7 @@ export interface Settings {
   fiscalType?: "none" | "digital" | "physical";
   fiscalAutoPrint?: boolean;
   closedUntil?: string;
+  deletePin?: string;
 }
 
 type SettingsListener = () => void;
@@ -75,10 +77,12 @@ class SettingsStore {
 
   private async loadFromSupabase() {
     try {
+      const tenantId = authStore.getTenantId();
+      const settingsKey = tenantId ? `${SUPABASE_SETTINGS_KEY}_${tenantId}` : SUPABASE_SETTINGS_KEY;
       const { data, error } = await supabase
         .from('settings')
         .select('value')
-        .eq('key', SUPABASE_SETTINGS_KEY)
+        .eq('key', settingsKey)
         .maybeSingle();
 
       if (error) {
@@ -99,10 +103,12 @@ class SettingsStore {
 
   private async saveToSupabase() {
     try {
+      const tenantId = authStore.getTenantId();
+      const settingsKey = tenantId ? `${SUPABASE_SETTINGS_KEY}_${tenantId}` : SUPABASE_SETTINGS_KEY;
       const { error } = await supabase
         .from('settings')
         .upsert(
-          { key: SUPABASE_SETTINGS_KEY, value: this.settings, updated_at: new Date().toISOString() },
+          { key: settingsKey, value: this.settings, updated_at: new Date().toISOString(), tenant_id: tenantId || undefined },
           { onConflict: 'key' }
         );
 

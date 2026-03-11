@@ -14,8 +14,7 @@ export function useAuth() {
     ...snapshot,
     login: authStore.login.bind(authStore),
     logout: authStore.logout.bind(authStore),
-    addUser: authStore.addUser.bind(authStore),
-    deleteUser: authStore.deleteUser.bind(authStore),
-    updateUser: authStore.updateUser.bind(authStore),
+    register: authStore.register.bind(authStore),
+    getTenantId: authStore.getTenantId.bind(authStore),
   };
 }

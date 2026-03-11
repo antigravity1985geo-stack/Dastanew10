@@ -8,6 +8,11 @@ import { hashPin } from "./utils";
 const EMPLOYEE_SESSION_KEY = "dasta_employee_session";
 const SHIFTS_KEY = "dasta_shifts";
 
+// Multi-tenancy helper
+function getTenantId(): string {
+  return authStore.getTenantId();
+}
+
 export interface JournalEntry {
   id: string;
   date: string;
@@ -222,7 +227,8 @@ class WarehouseStore {
       transactions: JSON.stringify(newEntry.transactions),
       reference_id: newEntry.referenceId,
       reference_type: newEntry.referenceType,
-      created_at: newEntry.createdAt
+      created_at: newEntry.createdAt,
+      tenant_id: getTenantId()
     };
 
     const { error } = await supabase.from('journal_entries').insert(dbEntry);
@@ -242,7 +248,8 @@ class WarehouseStore {
       table_name: log.tableName,
       record_id: log.recordId,
       old_data: sanitizeJson(log.oldData),
-      new_data: sanitizeJson(log.newData)
+      new_data: sanitizeJson(log.newData),
+      tenant_id: getTenantId()
     };
 
     // Optimistic local update
@@ -828,7 +835,8 @@ class WarehouseStore {
         supplier: product.supplier || product.client || "",
         currency: currency,
         exchange_rate: exchangeRate,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        tenant_id: getTenantId()
       };
 
       try {
@@ -865,6 +873,7 @@ class WarehouseStore {
         client: product.supplier || product.client,
         image_url: product.imageUrl || null,
         created_at: new Date().toISOString(),
+        tenant_id: getTenantId()
       };
 
       if (product.barcode) {
@@ -919,7 +928,8 @@ class WarehouseStore {
             supplier: product.supplier || product.client || "",
             currency: currency,
             exchange_rate: exchangeRate,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            tenant_id: getTenantId()
           };
 
           const { error: historyError } = await supabase.from('purchase_history').insert(purchaseHistoryEntry);
@@ -1171,7 +1181,8 @@ class WarehouseStore {
       purchase_price_at_sale: product.purchasePrice,
       created_at: new Date().toISOString(),
       created_by: currentUser?.id,
-      client: sale.client || ''
+      client: sale.client || '',
+      tenant_id: getTenantId()
     };
 
     // Optimistic update
@@ -1254,7 +1265,8 @@ class WarehouseStore {
       payment_method: expense.paymentMethod || 'cash',
       currency: expense.currency || 'GEL',
       exchange_rate: expense.exchangeRate || 1,
-      date: expense.date || new Date().toISOString().split('T')[0]
+      date: expense.date || new Date().toISOString().split('T')[0],
+      tenant_id: getTenantId()
     };
 
     // Supabase insert
@@ -1390,7 +1402,8 @@ class WarehouseStore {
           name: employee.name,
           position: employee.position,
           phone: employee.phone || "",
-          pin_code: hashedPin || ""
+          pin_code: hashedPin || "",
+          tenant_id: getTenantId()
         })
         .select()
         .single();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Warehouse, Eye, EyeOff, LogIn } from "lucide-react";
+import { Warehouse, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,26 +15,55 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 
 export function LoginPage() {
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
+  const { login, register } = useAuth();
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+
+  // Login fields
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Register-only fields
+  const [displayName, setDisplayName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [companySlug, setCompanySlug] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      const result = await login(username, password);
+      const result = await login(email, password);
       if (!result.success) {
         setError(result.error || "შესვლა ვერ მოხერხდა");
       }
     } catch (err) {
       setError("ტექნიკური შეცდომა");
-      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (password.length < 6) {
+      setError("პაროლი მინიმუმ 6 სიმბოლო უნდა იყოს");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await register(email, password, displayName, companyName, companySlug);
+      if (!result.success) {
+        setError(result.error || "რეგისტრაცია ვერ მოხერხდა");
+      }
+    } catch (err) {
+      setError("ტექნიკური შეცდომა");
     } finally {
       setIsLoading(false);
     }
@@ -49,32 +78,85 @@ export function LoginPage() {
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
-              DASTA CLOUD JR
+              DASTA CLOUD
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              სისტემაში შესასვლელად შეიყვანეთ მონაცემები
+              {isRegisterMode
+                ? "შექმენით ახალი ანგარიში თქვენი ბიზნესისთვის"
+                : "სისტემაში შესასვლელად შეიყვანეთ მონაცემები"}
             </p>
           </div>
         </div>
 
         <Card className="border-border/60 shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">ავტორიზაცია</CardTitle>
+            <CardTitle className="text-lg">
+              {isRegisterMode ? "რეგისტრაცია" : "ავტორიზაცია"}
+            </CardTitle>
             <CardDescription>
-              შეიყვანეთ მომხმარებლის სახელი და პაროლი
+              {isRegisterMode
+                ? "შეავსეთ ფორმა ახალი ანგარიშის შესაქმნელად"
+                : "შეიყვანეთ ელ-ფოსტა და პაროლი"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form
+              onSubmit={isRegisterMode ? handleRegister : handleLogin}
+              className="flex flex-col gap-4"
+            >
+              {isRegisterMode && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="displayName">თქვენი სახელი</Label>
+                    <Input
+                      id="displayName"
+                      type="text"
+                      placeholder="მაგ: გიორგი"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="companyName">კომპანიის სახელი</Label>
+                    <Input
+                      id="companyName"
+                      type="text"
+                      placeholder="მაგ: DASTA ვარკეთილი"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="companySlug">კომპანიის URL</Label>
+                    <Input
+                      id="companySlug"
+                      type="text"
+                      placeholder="მაგ: dasta-varketili (არასავალდებულო)"
+                      value={companySlug}
+                      onChange={(e) =>
+                        setCompanySlug(
+                          e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-")
+                        )
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      ლათინური ასოები და ტირე (არასავალდებულო)
+                    </p>
+                  </div>
+                </>
+              )}
+
               <div className="flex flex-col gap-2">
-                <Label htmlFor="username">ელ-ფოსტა / მომხმარებლის სახელი</Label>
+                <Label htmlFor="email">ელ-ფოსტა</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="ელ-ფოსტა"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
+                  id="email"
+                  type="email"
+                  placeholder="example@mail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -88,7 +170,7 @@ export function LoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
+                    autoComplete={isRegisterMode ? "new-password" : "current-password"}
                     className="pr-10"
                     required
                   />
@@ -96,7 +178,6 @@ export function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label={showPassword ? "პაროლის დამალვა" : "პაროლის ჩვენება"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -114,9 +195,33 @@ export function LoginPage() {
               )}
 
               <Button type="submit" className="w-full mt-2" disabled={isLoading}>
-                <LogIn className="mr-2 h-4 w-4" />
-                {isLoading ? "შესვლა..." : "შესვლა"}
+                {isRegisterMode ? (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    {isLoading ? "რეგისტრაცია..." : "რეგისტრაცია"}
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    {isLoading ? "შესვლა..." : "შესვლა"}
+                  </>
+                )}
               </Button>
+
+              <div className="text-center mt-2">
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={() => {
+                    setIsRegisterMode(!isRegisterMode);
+                    setError("");
+                  }}
+                >
+                  {isRegisterMode
+                    ? "უკვე გაქვთ ანგარიში? შესვლა"
+                    : "არ გაქვთ ანგარიში? რეგისტრაცია"}
+                </button>
+              </div>
             </form>
           </CardContent>
         </Card>

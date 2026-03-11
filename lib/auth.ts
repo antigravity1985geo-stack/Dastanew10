@@ -1,101 +1,117 @@
+"use client";
+
 import { supabase } from "./supabase";
 
 export interface User {
   id: string;
-  username: string;
+  email: string;
   displayName: string;
-  password: string; // In production, use hashing. This is placeholder for Supabase migration.
+  tenantId: string;
+  role: string;
   createdAt: string;
 }
 
 type AuthListener = () => void;
 
 export interface AuthSnapshot {
-  currentUser: Omit<User, "password"> | null;
+  currentUser: User | null;
   isAuthenticated: boolean;
-  users: Omit<User, "password">[];
+  tenantId: string | null;
 }
 
-const SESSION_KEY = "warehouse_auth_session";
+const TENANT_KEY = "dasta_tenant_id";
 
 class AuthStore {
-  private users: User[] = [];
-  private currentUserId: string | null = null;
+  private currentUser: User | null = null;
+  private tenantId: string | null = null;
   private listeners: Set<AuthListener> = new Set();
   private _cachedSnapshot: AuthSnapshot | null = null;
+  private initialized = false;
 
   constructor() {
-    this.initialize();
-  }
-
-  private async initialize() {
-    if (typeof window === "undefined") return;
-
-    try {
-      const { data: usersData, error } = await supabase.from('users').select('*');
-
-      if (error) {
-        console.error("Error fetching users:", error.message, error.details, error.hint);
-      }
-
-      if (usersData && usersData.length > 0) {
-        this.users = usersData.map((u: any) => ({
-          id: u.id,
-          username: u.username,
-          displayName: u.display_name,
-          password: u.password,
-          createdAt: u.created_at
-        }));
-      } else {
-        this.users = [];
-      }
-
-      const session = localStorage.getItem(SESSION_KEY);
-      if (session) {
-        const parsed = JSON.parse(session);
-        if (parsed.userId && this.users.find((u) => u.id === parsed.userId)) {
-          this.currentUserId = parsed.userId;
-        }
-      }
-
-      this.notify();
-
-      // Realtime users
-      supabase
-        .channel('auth-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
-          this.handleRealtimeUser(payload);
-        })
-        .subscribe();
-
-    } catch (err) {
-      console.error("Auth init error:", err);
+    if (typeof window !== "undefined") {
+      // Load cached tenant_id immediately for faster startup
+      try {
+        this.tenantId = localStorage.getItem(TENANT_KEY);
+      } catch {}
+      this.initialize();
     }
   }
 
-  private handleRealtimeUser(payload: any) {
-    const { eventType, new: newRow, old: oldRow } = payload;
+  private async initialize() {
+    try {
+      // Check existing Supabase Auth session
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const mapUser = (u: any) => ({
-      id: u.id,
-      username: u.username,
-      displayName: u.display_name,
-      password: u.password,
-      createdAt: u.created_at
-    });
+      if (session?.user) {
+        await this.loadProfile(session.user.id, session.user.email || "");
+      }
 
-    if (eventType === 'INSERT') {
-      if (!this.users.find(u => u.id === newRow.id)) {
-        this.users.push(mapUser(newRow));
-      }
-    } else if (eventType === 'UPDATE') {
-      const idx = this.users.findIndex(u => u.id === newRow.id);
-      if (idx !== -1) this.users[idx] = mapUser(newRow);
-    } else if (eventType === 'DELETE') {
-      this.users = this.users.filter(u => u.id !== oldRow.id);
-      if (this.currentUserId === oldRow.id) {
-        this.logout();
-      }
+      // Listen for auth state changes (login, logout, token refresh)
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          await this.loadProfile(session.user.id, session.user.email || "");
+        } else if (event === "SIGNED_OUT") {
+          this.currentUser = null;
+          this.tenantId = null;
+          try { localStorage.removeItem(TENANT_KEY); } catch {}
+          this.notify();
+        }
+      });
+
+      this.initialized = true;
+      this.notify();
+    } catch (err) {
+      console.error("Auth init error:", err);
+      this.initialized = true;
+      this.notify();
+    }
+  }
+
+  private async loadProfile(userId: string, email: string) {
+    let { data: profile, error } = await supabase
+      .from("profiles")
+      .select("tenant_id, display_name, role")
+      .eq("id", userId)
+      .maybeSingle(); // maybeSingle instead of single prevents 406 errors
+
+    // Auto-create profile if trigger failed previously
+    if (!profile) {
+      const { data: newProfile } = await supabase
+        .from("profiles")
+        .insert({
+          id: userId,
+          display_name: email.split("@")[0],
+          role: "owner"
+        })
+        .select("tenant_id, display_name, role")
+        .maybeSingle();
+      
+      profile = newProfile;
+    }
+
+    if (profile) {
+      this.tenantId = profile.tenant_id;
+      try { localStorage.setItem(TENANT_KEY, profile.tenant_id || ""); } catch {}
+
+      this.currentUser = {
+        id: userId,
+        email,
+        displayName: profile.display_name || email,
+        tenantId: profile.tenant_id,
+        role: profile.role || "owner",
+        createdAt: new Date().toISOString(),
+      };
+    } else {
+      // Fallback if we still can't get a profile
+      this.currentUser = {
+        id: userId,
+        email,
+        displayName: email.split("@")[0],
+        tenantId: "",
+        role: "owner",
+        createdAt: new Date().toISOString(),
+      };
     }
     this.notify();
   }
@@ -109,31 +125,12 @@ class AuthStore {
     this.listeners.forEach((l) => l());
   }
 
-
-  private persistSession() {
-    if (typeof window !== "undefined") {
-      if (this.currentUserId) {
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: this.currentUserId }));
-      } else {
-        localStorage.removeItem(SESSION_KEY);
-      }
-    }
-  }
-
-  private sanitizeUser(user: User): Omit<User, "password"> {
-    const { password: _, ...rest } = user;
-    return rest;
-  }
-
   getSnapshot(): AuthSnapshot {
     if (!this._cachedSnapshot) {
-      const currentUser = this.currentUserId
-        ? this.users.find((u) => u.id === this.currentUserId)
-        : null;
       this._cachedSnapshot = {
-        currentUser: currentUser ? this.sanitizeUser(currentUser) : null,
-        isAuthenticated: !!currentUser,
-        users: this.users.map((u) => this.sanitizeUser(u)),
+        currentUser: this.currentUser,
+        isAuthenticated: !!this.currentUser,
+        tenantId: this.tenantId,
       };
     }
     return this._cachedSnapshot;
@@ -144,147 +141,111 @@ class AuthStore {
     return () => this.listeners.delete(listener);
   }
 
-  async login(username: string, password: string): Promise<{ success: boolean; error?: string }> {
-    const user = this.users.find(
-      (u) => u.username.toLowerCase() === username.toLowerCase()
-    );
-    if (!user) {
-      return { success: false, error: "მომხმარებელი ვერ მოიძებნა" };
-    }
-    if (user.password !== password) {
-      return { success: false, error: "პაროლი არასწორია" };
-    }
-    this.currentUserId = user.id;
-    this.persistSession();
-    this.notify();
-    return { success: true };
+  getTenantId(): string {
+    return this.tenantId || localStorage.getItem(TENANT_KEY) || "";
   }
 
-  logout() {
-    this.currentUserId = null;
-    this.persistSession();
-    this.notify();
-  }
+  // ──────────── Authentication Methods ────────────
 
-  async addUser(username: string, password: string, displayName: string): Promise<{ success: boolean; error?: string }> {
-    if (this.users.find((u) => u.username.toLowerCase() === username.toLowerCase())) {
-      return { success: false, error: "ეს მომხმარებლის სახელი უკვე არსებობს" };
-    }
-    if (username.length < 3) {
-      return { success: false, error: "მომხმარებლის სახელი მინიმუმ 3 სიმბოლო უნდა იყოს" };
-    }
-    if (password.length < 4) {
-      return { success: false, error: "პაროლი მინიმუმ 4 სიმბოლო უნდა იყოს" };
-    }
-
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      username,
-      password,
-      displayName: displayName || username,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Optimistic
-    this.users.push(newUser);
-    this.notify();
-
-    const { error } = await supabase.from('users').insert({
-      id: newUser.id,
-      username: newUser.username,
-      password: newUser.password,
-      display_name: newUser.displayName,
-      created_at: newUser.createdAt
-    });
-    if (error) {
-      console.error("Error adding user:", error);
-      this.users = this.users.filter(u => u.id !== newUser.id);
-      this.notify();
-      return { success: false, error: "შეცდომა ბაზაში შენახვისას" };
-    }
-
-    return { success: true };
-  }
-
-  async deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
-    if (userId === this.currentUserId) {
-      return { success: false, error: "საკუთარი თავის წაშლა არ შეიძლება" };
-    }
-    const user = this.users.find((u) => u.id === userId);
-    if (!user) {
-      return { success: false, error: "მომხმარებელი ვერ მოიძებნა" };
-    }
-
-    const oldUsers = [...this.users];
-    // Optimistic
-    this.users = this.users.filter((u) => u.id !== userId);
-    this.notify();
-
-    const { error } = await supabase.from('users').delete().eq('id', userId);
-    if (error) {
-      console.error("Error deleting user:", error);
-      this.users = oldUsers;
-      this.notify();
-      return { success: false, error: "შეცდომა წაშლისას" };
-    }
-
-    return { success: true };
-  }
-
-  async updateUser(
-    userId: string,
-    data: { displayName?: string; password?: string }
-  ): Promise<{ success: boolean; error?: string }> {
-    const user = this.users.find((u) => u.id === userId);
-    if (!user) {
-      return { success: false, error: "მომხმარებელი ვერ მოიძებნა" };
-    }
-
-    const oldUser = { ...user };
-    if (data.displayName) user.displayName = data.displayName;
-    if (data.password) {
-      if (data.password.length < 4) {
-        return { success: false, error: "პაროლი მინიმუმ 4 სიმბოლო უნდა იყოს" };
+  async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        if (error.message.includes("Invalid login")) {
+          return { success: false, error: "ელ-ფოსტა ან პაროლი არასწორია" };
+        }
+        return { success: false, error: error.message };
       }
-      user.password = data.password;
+      if (data.user) {
+        await this.loadProfile(data.user.id, data.user.email || "");
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || "ტექნიკური შეცდომა" };
     }
-
-    // Optimistic
-    this.notify();
-
-    // Map to snake_case
-    const dbUpdates: any = {};
-    if (data.displayName) dbUpdates.display_name = data.displayName;
-    if (data.password) dbUpdates.password = data.password;
-
-    const { error } = await supabase.from('users').update(dbUpdates).eq('id', userId);
-    if (error) {
-      console.error("Error updating user:", error);
-      Object.assign(user, oldUser);
-      this.notify();
-      return { success: false, error: "შეცდომა ბაზაში განახლებისას" };
-    }
-
-    return { success: true };
   }
 
-  getAllUsersRaw(): User[] {
-    return [...this.users];
+  async register(
+    email: string,
+    password: string,
+    displayName: string,
+    companyName: string,
+    companySlug: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // 1. Create Supabase Auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName },
+        },
+      });
+
+      if (authError) {
+        if (authError.message.includes("already registered")) {
+          return { success: false, error: "ეს ელ-ფოსტა უკვე რეგისტრირებულია" };
+        }
+        return { success: false, error: authError.message };
+      }
+
+      if (!authData.user) {
+        return { success: false, error: "რეგისტრაცია ვერ მოხერხდა" };
+      }
+
+      // 2. Auto-generate slug if empty
+      let finalSlug = companySlug;
+      if (!finalSlug || finalSlug.trim() === "") {
+        const cleanName = companyName.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-");
+        const randomStr = Math.random().toString(36).substring(2, 6);
+        finalSlug = `${cleanName}-${randomStr}`;
+      } else {
+        finalSlug = finalSlug.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+      }
+
+      // 3. Create tenant
+      const { data: tenant, error: tenantError } = await supabase
+        .from("tenants")
+        .insert({
+          name: companyName,
+          slug: finalSlug,
+          owner_id: authData.user.id,
+        })
+        .select()
+        .single();
+
+      if (tenantError) {
+        if (tenantError.message.includes("tenants_slug_key")) {
+          return { success: false, error: "ეს კომპანიის URL უკვე დაკავებულია" };
+        }
+        return { success: false, error: "კომპანიის შექმნა ვერ მოხერხდა: " + tenantError.message };
+      }
+
+      // 3. Link profile to tenant
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ tenant_id: tenant.id, display_name: displayName, role: "owner" })
+        .eq("id", authData.user.id);
+
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+      }
+
+      // 4. Load profile into state
+      await this.loadProfile(authData.user.id, email);
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || "ტექნიკური შეცდომა" };
+    }
   }
 
-  async importUsers(users: User[]) {
-    this.users = users;
+  async logout() {
+    await supabase.auth.signOut();
+    this.currentUser = null;
+    this.tenantId = null;
+    try { localStorage.removeItem(TENANT_KEY); } catch {}
     this.notify();
-
-    const dbUsers = users.map(u => ({
-      id: u.id,
-      username: u.username,
-      display_name: u.displayName,
-      password: u.password,
-      created_at: u.createdAt
-    }));
-
-    await supabase.from('users').upsert(dbUsers);
   }
 }
 
