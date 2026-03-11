@@ -64,6 +64,7 @@ export function EmployeesPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -86,6 +87,7 @@ export function EmployeesPage() {
             return;
         }
 
+        setIsSubmitting(true);
         try {
             await store.addEmployee(formData);
             toast.success("თანამშრომელი დაემატა");
@@ -93,6 +95,8 @@ export function EmployeesPage() {
             setFormData({ name: "", position: POSITIONS[0], phone: "", pinCode: "" });
         } catch (error) {
             console.error("Add employee failed in UI:", error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -218,14 +222,14 @@ export function EmployeesPage() {
                                         onChange={(e) =>
                                             setFormData({ ...formData, pinCode: e.target.value })
                                         }
-                                        placeholder="მაგ: 1234"
+                                        placeholder="მაგ: 123456"
                                         className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                     />
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="submit" className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
-                                    შენახვა
+                                <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
+                                    {isSubmitting ? "ინახება..." : "შენახვა"}
                                 </Button>
                             </DialogFooter>
                         </form>

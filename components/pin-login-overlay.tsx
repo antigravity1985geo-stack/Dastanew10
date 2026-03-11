@@ -16,10 +16,10 @@ export function PINLoginOverlay() {
     if (store.currentEmployee) return null;
 
     const handleNumberClick = (num: string) => {
-        if (pin.length < 4) {
+        if (pin.length < 6) {
             const newPin = pin + num;
             setPin(newPin);
-            if (newPin.length === 4) {
+            if (newPin.length === 6) {
                 handleLogin(newPin);
             }
         }
@@ -49,11 +49,11 @@ export function PINLoginOverlay() {
                         <Lock className="w-8 h-8 text-primary" />
                     </div>
                     <h2 className="text-2xl font-bold">თანამშრომლის ავტორიზაცია</h2>
-                    <p className="text-muted-foreground">შეიყვანეთ თქვენი PIN კოდი მუშაობის დასაწყებად</p>
+                    <p className="text-muted-foreground">შეიყვანეთ 6-ციფრიანი PIN კოდი მუშაობის დასაწყებად</p>
                 </div>
 
                 <div className="flex justify-center gap-4 mb-8">
-                    {[0, 1, 2, 3].map((i) => (
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
                         <div
                             key={i}
                             className={cn(

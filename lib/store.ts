@@ -1349,19 +1349,29 @@ class WarehouseStore {
 
   // Employees
   async addEmployee(employee: Omit<Employee, "id" | "createdAt">) {
-    if (employee.pinCode && this.employees.some(e => e.pinCode === employee.pinCode)) {
-      toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
-      throw new Error("PIN კოდი უკვე არსებობს");
+    // 1. Hash PIN first, then check uniqueness (hash vs hash)
+    let hashedPin = employee.pinCode;
+    if (employee.pinCode) {
+      hashedPin = await hashPin(employee.pinCode);
+      if (this.employees.some(e => e.pinCode === hashedPin)) {
+        toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
+        throw new Error("PIN კოდი უკვე არსებობს");
+      }
+    }
+
+    // 2. Prevent exact name + phone duplicates
+    const nameLower = employee.name.trim().toLowerCase();
+    const phoneTrim = (employee.phone || "").trim();
+    if (this.employees.some(e =>
+      e.name.trim().toLowerCase() === nameLower &&
+      (e.phone || "").trim() === phoneTrim
+    )) {
+      toast.error("ამ სახელით და ტელეფონით თანამშრომელი უკვე არსებობს");
+      throw new Error("დუბლიკატი თანამშრომელი");
     }
 
     const optimisticId = crypto.randomUUID();
     const optimisticCreatedAt = new Date().toISOString();
-
-    // Hash PIN before saving (simple SHA-256 via crypto.subtle for browser)
-    let hashedPin = employee.pinCode;
-    if (employee.pinCode) {
-      hashedPin = await hashPin(employee.pinCode);
-    }
 
     // Keep the optimistic update unhashed so the user doesn't see a giant hash locally right away, 
     // or we hash it so local validation matches. Safer to hash it:
@@ -1415,14 +1425,14 @@ class WarehouseStore {
     const oldEmployee = this.employees.find(e => e.id === id);
     if (!oldEmployee) return;
 
-    // #6: PIN uniqueness check (only checking if they input a NEW pin that isn't hashed yet)
-    // Note: if employee.pinCode is a raw 4 digit pin, we hash it. If it's already a hash (from UI not changing it), we keep it.
+    // PIN uniqueness check: hash new PIN then compare hash-to-hash
     let finalPin = oldEmployee.pinCode;
     if (employee.pinCode && employee.pinCode !== oldEmployee.pinCode) {
-      if (employee.pinCode.length <= 8 && this.employees.some(e => e.id !== id && e.pinCode === employee.pinCode)) {
+      finalPin = await hashPin(employee.pinCode);
+      if (this.employees.some(e => e.id !== id && e.pinCode === finalPin)) {
+        toast.error("ეს PIN კოდი უკვე გამოყენებულია სხვა თანამშრომლის მიერ");
         throw new Error("PIN კოდი უკვე არსებობს");
       }
-      finalPin = await hashPin(employee.pinCode);
     }
 
     const originalData = { ...oldEmployee };
@@ -1469,15 +1479,9 @@ class WarehouseStore {
 
   async loginEmployee(pin: string): Promise<Employee | null> {
     const hashedAttempt = await hashPin(pin);
-    const employee = this.employees.find(e => e.pinCode === hashedAttempt || e.pinCode === pin); // fallback to plain if not migrated
+    const employee = this.employees.find(e => e.pinCode === hashedAttempt);
 
     if (employee) {
-      if (employee.pinCode === pin && employee.pinCode !== hashedAttempt) {
-        // Auto-migrate: Force hash the old plain-text PIN
-        employee.pinCode = hashedAttempt; // Optimistic local update
-        supabase.from('employees').update({ pin_code: hashedAttempt }).eq('id', employee.id).then();
-      }
-
       this.currentEmployee = employee;
       try { localStorage.setItem(EMPLOYEE_SESSION_KEY, JSON.stringify(employee.id)); } catch (e) { }
       this.notify();
