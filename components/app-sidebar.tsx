@@ -63,6 +63,12 @@ const navItems = [
     requiresAdmin: true,
   },
   {
+    label: "ანალიტიკა",
+    href: "/analytics",
+    icon: TrendingUp,
+    requiresAdmin: true,
+  },
+  {
     label: "ხარჯები",
     href: "/expenses",
     icon: Wallet,

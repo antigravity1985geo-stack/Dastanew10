@@ -20,5 +20,11 @@ export function useWarehouseStore() {
     deleteSale: warehouseStore.deleteSale.bind(warehouseStore),
     getProductById: warehouseStore.getProductById.bind(warehouseStore),
     getProductByBarcode: warehouseStore.getProductByBarcode.bind(warehouseStore),
+    getAnalyticsData: warehouseStore.getAnalyticsData.bind(warehouseStore),
+    getTopProducts: warehouseStore.getTopProducts.bind(warehouseStore),
+    getCategoryDistribution: warehouseStore.getCategoryDistribution.bind(warehouseStore),
+    getPurchaseHistory: warehouseStore.getPurchaseHistory.bind(warehouseStore),
+    addExpense: warehouseStore.addExpense.bind(warehouseStore),
+    deleteExpense: warehouseStore.deleteExpense.bind(warehouseStore),
   };
 }

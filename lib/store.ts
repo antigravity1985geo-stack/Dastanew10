@@ -1634,18 +1634,63 @@ class WarehouseStore {
       .map(([month, data]) => ({ month, ...data }));
   }
 
-  getTopProducts(limit = 5): { name: string; sold: number; revenue: number }[] {
-    const map = new Map<string, { sold: number; revenue: number }>();
+  getTopProducts(limit = 5): { name: string; sold: number; revenue: number; profit: number }[] {
+    const map = new Map<string, { sold: number; revenue: number; profit: number }>();
+    const settings = settingsStore.getSettings();
+    
     this.sales.forEach((s) => {
-      const existing = map.get(s.productName) || { sold: 0, revenue: 0 };
+      const existing = map.get(s.productName) || { sold: 0, revenue: 0, profit: 0 };
+      const revenue = settings.accountingMethod === 'cash' ? (s.paidInCash + s.paidInCard) : s.totalAmount;
+      const cog = this.calculateFIFOCOG(s.productId, s.quantity, s.createdAt);
+      
       existing.sold += s.quantity;
-      existing.revenue += s.totalAmount;
+      existing.revenue += revenue;
+      existing.profit += (revenue - cog);
       map.set(s.productName, existing);
     });
+
     return Array.from(map.entries())
       .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.revenue - a.revenue)
+      .sort((a, b) => b.profit - a.profit)
       .slice(0, limit);
+  }
+
+  getAnalyticsData(range: number = 30): { date: string; revenue: number; profit: number; expenses: number }[] {
+    const data: { [key: string]: { revenue: number; profit: number; expenses: number } } = {};
+    const settings = settingsStore.getSettings();
+    const now = new Date();
+    
+    // Initialize last X days
+    for (let i = range - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      data[key] = { revenue: 0, profit: 0, expenses: 0 };
+    }
+
+    // Aggregating sales
+    this.sales.forEach(s => {
+      const key = s.createdAt.split('T')[0];
+      if (data[key]) {
+        const revenue = settings.accountingMethod === 'cash' ? (s.paidInCash + s.paidInCard) : s.totalAmount;
+        const cog = this.calculateFIFOCOG(s.productId, s.quantity, s.createdAt);
+        data[key].revenue += revenue;
+        data[key].profit += (revenue - cog);
+      }
+    });
+
+    // Aggregating expenses
+    this.expenses.forEach(e => {
+      const key = e.date;
+      if (data[key]) {
+        data[key].expenses += (e.amount || 0);
+      }
+    });
+
+    return Object.entries(data).map(([date, values]) => ({
+      date,
+      ...values
+    })).sort((a, b) => a.date.localeCompare(b.date));
   }
 
   getCategoryDistribution(): { category: string; count: number; value: number }[] {
