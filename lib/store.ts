@@ -274,12 +274,49 @@ class WarehouseStore {
     }
   }
 
+  private lastTenantId: string | null = null;
+
   constructor() {
+    this.lastTenantId = authStore.getTenantId() || null;
     this.initialize();
+
+    // Listen to Auth changes to reload data when switching tenants
+    authStore.subscribe(() => {
+      const currentTenantId = authStore.getTenantId();
+      if (currentTenantId && currentTenantId !== this.lastTenantId) {
+        this.lastTenantId = currentTenantId;
+        this.resetAndReload();
+      } else if (!currentTenantId && this.lastTenantId) {
+        this.lastTenantId = null;
+        this.clearLocalData();
+      }
+    });
+  }
+
+  private clearLocalData() {
+    this.products = [];
+    this.sales = [];
+    this.purchaseHistory = [];
+    this.expenses = [];
+    this.employees = [];
+    this.auditLogs = [];
+    this.shifts = [];
+    this.currentShift = null;
+    this.journalEntries = [];
+    this.currentEmployee = null;
+    this.notify();
+  }
+
+  private async resetAndReload() {
+    this.clearLocalData();
+    await this.initialize();
   }
 
   private async initialize() {
     if (typeof window === "undefined") return;
+
+    // Check if we actually have a tenant, otherwise don't fetch
+    if (!authStore.getTenantId()) return;
 
     try {
       // Parallel fetch products, sales, and purchase history
