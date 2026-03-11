@@ -91,6 +91,9 @@ class AuthStore {
     }
 
     if (profile) {
+      if (!profile.tenant_id) {
+        console.warn("User profile found but tenant_id is missing for user:", userId);
+      }
       this.tenantId = profile.tenant_id;
       try { localStorage.setItem(TENANT_KEY, profile.tenant_id || ""); } catch {}
 
@@ -221,11 +224,15 @@ class AuthStore {
         return { success: false, error: "კომპანიის შექმნა ვერ მოხერხდა: " + tenantError.message };
       }
 
-      // 3. Link profile to tenant
+      // 3. Link profile to tenant (using upsert to be safe)
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ tenant_id: tenant.id, display_name: displayName, role: "owner" })
-        .eq("id", authData.user.id);
+        .upsert({ 
+          id: authData.user.id,
+          tenant_id: tenant.id, 
+          display_name: displayName, 
+          role: "owner" 
+        });
 
       if (profileError) {
         console.error("Profile update error:", profileError);

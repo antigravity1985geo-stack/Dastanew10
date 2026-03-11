@@ -8,15 +8,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Hashing function for initial PIN creation
-async function hashPIN(pin: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pin);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export function PINLoginOverlay() {
     const store = useWarehouseStore();
     const auth = useAuth();
@@ -51,12 +42,11 @@ export function PINLoginOverlay() {
     const handleCreateInitial = async (currentPin: string) => {
         setIsCreating(true);
         try {
-            const hashedPin = await hashPIN(currentPin);
             await store.addEmployee({
                 name: auth.currentUser?.displayName || "ადმინისტრატორი",
                 position: "ადმინისტრატორი",
                 phone: auth.currentUser?.email || "",
-                pinCode: hashedPin,
+                pinCode: currentPin, // Pass raw PIN, store handles hashing
             });
             toast.success("PIN კოდი წარმატებით შეიქმნა!");
             await store.loginEmployee(currentPin);

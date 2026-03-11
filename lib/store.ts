@@ -1432,6 +1432,13 @@ class WarehouseStore {
     });
     this.notify();
 
+    const tenantId = getTenantId();
+    if (!tenantId) {
+      const msg = "კომპანიის ID ვერ მოიძებნა (Tenant ID is empty). გთხოვთ დაარეფრეშოთ გვერდი.";
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -1440,12 +1447,20 @@ class WarehouseStore {
           position: employee.position,
           phone: employee.phone || "",
           pin_code: hashedPin || "",
-          tenant_id: getTenantId()
+          tenant_id: tenantId
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error adding employee:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
 
       if (data) {
         const idx = this.employees.findIndex(e => e.id === optimisticId);
@@ -1462,12 +1477,12 @@ class WarehouseStore {
         }
       }
     } catch (error: any) {
-      console.error("Error adding employee:", error);
+      console.error("Total error adding employee:", error);
       this.employees = this.employees.filter(e => e.id !== optimisticId);
       this.notify();
       const errorMessage = error.message || error.details || "უცნობი შეცდომა";
       toast.error("შეცდომა თანამშრომლის დამატებისას: " + errorMessage);
-      throw error; // Rethrow so the UI knows it failed
+      throw error;
     }
   }
 
