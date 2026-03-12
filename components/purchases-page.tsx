@@ -873,32 +873,32 @@ export function PurchasesPage() {
             <div id="print-area">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
-                <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden group hover:shadow-lg transition-shadow bg-blue-50/30 border-t-4 border-t-blue-500">
+                <Card className="border-none shadow-xl rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default bg-gradient-to-br from-blue-600 to-cyan-500 !text-white">
                   <CardContent className="p-5">
-                    <p className="text-[10px] font-black text-blue-600/70 uppercase tracking-widest border-b border-blue-100 pb-1 mb-2">
+                    <p className="text-[10px] font-black text-white/70 uppercase tracking-widest border-b border-white/10 pb-1 mb-2">
                       პროდუქციის ტიპი
                     </p>
-                    <p className="text-2xl font-black text-blue-950">
+                    <p className="text-2xl font-black text-white">
                       {store.totalProducts}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden group hover:shadow-lg transition-shadow bg-emerald-50/30 border-t-4 border-t-emerald-500">
+                <Card className="border-none shadow-xl rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default bg-gradient-to-br from-emerald-600 to-teal-500 !text-white">
                   <CardContent className="p-5">
-                    <p className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest border-b border-emerald-100 pb-1 mb-2">
+                    <p className="text-[10px] font-black text-white/70 uppercase tracking-widest border-b border-white/10 pb-1 mb-2">
                       მთლიანი სტოკი
                     </p>
-                    <p className="text-2xl font-black text-emerald-950">
-                      {store.totalStock} <span className="text-sm font-bold text-emerald-700/60">ერთ.</span>
+                    <p className="text-2xl font-black text-white">
+                      {store.totalStock} <span className="text-sm font-bold text-white/60">ერთ.</span>
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/50 shadow-md rounded-2xl overflow-hidden group hover:shadow-lg transition-shadow bg-amber-50/30 border-t-4 border-t-amber-500">
+                <Card className="border-none shadow-xl rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default bg-gradient-to-br from-amber-500 to-orange-600 !text-white">
                   <CardContent className="p-5">
-                    <p className="text-[10px] font-black text-amber-600/70 uppercase tracking-widest border-b border-amber-100 pb-1 mb-2">
+                    <p className="text-[10px] font-black text-white/70 uppercase tracking-widest border-b border-white/10 pb-1 mb-2">
                       მთლიანი შესყიდვის ღირებულება
                     </p>
-                    <p className="text-2xl font-black text-amber-600">
+                    <p className="text-2xl font-black text-white">
                       {store.totalPurchaseValue.toLocaleString()} ₾
                     </p>
                   </CardContent>

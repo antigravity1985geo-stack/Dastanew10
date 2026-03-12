@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
           color="primary"
           description="მოგება - ხარჯები"
           isHighlight
-          className="spring-up delay-500 aurora-border-glow"
+          className="spring-up delay-500"
         />
       </div>
 
@@ -292,37 +292,37 @@ function StatsCard({ title, value, icon: Icon, color, description, isHighlight =
   className?: string;
 }) {
   const colorMap: any = {
-    blue: "text-blue-600 bg-blue-50",
-    green: "text-green-600 bg-green-50",
-    red: "text-red-600 bg-red-50",
-    orange: "text-orange-600 bg-orange-50",
-    primary: "text-[#8b1a1a] bg-[#8b1a1a]/5"
+    blue: "from-blue-600 to-cyan-500",
+    green: "from-emerald-600 to-teal-500",
+    red: "from-rose-600 to-red-500",
+    orange: "from-amber-500 to-orange-600",
+    primary: "from-indigo-600 to-violet-600"
   };
 
   return (
     <Card className={cn(
-      "border-none shadow-sm rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default",
-      isHighlight ? "ring-2 ring-primary/20 bg-white" : "bg-white",
+      "border-none shadow-xl rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default bg-gradient-to-br !text-white",
+      colorMap[color],
       className
     )}>
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <div className={cn("p-2.5 rounded-xl", colorMap[color])}>
-            <Icon className="h-5 w-5" />
+          <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-md">
+            <Icon className="h-5 w-5 !text-white" />
           </div>
           {isHighlight && (
-            <Badge className="badge-aurora">
+            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-md">
               NET
             </Badge>
           )}
         </div>
         <div>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
+          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
           <div className="flex items-baseline gap-1">
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{value.toFixed(2)}</h3>
-            <span className="text-slate-400 text-sm font-bold">₾</span>
+            <h3 className="text-2xl font-black text-white tracking-tight">{value.toFixed(2)}</h3>
+            <span className="text-white/60 text-sm font-bold">₾</span>
           </div>
-          <p className="text-[10px] text-slate-400 mt-2 font-medium">{description}</p>
+          <p className="text-[10px] text-white/50 mt-2 font-medium">{description}</p>
         </div>
       </CardContent>
     </Card>
