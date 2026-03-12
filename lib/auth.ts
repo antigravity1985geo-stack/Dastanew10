@@ -145,7 +145,15 @@ class AuthStore {
   }
 
   getTenantId(): string {
-    return this.tenantId || localStorage.getItem(TENANT_KEY) || "";
+    if (this.tenantId) return this.tenantId;
+    if (typeof window !== "undefined") {
+      try {
+        return localStorage.getItem(TENANT_KEY) || "";
+      } catch (e) {
+        return "";
+      }
+    }
+    return "";
   }
 
   // ──────────── Authentication Methods ────────────
