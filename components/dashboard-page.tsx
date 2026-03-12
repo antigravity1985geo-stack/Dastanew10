@@ -63,65 +63,51 @@ export function DashboardPage() {
       label: "პროდუქციის ტიპი",
       value: store.totalProducts,
       icon: Package,
-      color: "text-sky-600",
-      bgColor: "bg-sky-50/50",
-      borderColor: "border-t-sky-500",
+      gradient: "!bg-gradient-to-br !from-sky-500 !to-blue-600",
     },
     {
       label: "მთლიანი სტოკი",
       value: store.totalStock,
       icon: Boxes,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50/50",
-      borderColor: "border-t-emerald-500",
+      gradient: "!bg-gradient-to-br !from-emerald-500 !to-teal-600",
     },
     {
       label: "შესყიდვის ღირებულება",
       value: `${store.totalPurchaseValue.toLocaleString()} ₾`,
       icon: ShoppingCart,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50/50",
-      borderColor: "border-t-amber-500",
+      gradient: "!bg-gradient-to-br !from-amber-500 !to-orange-600",
     },
     {
       label: "გაყიდვების შემოსავალი",
       value: `${store.totalRevenue.toLocaleString()} ₾`,
       icon: TrendingUp,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50/50",
-      borderColor: "border-t-blue-500",
+      gradient: "!bg-gradient-to-br !from-blue-600 !to-indigo-600",
     },
     {
       label: "აქტივების ღირებულება",
       value: `${store.totalSaleValue.toLocaleString()} ₾`,
       icon: ArrowUpRight,
-      color: "text-violet-600",
-      bgColor: "bg-violet-50/50",
-      borderColor: "border-t-violet-500",
+      gradient: "!bg-gradient-to-br !from-violet-500 !to-purple-600",
     },
     {
       label: "თანამშრომლები",
       value: store.employees.length,
       icon: Users,
-      color: "text-primary",
-      bgColor: "bg-primary/5",
-      borderColor: "border-t-primary",
+      gradient: "!bg-gradient-to-br !from-indigo-600 !to-blue-700",
     },
     {
       label: "ჯამური ხარჯი",
       value: `${store.totalExpenses.toLocaleString()} ₾`,
       icon: TrendingDown,
-      color: "text-rose-600",
-      bgColor: "bg-rose-50/50",
-      borderColor: "border-t-rose-500",
+      gradient: "!bg-gradient-to-br !from-rose-500 !to-red-600",
     },
     {
       label: "წმინდა მოგება",
       value: `${(store.totalProfit - store.totalExpenses).toLocaleString()} ₾`,
       icon: DollarSign,
-      color: "text-emerald-700",
-      bgColor: "bg-emerald-100/30",
-      borderColor: "border-t-emerald-600",
+      gradient: (store.totalProfit - store.totalExpenses) >= 0 
+        ? "!bg-gradient-to-br !from-emerald-600 !to-green-700" 
+        : "!bg-gradient-to-br !from-red-600 !to-rose-700",
     },
   ];
 
@@ -140,22 +126,23 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
           {stats.map((stat, idx) => (
             <Card key={stat.label} className={cn(
-              "aurora-glass rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden relative group spring-up",
+              "rounded-2xl shadow-sm hover:shadow-xl transition-all border-none overflow-hidden relative group spring-up !text-white",
               `delay-${(idx + 1) * 100}`,
-              stat.bgColor
+              stat.gradient
             )}>
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl transition-all group-hover:scale-110" />
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                    <p className="text-[10px] font-black !text-white uppercase tracking-widest opacity-80">
                       {stat.label}
                     </p>
-                    <p className="text-2xl font-black mt-2 text-foreground">
+                    <p className="text-2xl font-black mt-2 !text-white">
                       {stat.value}
                     </p>
                   </div>
-                  <div className={cn("rounded-xl p-2.5 shadow-sm bg-white/40 backdrop-blur-md")}>
-                    <stat.icon className={cn("h-5 w-5", stat.color)} />
+                  <div className={cn("rounded-xl p-2.5 shadow-sm bg-white/20 backdrop-blur-md")}>
+                    <stat.icon className={cn("h-5 w-5 !text-white")} />
                   </div>
                 </div>
               </CardContent>

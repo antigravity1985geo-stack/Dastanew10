@@ -998,34 +998,39 @@ export function AccountingPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 shadow-sm bg-card overflow-hidden">
+            <Card className={cn(
+              "border-none shadow-sm overflow-hidden relative text-white",
+              finances.netProfit >= 0 ? "!bg-gradient-to-br !from-emerald-500 !to-teal-600" : "!bg-gradient-to-br !from-rose-500 !to-red-600"
+            )}>
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <TrendingUp className="h-5 w-5" />
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                    <TrendingUp className="h-5 w-5 !text-white" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">წმინდა მოგება</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-90 !text-white">წმინდა მოგება</span>
                 </div>
-                <h3 className={cn("text-3xl font-black mb-1", finances.netProfit >= 0 ? "text-emerald-600" : "text-destructive")}>
+                <h3 className="text-3xl font-black mb-1 !text-white">
                   {finances.netProfit.toFixed(2)} ₾
                 </h3>
                 <div className="flex items-center gap-1">
-                  {finances.netProfit >= 0 ? <ArrowUpRight className="h-3 w-3 text-emerald-600" /> : <ArrowDownRight className="h-3 w-3 text-destructive" />}
-                  <span className="text-xs font-bold text-muted-foreground">მთლიანი პერიოდი</span>
+                  {finances.netProfit >= 0 ? <ArrowUpRight className="h-3 w-3 !text-white" /> : <ArrowDownRight className="h-3 w-3 !text-white" />}
+                  <span className="text-xs font-bold opacity-90 !text-white">მთლიანი პერიოდი</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 shadow-sm bg-card overflow-hidden">
+            <Card className="border-none shadow-sm !bg-gradient-to-br !from-purple-600 !to-indigo-700 !text-white overflow-hidden relative">
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
-                    <TrendingDown className="h-5 w-5" />
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                    <TrendingDown className="h-5 w-5 !text-white" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">ხარჯები</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-90 !text-white">ხარჯები</span>
                 </div>
-                <h3 className="text-3xl font-black mb-1 text-rose-600">{(finances.totalExpenses + finances.totalPurchases).toFixed(2)} ₾</h3>
-                <p className="text-xs font-medium text-muted-foreground italic">შესყიდვები + ხარჯები</p>
+                <h3 className="text-3xl font-black mb-1 !text-white">{(finances.totalExpenses + finances.totalPurchases).toFixed(2)} ₾</h3>
+                <p className="text-xs font-medium opacity-90 !text-white italic">შესყიდვები + ხარჯები</p>
               </CardContent>
             </Card>
           </div>
