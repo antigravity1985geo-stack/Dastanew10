@@ -69,44 +69,61 @@ class AuthStore {
   }
 
   private async loadProfile(userId: string, email: string) {
-    let { data: profile, error } = await supabase
-      .from("profiles")
-      .select("tenant_id, display_name, role")
-      .eq("id", userId)
-      .maybeSingle(); // maybeSingle instead of single prevents 406 errors
-
-    // Auto-create profile if trigger failed previously
-    if (!profile) {
-      const { data: newProfile } = await supabase
+    try {
+      let { data: profile, error } = await supabase
         .from("profiles")
-        .insert({
-          id: userId,
-          display_name: email.split("@")[0],
-          role: "owner"
-        })
         .select("tenant_id, display_name, role")
+        .eq("id", userId)
         .maybeSingle();
-      
-      profile = newProfile;
-    }
 
-    if (profile) {
-      if (!profile.tenant_id) {
-        console.warn("User profile found but tenant_id is missing for user:", userId);
+      // Auto-create profile if trigger failed previously
+      if (!profile && !error) {
+        const { data: newProfile, error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: userId,
+            display_name: email.split("@")[0],
+            role: "owner"
+          })
+          .select("tenant_id, display_name, role")
+          .maybeSingle();
+        
+        if (insertError) {
+          console.error("Failed to auto-create profile:", insertError);
+        } else {
+          profile = newProfile;
+        }
       }
-      this.tenantId = profile.tenant_id;
-      try { localStorage.setItem(TENANT_KEY, profile.tenant_id || ""); } catch {}
 
-      this.currentUser = {
-        id: userId,
-        email,
-        displayName: profile.display_name || email,
-        tenantId: profile.tenant_id,
-        role: profile.role || "owner",
-        createdAt: new Date().toISOString(),
-      };
-    } else {
-      // Fallback if we still can't get a profile
+      if (profile) {
+        if (!profile.tenant_id) {
+          console.warn("User profile found but tenant_id is missing for user:", userId);
+        }
+        this.tenantId = profile.tenant_id;
+        try { localStorage.setItem(TENANT_KEY, profile.tenant_id || ""); } catch {}
+
+        this.currentUser = {
+          id: userId,
+          email,
+          displayName: profile.display_name || email,
+          tenantId: profile.tenant_id,
+          role: profile.role || "owner",
+          createdAt: new Date().toISOString(),
+        };
+      } else {
+        // Fallback for unexpected errors or empty result
+        this.currentUser = {
+          id: userId,
+          email,
+          displayName: email.split("@")[0],
+          tenantId: "",
+          role: "owner",
+          createdAt: new Date().toISOString(),
+        };
+      }
+    } catch (err) {
+      console.error("loadProfile fatal error:", err);
+      // Ensure we don't hang even on crash
       this.currentUser = {
         id: userId,
         email,

@@ -316,11 +316,19 @@ class WarehouseStore {
     if (typeof window === "undefined") return;
 
     // Check if we actually have a tenant, otherwise don't fetch
-    if (!authStore.getTenantId()) return;
+    if (!authStore.getTenantId()) {
+      this.initialized = true;
+      this.notify();
+      return;
+    }
 
     try {
       const tenantId = getTenantId();
-      if (!tenantId) return;
+      if (!tenantId) {
+        this.initialized = true;
+        this.notify();
+        return;
+      }
 
       // Parallel fetch products, sales, and purchase history — filtered by tenant_id
       const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }, { data: auditLogsData }, { data: journalData }] = await Promise.all([
