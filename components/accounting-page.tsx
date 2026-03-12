@@ -36,6 +36,8 @@ import {
   ArrowRightLeft
 } from "lucide-react";
 import { nbgService } from "@/lib/nbg-service";
+import { supabase } from "@/lib/supabase";
+import { authStore } from "@/lib/auth";
 import { printPayoffReceipt, printFinancialReport } from "@/lib/invoice";
 import {
   Card,
@@ -1469,7 +1471,7 @@ export function AccountingPage() {
             {/* Budgeting vs Actuals */}
             <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
               <CardHeader className="bg-amber-50/50 border-b border-amber-100">
-                <CardTitle className="text-xl font-black flex items-center gap-2 text-amber-900">
+                <CardTitle className="text-xl font-black flex items-center gap-2">
                   <PieChartIcon className="h-5 w-5" />
                   ბიუჯეტი vs ფაქტიური
                 </CardTitle>
@@ -2184,6 +2186,11 @@ export function AccountingPage() {
                     }
 
                     try {
+                      const tenantId = authStore.getTenantId();
+                      if (!tenantId || tenantId === "null" || tenantId === "undefined") {
+                        toast.error("Tenant ID missing");
+                        return;
+                      }
                       await store.payoffDebts(
                         selectedEntity.transactions,
                         amount,

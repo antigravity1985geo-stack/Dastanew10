@@ -162,13 +162,12 @@ class AuthStore {
   }
 
   getTenantId(): string {
-    if (this.tenantId) return this.tenantId;
+    if (this.tenantId && this.tenantId !== "null" && this.tenantId !== "undefined") return this.tenantId;
     if (typeof window !== "undefined") {
       try {
-        return localStorage.getItem(TENANT_KEY) || "";
-      } catch (e) {
-        return "";
-      }
+        const cached = localStorage.getItem(TENANT_KEY);
+        if (cached && cached !== "null" && cached !== "undefined") return cached;
+      } catch (e) {}
     }
     return "";
   }

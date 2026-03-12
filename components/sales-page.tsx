@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authStore } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import {
   Table,
   TableBody,
@@ -33,6 +35,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { Product, Sale } from "@/lib/store";
 import { PageHeader } from "@/components/page-header";
+import { nbgService } from "@/lib/nbg-service";
 import { toast } from "sonner";
 import { exportToExcel } from "@/lib/excel";
 import { printInvoice, printPayoffReceipt } from "@/lib/invoice";
@@ -740,6 +743,8 @@ export function SalesPage() {
       const total = qty * price;
       const cash = editForm.paidInCash !== "" ? parseFloat(editForm.paidInCash) : 0;
       const card = editForm.paidInCard !== "" ? parseFloat(editForm.paidInCard) : 0;
+      const tenantId = authStore.getTenantId();
+      if (!tenantId || tenantId === "null" || tenantId === "undefined") return;
       const paid = cash + card;
 
       await store.updateSale(editingId, {

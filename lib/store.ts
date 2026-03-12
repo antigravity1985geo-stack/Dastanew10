@@ -324,7 +324,10 @@ class WarehouseStore {
 
     try {
       const tenantId = getTenantId();
-      if (!tenantId) {
+      console.log("DEBUG: store.initialize with tenantId:", tenantId);
+      
+      if (!tenantId || tenantId === "null" || tenantId === "undefined") {
+        console.warn("DEBUG: Initializing store with empty/invalid tenantId, skipping fetch.");
         this.initialized = true;
         this.notify();
         return;
@@ -453,8 +456,12 @@ class WarehouseStore {
         })
         .subscribe();
 
-    } catch (error) {
-      console.error("Supabase init error:", error);
+    } catch (error: any) {
+      console.error("Supabase init error (400?):", error);
+      if (error && typeof error === 'object' && error.message) {
+        console.error("Error Message:", error.message);
+        console.error("Error Context:", { tenantId: getTenantId() });
+      }
     }
   }
 
