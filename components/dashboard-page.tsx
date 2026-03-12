@@ -129,19 +129,23 @@ export function DashboardPage() {
         <AIInsightsCard />
         {/* Stats Grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
-          {stats.map((stat) => (
-            <Card key={stat.label} className={cn("border-border/50 shadow-sm hover:shadow-md transition-all overflow-hidden relative group border-t-4", stat.bgColor, stat.borderColor)}>
+          {stats.map((stat, idx) => (
+            <Card key={stat.label} className={cn(
+              "aurora-glass rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden relative group spring-up",
+              `delay-${(idx + 1) * 100}`,
+              stat.bgColor
+            )}>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                       {stat.label}
                     </p>
-                    <p className="text-2xl font-black mt-2 text-card-foreground">
+                    <p className="text-2xl font-black mt-2 text-foreground">
                       {stat.value}
                     </p>
                   </div>
-                  <div className={cn("rounded-xl p-2.5", stat.bgColor)}>
+                  <div className={cn("rounded-xl p-2.5 shadow-sm bg-white/40 backdrop-blur-md")}>
                     <stat.icon className={cn("h-5 w-5", stat.color)} />
                   </div>
                 </div>
@@ -153,17 +157,17 @@ export function DashboardPage() {
         {/* Status Section: Low Stock & Recent Activity */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-8 text-slate-800">
            {/* Recent Inventory */}
-          <Card className="border-border/50 shadow-md rounded-2xl">
+          <Card className="aurora-glass shadow-xl rounded-3xl spring-up delay-400">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-base font-bold flex items-center gap-2">
+                <CardTitle className="text-base font-black flex items-center gap-2">
                   <Boxes className="h-4 w-4 text-primary" />
                   მარაგების სტატუსი
                 </CardTitle>
-                <CardDescription>ბოლო დამატებული პროდუქტები</CardDescription>
+                <CardDescription className="text-xs font-bold text-muted-foreground">ბოლო დამატებული პროდუქტები</CardDescription>
               </div>
               <Link href="/mobile-warehouse">
-                <Button variant="ghost" size="sm" className="text-primary font-bold text-xs h-8">
+                <Button variant="ghost" size="sm" className="text-primary font-black text-[10px] uppercase hover:bg-primary/5">
                   ყველას ნახვა
                 </Button>
               </Link>
@@ -171,24 +175,24 @@ export function DashboardPage() {
             <CardContent>
               {store.products.length > 0 ? (
                 <div className="space-y-3">
-                  {store.products.slice(0, 5).map((product) => (
+                  {store.products.slice(0, 4).map((product) => (
                     <div
                       key={product.id}
-                      className="flex items-center justify-between rounded-xl border border-border/50 p-3.5 hover:bg-muted/20 transition-colors"
+                      className="flex items-center justify-between rounded-xl border border-border/40 bg-white/5 p-3.5 hover:bg-white/10 transition-all hover:scale-[1.01]"
                     >
                       <div>
-                        <p className="text-sm font-bold text-card-foreground">
+                        <p className="text-sm font-black text-foreground">
                           {product.name}
                         </p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
                           {product.category || "კატეგორიის გარეშე"}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-card-foreground">
+                        <p className="text-sm font-black text-foreground">
                           {product.quantity} ერთ.
                         </p>
-                        <p className="text-[10px] font-bold text-muted-foreground">
+                        <p className="text-[10px] font-black text-primary">
                           {product.salePrice.toLocaleString()} ₾
                         </p>
                       </div>
@@ -204,17 +208,17 @@ export function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Analytics Shortcut */}
-          <Card className="border-none bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm rounded-2xl flex flex-col items-center justify-center p-8 text-center border-2 border-primary/10">
-            <div className="h-16 w-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-              <TrendingUp className="h-8 w-8 text-primary" />
+           {/* Analytics Shortcut */}
+          <Card className="border-none bg-slate-900 border-border/40 shadow-2xl rounded-3xl flex flex-col items-center justify-center p-8 text-center aurora-border-glow spring-up delay-500">
+            <div className="h-16 w-16 bg-primary/20 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+              <TrendingUp className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-xl font-black text-primary mb-2">დეტალური ანალიტიკა</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+            <h3 className="text-xl font-black text-white mb-2 uppercase tracking-tighter">დეტალური ანალიტიკა</h3>
+            <p className="text-sm text-white/50 mb-6 max-w-xs font-medium italic">
               იხილეთ გაყიდვების დინამიკა, FIFO მოგება და ფინანსური რეპორტები ერთ გვერდზე.
             </p>
             <Link href="/analytics">
-              <Button className="rounded-xl px-8 h-12 font-bold shadow-lg shadow-primary/20">
+              <Button className="rounded-2xl px-10 h-14 font-black shadow-xl shadow-primary/30 uppercase tracking-widest text-xs transition-transform active:scale-95">
                 ანალიტიკაზე გადასვლა
               </Button>
             </Link>

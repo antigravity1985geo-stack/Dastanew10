@@ -98,20 +98,22 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard 
           title="შემოსავალი" 
           value={totals.revenue} 
           icon={DollarSign} 
           color="blue"
           description="მთლიანი გაყიდვები"
+          className="spring-up delay-100"
         />
         <StatsCard 
-          title="საოპერაციო მოგება" 
+          title="მოგება" 
           value={totals.profit} 
           icon={TrendingUp} 
           color="green" 
-          description="შემოსავალი - თვითღირებულება"
+          description="შემოსავალი - თვითღირ."
+          className="spring-up delay-200"
         />
         <StatsCard 
           title="ხარჯები" 
@@ -119,13 +121,15 @@ export default function AnalyticsPage() {
           icon={TrendingDown} 
           color="red"
           description="სხვადასხვა ხარჯები"
+          className="spring-up delay-300"
         />
         <StatsCard 
           title="ფასდაკლებები" 
           value={totals.discounts} 
           icon={Package} 
           color="orange"
-          description="აქციების ჯამური ღირებულება"
+          description="აქციების ჯამი"
+          className="spring-up delay-400"
         />
         <StatsCard 
           title="სუფთა მოგება" 
@@ -134,6 +138,7 @@ export default function AnalyticsPage() {
           color="primary"
           description="მოგება - ხარჯები"
           isHighlight
+          className="spring-up delay-500 aurora-border-glow"
         />
       </div>
 
@@ -242,7 +247,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Breakdown Card */}
-        <Card className="border-none shadow-sm rounded-2xl bg-[#8b1a1a] text-white">
+        <Card className="border-none shadow-xl rounded-3xl bg-slate-900 text-white aurora-border-glow">
           <CardHeader>
             <CardTitle className="text-white/60 text-xs font-bold uppercase tracking-widest">ფინანსური რეზიუმე</CardTitle>
           </CardHeader>
@@ -264,9 +269,9 @@ export default function AnalyticsPage() {
               </div>
             </div>
             
-            <div className="bg-white/10 p-4 rounded-2xl">
-              <p className="text-xs text-white/60 mb-1 font-bold">INFO</p>
-              <p className="text-xs leading-relaxed text-white/80">
+            <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+              <p className="text-xs text-primary font-black mb-1">INFO</p>
+              <p className="text-xs leading-relaxed text-white/60 italic">
                 გაანგარიშება ხდება **FIFO (First-In, First-Out)** პრინციპით. სისტემა თვლის მოგებას იმ შესყიდვის ფასებიდან გამომდინარე, რომელიც ყველაზე ადრეა განხორციელებული.
               </p>
             </div>
@@ -277,13 +282,14 @@ export default function AnalyticsPage() {
   );
 }
 
-function StatsCard({ title, value, icon: Icon, color, description, isHighlight = false }: {
+function StatsCard({ title, value, icon: Icon, color, description, isHighlight = false, className }: {
   title: string;
   value: number;
   icon: any;
   color: string;
   description: string;
   isHighlight?: boolean;
+  className?: string;
 }) {
   const colorMap: any = {
     blue: "text-blue-600 bg-blue-50",
@@ -296,7 +302,8 @@ function StatsCard({ title, value, icon: Icon, color, description, isHighlight =
   return (
     <Card className={cn(
       "border-none shadow-sm rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default",
-      isHighlight ? "ring-2 ring-[#8b1a1a]/20 bg-white" : "bg-white"
+      isHighlight ? "ring-2 ring-primary/20 bg-white" : "bg-white",
+      className
     )}>
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-4">
@@ -304,7 +311,7 @@ function StatsCard({ title, value, icon: Icon, color, description, isHighlight =
             <Icon className="h-5 w-5" />
           </div>
           {isHighlight && (
-            <Badge className="bg-[#8b1a1a]/10 text-[#8b1a1a] hover:bg-[#8b1a1a]/20 border-none px-2 py-0.5 rounded-lg text-[10px] font-black uppercase">
+            <Badge className="badge-aurora">
               NET
             </Badge>
           )}

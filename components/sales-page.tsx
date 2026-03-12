@@ -964,7 +964,7 @@ export function SalesPage() {
   }, [mounted, store.currentShift, store.currentEmployee, showHistory, store.sales.length]);
 
   return (
-    <div className="flex h-screen w-full bg-[#f8f9fa] overflow-hidden font-sans text-slate-800">
+    <div className="flex h-screen w-full bg-background overflow-hidden font-sans text-foreground">
       {/* Show PIN Overlay if there is at least one employee with a PIN code */}
       {store.initialized && !store.currentEmployee && store.employees.some((e: any) => e.pinCode && e.pinCode.trim() !== "") && <PINLoginOverlay />}
 
@@ -979,10 +979,10 @@ export function SalesPage() {
 
       <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* WORK AREA */}
-        <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[#eff1f3]">
+        <div className="flex-1 flex p-4 gap-3 overflow-hidden bg-muted/30">
           {/* LEFT: Product Grid / Categories */}
-          <div className="w-[35%] lg:w-[40%] flex flex-col gap-4 h-full">
-            <div className="bg-white rounded-2xl shadow-sm p-4 flex-shrink-0">
+          <div className="flex-1 flex flex-col gap-3 h-full spring-up delay-100">
+            <div className="bg-card aurora-glass rounded-2xl shadow-sm p-4 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
@@ -995,8 +995,8 @@ export function SalesPage() {
               </div>
             </div>
             
-            <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="flex-1 bg-card aurora-glass rounded-2xl shadow-sm p-4 overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                 {filteredProducts.map((product) => {
                   const inCart = cart.find(item => item.productId === product.id);
                   const isOutOfStock = product.quantity <= 0;
@@ -1049,177 +1049,211 @@ export function SalesPage() {
             </div>
           </div>
 
-          {/* CENTER: Receipt / Order View */}
-          <div className="flex-1 bg-white rounded-2xl shadow-md border-2 border-slate-200 flex flex-col overflow-hidden">
-            {/* Held Receipts Bar */}
-            {heldReceipts.length > 0 && (
-              <div className="bg-amber-50/50 border-b border-amber-100 p-2 flex gap-2 overflow-x-auto custom-scrollbar">
-                {heldReceipts.map(receipt => (
-                  <button
-                    key={receipt.id}
-                    onClick={() => recallReceipt(receipt.id)}
-                    className="flex items-center gap-2 bg-white border border-amber-200 px-3 py-1.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 group shrink-0"
-                  >
-                    <div className="flex flex-col items-start">
-                      <span className="text-[9px] font-black text-amber-600 uppercase leading-none">Held Receipt</span>
-                      <span className="text-xs font-bold text-slate-700">{receipt.clientName || "Unknown"}</span>
-                    </div>
-                    <div className="h-6 w-[1px] bg-amber-100 mx-1" />
-                    <span className="text-xs font-black text-slate-900">{receipt.total.toLocaleString()} ₾</span>
-                    <div 
-                      onClick={(e) => { e.stopPropagation(); removeHeldReceipt(receipt.id); }}
-                      className="ml-1 p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+          {/* RIGHT: Combined Order & Keypad Sidebar */}
+          <div className="w-[450px] flex flex-col gap-3 h-full overflow-hidden spring-up delay-300">
+            <div className="flex-1 bg-card aurora-glass rounded-3xl shadow-2xl border border-border/40 flex flex-col overflow-hidden">
+              {/* Held Receipts Bar */}
+              {heldReceipts.length > 0 && (
+                <div className="bg-amber-50/50 border-b border-amber-100 p-2 flex gap-2 overflow-x-auto custom-scrollbar">
+                  {heldReceipts.map(receipt => (
+                    <button
+                      key={receipt.id}
+                      onClick={() => recallReceipt(receipt.id)}
+                      className="flex items-center gap-2 bg-white border border-amber-200 px-3 py-1.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 group shrink-0"
                     >
-                      <X className="h-3 w-3" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="bg-slate-50/80 p-3 flex items-center justify-between border-b">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-[#8b1a1a] flex items-center justify-center">
-                  <ShoppingCart className="h-4 w-4 text-white" />
-                </div>
-                <span className="font-black text-sm uppercase tracking-tight">აქტიური შეკვეთა</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  className="h-8 px-3 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors"
-                  onClick={clearCart}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  გასუფთავება
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-slate-100/50 px-4 py-2 grid grid-cols-6 text-[9px] font-black text-slate-400 uppercase tracking-widest flex-shrink-0">
-              <div className="col-span-3">დასახელება</div>
-              <div className="text-center">რაოდ.</div>
-              <div className="text-right">ფასი</div>
-              <div className="text-right pr-2">ჯამი</div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-60">
-                   <ShoppingCart className="h-16 w-16 mb-2 opacity-10" />
-                   <p className="text-sm font-bold">Your cart is empty</p>
-                   <p className="text-[10px] font-medium">Scan items or select from the list</p>
-                </div>
-              ) : (
-                cart.map(item => (
-                  <div key={item.productId} className="grid grid-cols-6 items-center py-2.5 border-b border-slate-100 group animate-in slide-in-from-left-2 transition-all">
-                    <div className="col-span-3 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-slate-50 border border-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} className="h-full w-full object-cover" alt="" />
-                        ) : (
-                          <Package className="h-5 w-5 text-slate-300" />
-                        )}
+                      <div className="flex flex-col items-start">
+                        <span className="text-[9px] font-black text-amber-600 uppercase leading-none">Held Receipt</span>
+                        <span className="text-xs font-bold text-slate-700">{receipt.clientName || "Unknown"}</span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 line-clamp-1">{item.productName}</p>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.category || "General"}</p>
+                      <div className="h-6 w-[1px] bg-amber-100 mx-1" />
+                      <span className="text-xs font-black text-slate-900">{receipt.total.toLocaleString()} ₾</span>
+                      <div 
+                        onClick={(e) => { e.stopPropagation(); removeHeldReceipt(receipt.id); }}
+                        className="ml-1 p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <X className="h-3 w-3" />
                       </div>
-                    </div>
-                    <div className="flex items-center justify-center gap-1">
-                       <button 
-                         onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
-                         className="h-5 w-5 rounded bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary flex items-center justify-center"
-                       >
-                         <Minus className="h-3 w-3" />
-                       </button>
-                       <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
-                       <button 
-                         onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
-                         className="h-5 w-5 rounded bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary flex items-center justify-center"
-                       >
-                         <Plus className="h-3 w-3" />
-                       </button>
-                    </div>
-                    <div className="text-right text-xs font-bold text-slate-500">{item.salePrice.toLocaleString()}</div>
-                    <div className="text-right text-xs font-black text-slate-900 pr-2">{(item.quantity * item.salePrice).toLocaleString()}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="bg-slate-50/80 p-3 flex items-center justify-between border-b">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                    <ShoppingCart className="h-4 w-4 text-white" />
                   </div>
-                ))
-              )}
-            </div>
-
-            <div className="bg-[#fdfdfd] border-t-2 border-slate-100 p-5 mt-auto flex-shrink-0">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">სულ რაოდენობა</span>
-                  <span className="text-lg font-black text-slate-800">{cartItemCount}</span>
+                  <span className="font-black text-sm uppercase tracking-tight text-foreground">აქტიური შეკვეთა</span>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ჯამური თანხა</span>
-                  <span className="text-4xl font-black text-slate-1000 tracking-tighter leading-none">{cartTotal.toLocaleString()} ₾</span>
+                <div className="flex items-center gap-2">
+                  <button 
+                    className="h-8 px-3 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-1.5 transition-colors"
+                    onClick={clearCart}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    გასუფთავება
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* RIGHT: Keypad & Quick Actions */}
-          <div className="w-[300px] flex flex-col gap-2 flex-shrink-0">
-            {/* Input Overlay */}
-            <div className="bg-white rounded-2xl shadow-md p-3 flex flex-col gap-1.5">
-              <div className="flex justify-between items-center mb-1">
-                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">მყიდველი</span>
-                 {clientName && <button onClick={() => setClientName("")} className="text-[9px] text-red-500 font-bold uppercase">წაშლა</button>}
+              <div className="bg-slate-100/50 px-4 py-2 grid grid-cols-6 text-[9px] font-black text-slate-400 uppercase tracking-widest flex-shrink-0">
+                <div className="col-span-3">დასახელება</div>
+                <div className="text-center">რაოდ.</div>
+                <div className="text-right">ფასი</div>
+                <div className="text-right pr-2">ჯამი</div>
               </div>
-              <Input 
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="საცალო მყიდველი"
-                className="h-10 bg-slate-50 border-none font-bold text-sm tracking-tight rounded-xl"
-              />
-              <div className="flex justify-between items-center mt-2 mb-1">
-                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">მიღებული თანხა</span>
-                 {receivedAmount && <button onClick={() => setReceivedAmount("")} className="text-[9px] text-red-500 font-bold uppercase">წაშლა</button>}
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                {cart.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-60">
+                     <ShoppingCart className="h-12 w-12 mb-2 opacity-10" />
+                     <p className="text-xs font-bold">Your cart is empty</p>
+                  </div>
+                ) : (
+                  cart.map(item => (
+                    <div key={item.productId} className="grid grid-cols-6 items-center py-2 border-b border-slate-100 group animate-in slide-in-from-left-2 transition-all">
+                      <div className="col-span-3 flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-slate-50 border border-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} className="h-full w-full object-cover" alt="" />
+                          ) : (
+                            <Package className="h-4 w-4 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-slate-800 line-clamp-1">{item.productName}</p>
+                          <p className="text-[8px] text-slate-400 font-bold uppercase">{item.category || "General"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-1">
+                         <button 
+                           onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                           className="h-4 w-4 rounded bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary flex items-center justify-center"
+                         >
+                           <Minus className="h-2.5 w-2.5" />
+                         </button>
+                         <span className="text-[11px] font-black min-w-[15px] text-center">{item.quantity}</span>
+                         <button 
+                           onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                           className="h-4 w-4 rounded bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary flex items-center justify-center"
+                         >
+                           <Plus className="h-2.5 w-2.5" />
+                         </button>
+                      </div>
+                      <div className="text-right text-[11px] font-bold text-slate-500">{item.salePrice.toLocaleString()}</div>
+                      <div className="text-right text-[11px] font-black text-slate-900 pr-2">{(item.quantity * item.salePrice).toLocaleString()}</div>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="h-12 bg-emerald-50 rounded-2xl border-2 border-emerald-100 flex items-center px-4 justify-between">
-                <span className="text-2xl font-black text-emerald-700">{receivedAmount || "0"}</span>
-                <span className="text-sm font-black text-emerald-300">₾</span>
-              </div>
-              {receivedAmount && parseFloat(receivedAmount) > cartTotal && (
-                <div className="flex justify-between items-center px-1 animate-in zoom-in duration-300 mt-0.5">
-                  <span className="text-[9px] font-black text-emerald-600 uppercase">ხურდა</span>
-                  <span className="text-lg font-black text-emerald-600">{(parseFloat(receivedAmount) - cartTotal).toLocaleString()} ₾</span>
+
+              {/* Bottom Section: Summary + Keypad (Merged) */}
+              <div className="bg-white border-t border-border/40 p-4 space-y-3 flex flex-col flex-shrink-0">
+                <div className="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">სულ რაოდენობა</span>
+                    <span className="text-base font-black text-slate-800">{cartItemCount}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ჯამური თანხა</span>
+                    <span className="text-3xl font-black text-slate-950 tracking-tighter leading-none">{cartTotal.toLocaleString()} ₾</span>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Numeric Keypad */}
-            <div className="bg-white rounded-2xl shadow-md p-1.5 grid grid-cols-3 gap-1.5 h-[210px]">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0].map(val => (
-                <button
-                  key={val}
+                <div className="flex gap-3 h-[200px]">
+                  {/* Left part of tools: Client & Amount */}
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">მყიდველი</span>
+                      <Input 
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                        placeholder="საცალო მყიდველი"
+                        className="h-8 bg-slate-50 border-none font-bold text-xs tracking-tight rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">მიღებული თანხა</span>
+                      <div className="h-10 bg-emerald-50 rounded-xl border-2 border-emerald-100 flex items-center px-3 justify-between">
+                        <span className="text-xl font-black text-emerald-700">{receivedAmount || "0"}</span>
+                        <span className="text-xs font-black text-emerald-300">₾</span>
+                      </div>
+                      {receivedAmount && parseFloat(receivedAmount) > cartTotal && (
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[8px] font-black text-emerald-600 uppercase">ხურდა</span>
+                          <span className="text-sm font-black text-emerald-600">{(parseFloat(receivedAmount) - cartTotal).toLocaleString()} ₾</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Final Actions Mini */}
+                    <div className="grid grid-cols-2 gap-2 mt-auto">
+                       <Button 
+                          variant="outline" 
+                          className="h-9 bg-blue-50 border-blue-200 text-blue-600 font-black rounded-xl hover:bg-blue-100 text-[10px] tracking-widest"
+                          onClick={() => {
+                             setPayMode("card");
+                             handleSellAll({ cash: 0, card: cartTotal, client: clientName });
+                          }}
+                       >
+                          ბარათი
+                       </Button>
+                       <Button 
+                          variant="outline" 
+                          className="h-9 bg-amber-50 border-amber-200 text-amber-600 font-black rounded-xl hover:bg-amber-100 text-[10px] tracking-widest"
+                          onClick={holdCurrentReceipt}
+                       >
+                          გადადება
+                       </Button>
+                    </div>
+                  </div>
+
+                  {/* Right part: Small Numeric Keypad */}
+                  <div className="w-[180px] grid grid-cols-3 gap-1">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0].map(val => (
+                      <button
+                        key={val}
+                        onClick={() => {
+                          if (val === "." && receivedAmount.includes(".")) return;
+                          setReceivedAmount(prev => prev + String(val));
+                        }}
+                        className="h-full rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-base font-bold transition-all active:scale-95 flex items-center justify-center text-slate-700"
+                      >
+                        {val}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setReceivedAmount("")}
+                      className="h-full rounded-xl bg-orange-100 hover:bg-orange-200 border border-orange-200 text-base font-black text-orange-600 transition-all active:scale-95 flex items-center justify-center"
+                    >
+                      C
+                    </button>
+                  </div>
+                </div>
+
+                <Button 
                   onClick={() => {
-                    if (val === "." && receivedAmount.includes(".")) return;
-                    setReceivedAmount(prev => prev + String(val));
+                    if (cart.length === 0) return;
+                    setPayMode("cash");
+                    const cashVal = receivedAmount ? parseFloat(receivedAmount) : cartTotal;
+                    handleSellAll({ cash: cashVal, card: 0, client: clientName });
                   }}
-                  className="h-full rounded-xl bg-[#fdfaf5] hover:bg-[#f7f0e4] border border-[#f3e5ca] text-xl font-bold transition-colors active:scale-95 flex items-center justify-center text-slate-700"
+                  className="h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-2xl shadow-lg shadow-emerald-200/50 flex flex-col items-center justify-center gap-0 group transition-all active:scale-[0.98]"
                 >
-                  {val}
-                </button>
-              ))}
-              <button
-                onClick={() => setReceivedAmount("")}
-                className="h-full rounded-xl bg-orange-100 hover:bg-orange-200 border border-orange-200 text-xl font-black text-orange-600 transition-colors active:scale-95 flex items-center justify-center"
-              >
-                C
-              </button>
+                  <div className="flex items-center gap-2">
+                     <span>ნაღდი (ENTER)</span>
+                  </div>
+                </Button>
+              </div>
             </div>
 
-            {/* Quick Settings */}
+            {/* Bottom mini actions (Fiscal/RSGE) */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setSendToRSGE(!sendToRSGE)}
                 className={cn(
-                  "h-10 rounded-xl border-2 flex items-center justify-center gap-2 transition-all text-[10px] font-black tracking-widest",
-                  sendToRSGE ? "bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-white border-slate-100 text-slate-400 hover:bg-slate-50"
+                  "h-8 rounded-lg border flex items-center justify-center gap-2 transition-all text-[9px] font-black tracking-widest",
+                  sendToRSGE ? "bg-emerald-500 border-emerald-600 text-white" : "bg-white border-slate-200 text-slate-400"
                 )}
               >
                 RS.GE
@@ -1228,51 +1262,13 @@ export function SalesPage() {
               <button
                 onClick={() => setPrintFiscal(!printFiscal)}
                 className={cn(
-                  "h-10 rounded-xl border-2 flex items-center justify-center gap-2 transition-all text-[10px] font-black tracking-widest",
-                  printFiscal ? "bg-[#8b1a1a] border-[#6b1414] text-white shadow-lg shadow-red-100" : "bg-white border-slate-100 text-slate-400 hover:bg-slate-50"
+                  "h-8 rounded-lg border flex items-center justify-center gap-2 transition-all text-[9px] font-black tracking-widest",
+                  printFiscal ? "bg-primary border-primary text-white" : "bg-white border-slate-200 text-slate-400"
                 )}
               >
                 ფისკალური
                 {printFiscal && <CheckCircle2 className="h-3 w-3" />}
               </button>
-            </div>
-
-            {/* Final Actions */}
-            <div className="flex flex-col gap-1.5 mt-auto">
-              <div className="grid grid-cols-2 gap-2">
-                 <Button 
-                    variant="outline" 
-                    className="h-12 bg-blue-50 border-blue-200 text-blue-600 font-black rounded-xl hover:bg-blue-100 text-xs tracking-widest"
-                    onClick={() => {
-                       setPayMode("card");
-                       handleSellAll({ cash: 0, card: cartTotal, client: clientName });
-                    }}
-                 >
-                    ბარათი
-                 </Button>
-                 <Button 
-                    variant="outline" 
-                    className="h-12 bg-amber-50 border-amber-200 text-amber-600 font-black rounded-xl hover:bg-amber-100 text-xs tracking-widest"
-                    onClick={holdCurrentReceipt}
-                 >
-                    გადადება (F9)
-                 </Button>
-              </div>
-              <Button 
-                onClick={() => {
-                  if (cart.length === 0) return;
-                  setPayMode("cash");
-                  const cashVal = receivedAmount ? parseFloat(receivedAmount) : cartTotal;
-                  handleSellAll({ cash: cashVal, card: 0, client: clientName });
-                }}
-                className="h-16 bg-[#2ecc71] hover:bg-[#27ae60] text-white font-black text-xl rounded-2xl shadow-lg shadow-emerald-200/50 flex flex-col items-center justify-center gap-0.5 group transition-all active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-2">
-                   <span>ნაღდი</span>
-                   <CheckCircle2 className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-[10px] font-bold opacity-60 tracking-widest">(ENTER)</span>
-              </Button>
             </div>
           </div>
         </div>
