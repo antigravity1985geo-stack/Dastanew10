@@ -82,8 +82,9 @@ class AuthStore {
           .from("profiles")
           .insert({
             id: userId,
+            username: email, // Added username to satisfy NOT NULL constraint
             display_name: email.split("@")[0],
-            role: "owner"
+            role: "owner" as any
           })
           .select("tenant_id, display_name, role")
           .maybeSingle();
@@ -99,19 +100,23 @@ class AuthStore {
         if (!profile.tenant_id) {
           console.warn("User profile found but tenant_id is missing for user:", userId);
         }
-        this.tenantId = profile.tenant_id;
-        try { localStorage.setItem(TENANT_KEY, profile.tenant_id || ""); } catch {}
+        this.tenantId = profile.tenant_id || null;
+        try { 
+          if (profile.tenant_id) localStorage.setItem(TENANT_KEY, profile.tenant_id);
+          else localStorage.removeItem(TENANT_KEY);
+        } catch {}
 
         this.currentUser = {
           id: userId,
           email,
           displayName: profile.display_name || email,
-          tenantId: profile.tenant_id,
+          tenantId: profile.tenant_id || "",
           role: profile.role || "owner",
           createdAt: new Date().toISOString(),
         };
       } else {
         // Fallback for unexpected errors or empty result
+        this.tenantId = null;
         this.currentUser = {
           id: userId,
           email,
@@ -161,7 +166,7 @@ class AuthStore {
     return () => this.listeners.delete(listener);
   }
 
-  getTenantId(): string {
+  getTenantId(): string | null {
     if (this.tenantId && this.tenantId !== "null" && this.tenantId !== "undefined") return this.tenantId;
     if (typeof window !== "undefined") {
       try {
@@ -169,7 +174,7 @@ class AuthStore {
         if (cached && cached !== "null" && cached !== "undefined") return cached;
       } catch (e) {}
     }
-    return "";
+    return null;
   }
 
   // ──────────── Authentication Methods ────────────
@@ -253,6 +258,7 @@ class AuthStore {
         .from("profiles")
         .upsert({ 
           id: authData.user.id,
+          username: email, // Added username to satisfy NOT NULL constraint
           tenant_id: tenant.id, 
           display_name: displayName, 
           role: "owner" 

@@ -9,7 +9,7 @@ const EMPLOYEE_SESSION_KEY = "dasta_employee_session";
 const SHIFTS_KEY = "dasta_shifts";
 
 // Multi-tenancy helper
-function getTenantId(): string {
+function getTenantId(): string | null {
   return authStore.getTenantId();
 }
 
@@ -436,22 +436,22 @@ class WarehouseStore {
       this.initialized = true;
       this.notify();
 
-      // Subscribe to changes
+      // Subscribe to changes — filter by tenant_id to prevent cross-tenant leakage
       supabase
-        .channel('schema-db-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        .channel(`schema-db-changes-${tenantId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeProduct(payload);
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeSale(payload);
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_history' }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_history', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimePurchase(payload);
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeExpense(payload);
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeEmployee(payload);
         })
         .subscribe();
@@ -731,6 +731,7 @@ class WarehouseStore {
       throw new Error("ცვლის გასახსნელად საჭიროა ავტორიზაცია");
     }
 
+    const tenantId = getTenantId();
     const newShift: Shift = {
       id: crypto.randomUUID(),
       employeeId: this.currentEmployee.id,
@@ -743,6 +744,23 @@ class WarehouseStore {
     this.shifts.push(newShift);
     this.persistShifts();
     this.notify();
+
+    // Persist to Supabase
+    try {
+      const { error } = await supabase.from('shifts').insert({
+        id: newShift.id,
+        employee_id: newShift.employeeId,
+        employee_name: newShift.employeeName,
+        opened_at: newShift.openedAt,
+        opening_cash: newShift.openingCash,
+        status: 'open',
+        tenant_id: tenantId
+      });
+      if (error) console.error("Failed to persist shift to Supabase:", error.message);
+    } catch (e) {
+      console.error("openShift Supabase error:", e);
+    }
+
     toast.success("ცვლა გახსნილია");
   }
 
@@ -752,15 +770,12 @@ class WarehouseStore {
       throw new Error("გახსნილი ცვლა ვერ მოიძებნა");
     }
 
-    // Calculate expected cash: Opening Cash + Total Cash Sales + Partial Cash Payoffs - Cash Expenses
-    // We only filter sales/expenses since shift was opened
     const shiftSales = this.sales.filter(s => s.createdAt > shift.openedAt);
     const shiftSalesCash = shiftSales.reduce((sum, s) => sum + s.paidInCash, 0);
 
     const shiftExpenses = this.expenses.filter(e => e.date > shift.openedAt && e.paymentMethod === 'cash');
     const shiftExpensesTotal = shiftExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Simplification: Not tracking payoffs since shift open yet, but could be added.
     const expectedCash = shift.openingCash + shiftSalesCash - shiftExpensesTotal;
     const variance = actualCash - expectedCash;
 
@@ -772,6 +787,20 @@ class WarehouseStore {
 
     this.persistShifts();
     this.notify();
+
+    // Update Supabase
+    try {
+      const { error } = await supabase.from('shifts').update({
+        closed_at: shift.closedAt,
+        status: 'closed',
+        expected_cash: expectedCash,
+        actual_cash: actualCash,
+        variance: variance
+      }).eq('id', shift.id);
+      if (error) console.error("Failed to update shift in Supabase:", error.message);
+    } catch (e) {
+      console.error("closeShift Supabase error:", e);
+    }
 
     if (Math.abs(variance) > 0.1) {
       toast.warning(`ცვლა დაიხურა სხვაობით: ${variance.toFixed(2)} ₾`);
@@ -813,8 +842,12 @@ class WarehouseStore {
     currency?: "GEL" | "USD" | "EUR";
     exchangeRate?: number;
   }) {
-    // Phase 5: Products usually don't have a distinct "transaction date" for locking
-    // unless added via purchase history. We'll use TODAY.
+    const tenantId = authStore.getTenantId();
+    if (!tenantId) {
+      toast.error("თქვენი პროფილი არაა დაკავშირებული ტენანტთან. გთხოვთ დაუკავშირდეთ ადმინისტრატორს.");
+      throw new Error("Missing tenant_id");
+    }
+
     this.checkPeriodLocked(new Date().toISOString());
 
     const existing = this.products.find((p) =>
@@ -877,11 +910,12 @@ class WarehouseStore {
         oldData: { quantity: oldProductQuantity, purchasePrice: existing.purchasePrice, salePrice: existing.salePrice }
       });
 
+      const tenantId = authStore.getTenantId();
       // Log purchase history for stock increase
       const purchaseHistoryEntry = {
         product_id: existing.id,
         product_name: existing.name,
-        category_name: existing.category,
+        category_name: existing.category || "სხვადასხვა",
         purchase_price: product.purchasePrice,
         sale_price: product.salePrice,
         quantity: product.quantity,
@@ -891,7 +925,7 @@ class WarehouseStore {
         currency: currency,
         exchange_rate: exchangeRate,
         created_at: new Date().toISOString(),
-        tenant_id: getTenantId()
+        tenant_id: tenantId
       };
 
       try {
@@ -928,8 +962,12 @@ class WarehouseStore {
         client: product.supplier || product.client,
         image_url: product.imageUrl || null,
         created_at: new Date().toISOString(),
-        tenant_id: getTenantId()
+        tenant_id: tenantId
       };
+
+      if (!newProduct.category_name) {
+        newProduct.category_name = "სხვადასხვა";
+      }
 
       if (product.barcode) {
         newProduct.barcode = product.barcode;
@@ -963,18 +1001,10 @@ class WarehouseStore {
         // Use the local data we just sent as the "dbProduct"
         const dbProduct = newProduct;
 
-        if (dbProduct) {
-          this.logAction({
-            actionType: 'INSERT',
-            tableName: 'products',
-            recordId: dbProduct.id,
-            newData: dbProduct
-          });
-
           const purchaseHistoryEntry = {
             product_id: dbProduct.id,
             product_name: dbProduct.name,
-            category_name: dbProduct.category_name,
+            category_name: dbProduct.category_name || "სხვადასხვა",
             purchase_price: product.purchasePrice,
             sale_price: dbProduct.sale_price,
             quantity: dbProduct.quantity,
@@ -984,12 +1014,11 @@ class WarehouseStore {
             currency: currency,
             exchange_rate: exchangeRate,
             created_at: new Date().toISOString(),
-            tenant_id: getTenantId()
+            tenant_id: tenantId
           };
 
           const { error: historyError } = await supabase.from('purchase_history').insert(purchaseHistoryEntry);
           if (historyError) console.error("Error logging purchase history:", historyError.message);
-        }
       } catch (error: any) {
         console.error("Error adding product:", error);
         this.products = this.products.filter(p => p.id !== newProduct.id);
@@ -1525,14 +1554,15 @@ class WarehouseStore {
     this.notify();
 
     try {
+      // Only send defined fields to avoid overwriting with null
+      const dbUpdates: any = { pin_code: finalPin };
+      if (employee.name !== undefined) dbUpdates.name = employee.name;
+      if (employee.position !== undefined) dbUpdates.position = employee.position;
+      if (employee.phone !== undefined) dbUpdates.phone = employee.phone;
+
       const { error } = await supabase
         .from('employees')
-        .update({
-          name: employee.name,
-          position: employee.position,
-          phone: employee.phone,
-          pin_code: finalPin
-        })
+        .update(dbUpdates)
         .eq('id', id);
 
       if (error) throw error;
@@ -1579,8 +1609,8 @@ class WarehouseStore {
     this.notify();
   }
 
-  setClosedUntil(date: string | undefined) {
-    settingsStore.updateSettings({ closedUntil: date });
+  async setClosedUntil(date: string | undefined) {
+    await settingsStore.updateSettings({ closedUntil: date });
     this.notify();
   }
 
@@ -1795,8 +1825,8 @@ class WarehouseStore {
     }));
   }
 
-  getLowStockProducts(threshold = 5): Product[] {
-    return this.products.filter(p => p.quantity < threshold);
+  getLowStockProducts(defaultThreshold = 5): Product[] {
+    return this.products.filter(p => p.quantity < (p.minStockLevel ?? defaultThreshold));
   }
 
   getPurchaseHistory(): PurchaseHistory[] {
@@ -1820,12 +1850,13 @@ class WarehouseStore {
     this.notify();
 
     try {
+      const tenantId = getTenantId();
       const results = await Promise.all([
-        supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('sales').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('purchase_history').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-        supabase.from('employees').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+        supabase.from('products').delete().eq('tenant_id', tenantId),
+        supabase.from('sales').delete().eq('tenant_id', tenantId),
+        supabase.from('purchase_history').delete().eq('tenant_id', tenantId),
+        supabase.from('expenses').delete().eq('tenant_id', tenantId),
+        supabase.from('employees').delete().eq('tenant_id', tenantId)
       ]);
 
       const errors = results.filter(r => r.error);
@@ -2004,6 +2035,7 @@ class WarehouseStore {
 }
 
 // Singleton - lazy init to avoid SSR issues
+// initialize() guards against SSR internally with `if (typeof window === "undefined") return;`
 let _instance: WarehouseStore | null = null;
 function getWarehouseStore(): WarehouseStore {
   if (!_instance) {
@@ -2012,6 +2044,4 @@ function getWarehouseStore(): WarehouseStore {
   return _instance;
 }
 
-export const warehouseStore = typeof window !== "undefined"
-  ? getWarehouseStore()
-  : new WarehouseStore();
+export const warehouseStore = getWarehouseStore();

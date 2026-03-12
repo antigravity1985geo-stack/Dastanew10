@@ -2,6 +2,7 @@
 
 import { supabase } from "./supabase";
 import { authStore } from "./auth";
+import { hashPin } from "./utils";
 
 export interface Settings {
   companyName: string;
@@ -147,7 +148,12 @@ class SettingsStore {
     return () => this.listeners.delete(listener);
   }
 
-  updateSettings(updates: Partial<Settings>) {
+  async updateSettings(updates: Partial<Settings>) {
+    // If updating deletePin, hash it first
+    if (updates.deletePin) {
+      updates.deletePin = await hashPin(updates.deletePin);
+    }
+    
     this.settings = { ...this.settings, ...updates };
     this.persistLocal();
     this.saveToSupabase();
@@ -166,6 +172,8 @@ class SettingsStore {
   }
 }
 
+// Singleton - lazy init to avoid SSR issues
+// initialize() logic relies on window check internally or can run safely on server cache
 let _settingsInstance: SettingsStore | null = null;
 function getSettingsStore(): SettingsStore {
   if (!_settingsInstance) {
@@ -174,5 +182,4 @@ function getSettingsStore(): SettingsStore {
   return _settingsInstance;
 }
 
-export const settingsStore =
-  typeof window !== "undefined" ? getSettingsStore() : new SettingsStore();
+export const settingsStore = getSettingsStore();
