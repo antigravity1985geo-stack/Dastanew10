@@ -271,10 +271,10 @@ export function PromotionsPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-border/50 shadow-lg rounded-3xl overflow-hidden bg-gradient-to-br from-red-500 to-rose-600 text-white border-none">
+          <Card className="border-red-100 dark:border-red-900/30 shadow-md rounded-3xl overflow-hidden bg-red-50/50 dark:bg-red-950/10 backdrop-blur-none aurora-glass-none">
             <CardContent className="p-6">
-              <h3 className="text-lg font-black mb-1">მოკლე რჩევა</h3>
-              <p className="text-sm opacity-90 leading-relaxed font-medium">
+              <h3 className="text-lg font-black mb-1 text-red-600">მოკლე რჩევა</h3>
+              <p className="text-sm text-red-900/80 dark:text-red-200/80 leading-relaxed font-medium">
                 აქციები გეხმარებათ გაზარდოთ გაყიდვები იმ პროდუქტებზე, რომლებიც დიდხანს გიდევთ საწყობში. 
                 აქ მითითებული ფასი ავტომატურად აისახება მოლარის ეკრანზე.
               </p>
