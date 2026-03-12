@@ -62,6 +62,7 @@ export interface Sale {
   exchangeRate: number; // Added
   idempotencyKey?: string; // Added for RS.GE sync
   receiptNumber?: string; // Added for RS.GE Fiscal Receipt
+  discountTotal?: number; // Added Phase 5: Track lost revenue from discounts
   createdAt: string;
 }
 
@@ -1266,7 +1267,8 @@ class WarehouseStore {
       created_at: new Date().toISOString(),
       created_by: currentUser?.id,
       client: sale.client || '',
-      tenant_id: getTenantId()
+      tenant_id: getTenantId(),
+      discount_total: (product.salePrice - sale.salePrice) * sale.quantity
     };
 
     // Optimistic update
@@ -1277,6 +1279,7 @@ class WarehouseStore {
       currency: sale.currency || "GEL",
       exchangeRate: sale.exchangeRate || 1,
       totalAmount: insertSaleData.total_amount,
+      discountTotal: insertSaleData.discount_total,
       createdAt: insertSaleData.created_at
     };
     this.sales.push(optimisticSale);
@@ -1773,8 +1776,8 @@ class WarehouseStore {
       .slice(0, limit);
   }
 
-  getAnalyticsData(range: number = 30): { date: string; revenue: number; profit: number; expenses: number }[] {
-    const data: { [key: string]: { revenue: number; profit: number; expenses: number } } = {};
+  getAnalyticsData(range: number = 30): { date: string; revenue: number; profit: number; expenses: number; discounts: number }[] {
+    const data: { [key: string]: { revenue: number; profit: number; expenses: number; discounts: number } } = {};
     const settings = settingsStore.getSettings();
     const now = new Date();
     
@@ -1783,7 +1786,7 @@ class WarehouseStore {
       const d = new Date();
       d.setDate(now.getDate() - i);
       const key = d.toISOString().split('T')[0];
-      data[key] = { revenue: 0, profit: 0, expenses: 0 };
+      data[key] = { revenue: 0, profit: 0, expenses: 0, discounts: 0 };
     }
 
     // Aggregating sales
@@ -1794,6 +1797,7 @@ class WarehouseStore {
         const cog = this.calculateFIFOCOG(s.productId, s.quantity, s.createdAt);
         data[key].revenue += revenue;
         data[key].profit += (revenue - cog);
+        data[key].discounts += (s.discountTotal || 0);
       }
     });
 

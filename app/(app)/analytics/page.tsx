@@ -58,8 +58,9 @@ export default function AnalyticsPage() {
     return analyticsData.reduce((acc, curr) => ({
       revenue: acc.revenue + curr.revenue,
       profit: acc.profit + curr.profit,
-      expenses: acc.expenses + curr.expenses
-    }), { revenue: 0, profit: 0, expenses: 0 } as { revenue: number; profit: number; expenses: number });
+      expenses: acc.expenses + curr.expenses,
+      discounts: acc.discounts + (curr.discounts || 0)
+    }), { revenue: 0, profit: 0, expenses: 0, discounts: 0 } as { revenue: number; profit: number; expenses: number; discounts: number });
   }, [analyticsData]);
 
   const cogs = totals.revenue - totals.profit;
@@ -118,6 +119,13 @@ export default function AnalyticsPage() {
           icon={TrendingDown} 
           color="red"
           description="სხვადასხვა ხარჯები"
+        />
+        <StatsCard 
+          title="ფასდაკლებები" 
+          value={totals.discounts} 
+          icon={Package} 
+          color="orange"
+          description="აქციების ჯამური ღირებულება"
         />
         <StatsCard 
           title="სუფთა მოგება" 
@@ -281,6 +289,7 @@ function StatsCard({ title, value, icon: Icon, color, description, isHighlight =
     blue: "text-blue-600 bg-blue-50",
     green: "text-green-600 bg-green-50",
     red: "text-red-600 bg-red-50",
+    orange: "text-orange-600 bg-orange-50",
     primary: "text-[#8b1a1a] bg-[#8b1a1a]/5"
   };
 
