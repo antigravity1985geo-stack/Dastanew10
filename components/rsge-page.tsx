@@ -135,7 +135,7 @@ export function RSGEPage() {
             const res = await rsgeService.getWaybills({
                 from: fromDate,
                 to: toDate,
-                status: filterStatus,
+                status: filterStatus as any,
                 buyerTin: filterTin,
             });
             setWaybills(res.waybills || []);
