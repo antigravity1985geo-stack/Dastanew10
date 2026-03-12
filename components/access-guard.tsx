@@ -30,9 +30,13 @@ export function AccessGuard({ children, requiredRole = "ადმინისტ
         return <>{children}</>;
     }
 
-    // 1. If not logged in at all, show PIN Overlay
+    // 1. PIN Check: Only force PIN login if there's at least one employee with a PIN code setup
     if (!currentEmployee) {
-        return <PINLoginOverlay />;
+        const hasEmployeesWithPin = store.employees.some(e => e.pinCode && e.pinCode.trim() !== "");
+        if (hasEmployeesWithPin) {
+            return <PINLoginOverlay />;
+        }
+        return <>{children}</>;
     }
 
     // 2. If logged in but doesn't have the required role

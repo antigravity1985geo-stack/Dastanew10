@@ -1,5 +1,5 @@
-import { supabase } from "./lib/supabase";
-import { authStore } from "./lib/auth";
+import { supabase } from "./supabase";
+import { authStore } from "./auth";
 
 async function runDebug() {
   console.log("Checking session...");

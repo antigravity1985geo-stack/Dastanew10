@@ -960,7 +960,8 @@ export function SalesPage() {
 
   return (
     <div className="flex h-screen w-full bg-[#f8f9fa] overflow-hidden font-sans text-slate-800">
-      <PINLoginOverlay />
+      {/* Show PIN Overlay if there is at least one employee with a PIN code */}
+      {store.initialized && !store.currentEmployee && store.employees.some((e: any) => e.pinCode && e.pinCode.trim() !== "") && <PINLoginOverlay />}
 
       <ManagerAuthDialog
         open={managerAuthOpen}

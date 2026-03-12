@@ -131,8 +131,9 @@ export function AppSidebar() {
               pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href));
 
-            // SECURITY: Completely hide the menu item if it requires admin and the current user is not an admin.
-            if (item.requiresAdmin && store.currentEmployee?.position !== "ადმინისტრატორი") {
+            // SECURITY: Completely hide the menu item if an employee logged in and is not an admin.
+            // If no employee is logged in, we assume the main account owner and show it.
+            if (item.requiresAdmin && store.currentEmployee && store.currentEmployee.position !== "ადმინისტრატორი") {
               return null;
             }
 
@@ -171,7 +172,7 @@ export function AppSidebar() {
                 {currentUser.displayName}
               </p>
               <p className="text-xs truncate text-sidebar-foreground/50">
-                {currentUser.username}
+                {currentUser.email}
               </p>
             </div>
           </div>

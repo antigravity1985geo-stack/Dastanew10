@@ -319,15 +319,18 @@ class WarehouseStore {
     if (!authStore.getTenantId()) return;
 
     try {
-      // Parallel fetch products, sales, and purchase history
+      const tenantId = getTenantId();
+      if (!tenantId) return;
+
+      // Parallel fetch products, sales, and purchase history — filtered by tenant_id
       const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }, { data: auditLogsData }, { data: journalData }] = await Promise.all([
-        supabase.from('products').select('*'),
-        supabase.from('sales').select('*'),
-        supabase.from('purchase_history').select('*'),
-        supabase.from('expenses').select('*'),
-        supabase.from('employees').select('*'),
-        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100),
-        supabase.from('journal_entries').select('*').order('created_at', { ascending: false })
+        supabase.from('products').select('*').eq('tenant_id', tenantId),
+        supabase.from('sales').select('*').eq('tenant_id', tenantId),
+        supabase.from('purchase_history').select('*').eq('tenant_id', tenantId),
+        supabase.from('expenses').select('*').eq('tenant_id', tenantId),
+        supabase.from('employees').select('*').eq('tenant_id', tenantId),
+        supabase.from('audit_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100),
+        supabase.from('journal_entries').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
       ]);
 
       if (journalData) {
@@ -400,7 +403,7 @@ class WarehouseStore {
       } catch (e) { console.warn("Failed to restore local shifts", e); }
 
       try {
-        const { data: dbShifts, error: shiftError } = await supabase.from('shifts').select('*').order('opened_at', { ascending: false }).limit(50);
+        const { data: dbShifts, error: shiftError } = await supabase.from('shifts').select('*').eq('tenant_id', tenantId).order('opened_at', { ascending: false }).limit(50);
         if (!shiftError && dbShifts && dbShifts.length > 0) {
           const mappedShifts = dbShifts.map(s => this.mapShift(s));
 
