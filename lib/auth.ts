@@ -253,19 +253,36 @@ class AuthStore {
         return { success: false, error: "კომპანიის შექმნა ვერ მოხერხდა: " + tenantError.message };
       }
 
-      // 3. Link profile to tenant (using upsert to be safe)
-      const { error: profileError } = await supabase
+      // 4. Link profile to tenant
+      // The handle_new_auth_user trigger creates the profile without tenant_id,
+      // so we need to UPDATE it. Add a small delay to ensure trigger has fired.
+      await new Promise(r => setTimeout(r, 500));
+
+      // Try UPDATE first (profile should already exist from trigger)
+      const { error: updateError, count } = await supabase
         .from("profiles")
-        .upsert({ 
-          id: authData.user.id,
-          username: email, // Added username to satisfy NOT NULL constraint
+        .update({ 
           tenant_id: tenant.id, 
           display_name: displayName, 
-          role: "owner" 
-        });
+          role: "owner" as any
+        })
+        .eq("id", authData.user.id);
 
-      if (profileError) {
-        console.error("Profile update error:", profileError);
+      if (updateError) {
+        console.error("Profile update error:", updateError);
+        // Fallback: try upsert in case trigger hasn't fired yet
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert({ 
+            id: authData.user.id,
+            username: email,
+            tenant_id: tenant.id, 
+            display_name: displayName, 
+            role: "owner" as any
+          });
+        if (upsertError) {
+          console.error("Profile upsert fallback also failed:", upsertError);
+        }
       }
 
       // 4. Load profile into state

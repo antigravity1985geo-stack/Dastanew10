@@ -1554,11 +1554,12 @@ class WarehouseStore {
     this.notify();
 
     try {
-      // Only send defined fields to avoid overwriting with null
-      const dbUpdates: any = { pin_code: finalPin };
+      // undefined-checker dbUpdates object
+      const dbUpdates: any = {};
       if (employee.name !== undefined) dbUpdates.name = employee.name;
       if (employee.position !== undefined) dbUpdates.position = employee.position;
       if (employee.phone !== undefined) dbUpdates.phone = employee.phone;
+      if (employee.pinCode !== undefined) dbUpdates.pin_code = finalPin;
 
       const { error } = await supabase
         .from('employees')
@@ -1825,8 +1826,8 @@ class WarehouseStore {
     }));
   }
 
-  getLowStockProducts(defaultThreshold = 5): Product[] {
-    return this.products.filter(p => p.quantity < (p.minStockLevel ?? defaultThreshold));
+  getLowStockProducts(threshold = 5): Product[] {
+    return this.products.filter(p => p.quantity < (p.minStockLevel ?? threshold));
   }
 
   getPurchaseHistory(): PurchaseHistory[] {
@@ -1835,6 +1836,12 @@ class WarehouseStore {
 
   // Data management
   async clearAll() {
+    const tenantId = getTenantId();
+    if (!tenantId) {
+      toast.error("კომპანიის ID ვერ მოიძებნა");
+      return;
+    }
+
     this.products = [];
     this.sales = [];
     this.purchaseHistory = [];
@@ -1850,7 +1857,6 @@ class WarehouseStore {
     this.notify();
 
     try {
-      const tenantId = getTenantId();
       const results = await Promise.all([
         supabase.from('products').delete().eq('tenant_id', tenantId),
         supabase.from('sales').delete().eq('tenant_id', tenantId),
@@ -1862,8 +1868,6 @@ class WarehouseStore {
       const errors = results.filter(r => r.error);
       if (errors.length > 0) {
         console.error("Errors clearing some tables:", errors);
-        // If purchase_history failed but products succeeded, it might be RLS
-        // But since products succeeded and it has CASCADE, it might have deleted anyway
         toast.error("ზოგიერთი მონაცემი ვერ წაიშალა");
       }
     } catch (error) {

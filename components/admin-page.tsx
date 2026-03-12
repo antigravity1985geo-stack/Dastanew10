@@ -562,7 +562,10 @@ function DataTab({ store }: DataTabProps) {
 
   const handleClearAll = async () => {
     const settings = settingsStore.getSettings();
-    if (pinInput !== settings.deletePin) {
+    const { hashPin } = await import("@/lib/utils");
+    const hashedInput = await hashPin(pinInput);
+    
+    if (hashedInput !== settings.deletePin && pinInput !== settings.deletePin) {
       toast.error("პინ-კოდი არასწორია");
       return;
     }
