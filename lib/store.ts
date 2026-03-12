@@ -1318,12 +1318,12 @@ class WarehouseStore {
           ]
         });
       }
-    } catch (error) {
-      console.error("Error adding sale:", error);
+    } catch (error: any) {
+      console.error("Error adding sale:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       product.quantity = oldProductQuantity;
       this.sales = this.sales.filter(s => s.id !== insertSaleData.id);
       this.notify();
-      toast.error("შეცდომა გაყიდვისას");
+      throw error;
     }
   }
 
