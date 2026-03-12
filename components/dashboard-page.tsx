@@ -30,6 +30,9 @@ import { AIInsightsCard } from "@/components/ai-assistant";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useHeaderSetup } from "@/lib/header-store";
+import { Printer } from "lucide-react";
+import { printPage } from "@/lib/print";
 
 const CHART_COLORS = [
   "#0ea5e9",
@@ -41,6 +44,19 @@ const CHART_COLORS = [
 
 export function DashboardPage() {
   const store = useWarehouseStore();
+
+  useHeaderSetup(
+    "დეშბორდი",
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => printPage("დეშბორდი - ანალიტიკა")}
+      className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold h-9 rounded-xl shadow-sm active:scale-95 transition-all"
+    >
+      <Printer className="h-4 w-4" />
+      <span className="hidden sm:inline">ბეჭდვა</span>
+    </Button>
+  );
 
   const stats = [
     {
@@ -74,14 +90,6 @@ export function DashboardPage() {
       color: "text-blue-600",
       bgColor: "bg-blue-50/50",
       borderColor: "border-t-blue-500",
-    },
-    {
-      label: "მოგება",
-      value: `${store.totalProfit.toLocaleString()} ₾`,
-      icon: DollarSign,
-      color: "text-emerald-700",
-      bgColor: "bg-emerald-100/30",
-      borderColor: "border-t-emerald-600",
     },
     {
       label: "აქტივების ღირებულება",
@@ -121,8 +129,9 @@ export function DashboardPage() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
         title="დეშბორდი"
-        description="ბიზნესის მთლიანი ანალიტიკა"
-        printTitle="დეშბორდი - ანალიტიკა"
+        description="სისტემის მიმოხილვა და სტატისტიკა"
+        hideActions
+        hideTitle
       />
 
       <div id="print-area">

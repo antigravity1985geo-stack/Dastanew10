@@ -39,3 +39,11 @@ export function useHeader() {
 
     return state;
 }
+
+export function useHeaderSetup(title: string | React.ReactNode, actions: React.ReactNode | null = null) {
+    useEffect(() => {
+        headerStore.setHeader(title, actions);
+        // We don't clear on unmount here to avoid flicker during transitions
+        // until the next page sets its header.
+    }, [title, actions]);
+}

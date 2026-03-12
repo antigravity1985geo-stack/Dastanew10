@@ -100,6 +100,7 @@ import { CHART_OF_ACCOUNTS, getAccountByCode } from "@/lib/coa";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useHeaderSetup } from "@/lib/header-store";
 
 export function AccountingPage() {
   const store = useWarehouseStore();
@@ -645,6 +646,63 @@ export function AccountingPage() {
     }
   };
 
+  useHeaderSetup(
+    "ბუღალტერია",
+    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleUpdateRates}
+        className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold h-9 rounded-xl shrink-0"
+      >
+        <RefreshCcw className="h-4 w-4" />
+        <span className="hidden lg:inline">NBG კურსები</span>
+        <span className="lg:hidden inline text-[10px]">NBG</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white text-slate-700 h-9 rounded-xl shrink-0"
+        onClick={() => printFinancialReport({
+          revenue: finances.totalSales,
+          profit: finances.totalSales - finances.totalPurchases,
+          expenses: finances.totalExpenses,
+          netProfit: finances.netProfit,
+          cashBalance: finances.currentCashBalance,
+          bankBalance: finances.currentBankBalance,
+          expenseDistribution: expenseDistribution
+        })}
+      >
+        <DownloadCloud className="h-4 w-4" />
+        <span className="hidden lg:inline">ანგარიში (PDF)</span>
+        <span className="lg:hidden inline text-[10px]">PDF</span>
+      </Button>
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 shadow-sm font-bold border-blue-100 bg-blue-50/30 hover:bg-blue-50 text-blue-700 h-9 rounded-xl shrink-0"
+        onClick={() => setIsBankImportOpen(true)}
+      >
+        <History className="h-4 w-4" />
+        <span className="hidden lg:inline">ბანკის იმპორტი</span>
+        <span className="lg:hidden inline text-[10px]">იმპორტი</span>
+      </Button>
+
+      <Button variant="outline" size="sm" className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white h-9 rounded-xl shrink-0" onClick={() => setIsTransferOpen(true)}>
+        <div className="flex -space-x-1.5 items-center">
+          <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
+          <ArrowDownRight className="h-3.5 w-3.5 text-rose-600" />
+        </div>
+        <span className="hidden lg:inline">შიდა გადარიცხვა</span>
+        <span className="lg:hidden inline text-[10px]">გადარიცხვა</span>
+      </Button>
+      <div className="shrink-0 scale-90 sm:scale-100 origin-right">
+        <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+      </div>
+    </div>
+  );
+
   if (!mounted) return null;
 
   return (
@@ -652,61 +710,8 @@ export function AccountingPage() {
       <PageHeader
         title="ბუღალტერია"
         description="ფინანსური მაჩვენებლები და ხარჯების მართვა"
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleUpdateRates}
-              className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50 font-bold h-9 sm:h-10 rounded-xl shrink-0"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              <span className="hidden md:inline">NBG კურსები</span>
-              <span className="md:hidden inline text-[10px]">NBG</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white text-slate-700 h-9 sm:h-10 rounded-xl shrink-0"
-              onClick={() => printFinancialReport({
-                revenue: finances.totalSales,
-                profit: finances.totalSales - finances.totalPurchases,
-                expenses: finances.totalExpenses,
-                netProfit: finances.netProfit,
-                cashBalance: finances.currentCashBalance,
-                bankBalance: finances.currentBankBalance,
-                expenseDistribution: expenseDistribution
-              })}
-            >
-              <DownloadCloud className="h-4 w-4" />
-              <span className="hidden md:inline">ანგარიში (PDF)</span>
-              <span className="md:hidden inline text-[10px]">PDF</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 shadow-sm font-bold border-blue-100 bg-blue-50/30 hover:bg-blue-50 text-blue-700 h-9 sm:h-10 rounded-xl shrink-0"
-              onClick={() => setIsBankImportOpen(true)}
-            >
-              <History className="h-4 w-4" />
-              <span className="hidden md:inline">ბანკის იმპორტი</span>
-              <span className="md:hidden inline text-[10px]">იმპორტი</span>
-            </Button>
-
-            <Button variant="outline" size="sm" className="gap-2 shadow-sm font-bold border-border/50 bg-white/50 hover:bg-white h-9 sm:h-10 rounded-xl shrink-0" onClick={() => setIsTransferOpen(true)}>
-              <div className="flex -space-x-1.5 items-center">
-                <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
-                <ArrowDownRight className="h-3.5 w-3.5 text-rose-600" />
-              </div>
-              <span className="hidden md:inline">შიდა გადარიცხვა</span>
-              <span className="md:hidden inline text-[10px]">გადარიცხვა</span>
-            </Button>
-            <div className="w-full sm:w-auto mt-2 sm:mt-0">
-              <DatePickerWithRange date={dateRange} setDate={setDateRange} />
-            </div>
-          </>
-        }
+        hideActions
+        hideTitle
       />
 
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>

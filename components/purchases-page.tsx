@@ -56,6 +56,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useSettings } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
+import { useHeaderSetup } from "@/lib/header-store";
+import { printPage } from "@/lib/print";
+import { Printer } from "lucide-react";
 
 export function PurchasesPage() {
   const store = useWarehouseStore();
@@ -65,6 +68,7 @@ export function PurchasesPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
 
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -461,6 +465,56 @@ export function PurchasesPage() {
     return sortedHistory.slice(start, start + historyItemsPerPage);
   }, [sortedHistory, historyCurrentPage]);
 
+  useHeaderSetup(
+    "შესყიდვები",
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => printPage("შესყიდვების რეესტრი")}
+        className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold h-9 rounded-xl shadow-sm active:scale-95 transition-all"
+      >
+        <Printer className="h-4 w-4" />
+        <span className="hidden sm:inline">ბეჭდვა</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 border-border/50 bg-white/50 hover:bg-white font-bold h-9 rounded-xl hidden md:flex"
+        onClick={() => downloadImportTemplate()}
+      >
+        <FileSpreadsheet className="h-4 w-4" />
+        <span className="hidden lg:inline">შაბლონი</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 border-border/50 bg-white/50 hover:bg-white font-bold h-9 rounded-xl"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Upload className="h-4 w-4" />
+        <span className="hidden lg:inline">იმპორტი</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 border-border/50 bg-white/50 hover:bg-white font-bold h-9 rounded-xl"
+        onClick={handleExportExcel}
+      >
+        <Download className="h-4 w-4" />
+        <span className="hidden lg:inline">ექსპორტი</span>
+      </Button>
+      <Button 
+        size="sm" 
+        className="gap-2 font-bold h-9 rounded-xl shadow-lg shadow-primary/20"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="h-4 w-4" />
+        <span className="hidden sm:inline">დამატება</span>
+      </Button>
+    </div>
+  );
+
   if (!mounted) return null;
 
   return (
@@ -468,54 +522,12 @@ export function PurchasesPage() {
       <PageHeader
         title="შესყიდვები"
         description="პროდუქციის შესყიდვა და ისტორია"
-        printTitle="შესყიდვების რეესტრი"
-        actions={
-          <>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".csv,.txt"
-              className="hidden"
-              onChange={handleImportExcel}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => downloadImportTemplate()}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              შაბლონი
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4" />
-              იმპორტი
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handleExportExcel}
-            >
-              <Download className="h-4 w-4" />
-              ექსპორტი
-            </Button>
-          </>
-        }
-      >
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              პროდუქციის დამატება
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        hideActions
+        hideTitle
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">
                 ახალი პროდუქციის დამატება
@@ -838,7 +850,6 @@ export function PurchasesPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </PageHeader>
       <div id="print-area" className="animate-in fade-in duration-700">
         <Tabs defaultValue="stock" className="space-y-8" onValueChange={setActiveTab}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
@@ -898,48 +909,12 @@ export function PurchasesPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 bg-card p-4 rounded-2xl border border-border/50 shadow-sm">
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <Input
+                  <input
                     placeholder="ძებნა (სახელი, კატეგორია, შტრიხკოდი...)"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10 border-none bg-muted/30 rounded-xl font-medium focus-visible:ring-primary/20"
+                    className="pl-10 h-10 border-none bg-muted/30 rounded-xl font-medium focus-visible:ring-primary/20 w-full"
                   />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportExcel}
-                    className="gap-2 rounded-xl font-bold border-border/50 hover:bg-muted/50"
-                  >
-                    <Download className="h-4 w-4 text-emerald-600" />
-                    Excel-ში ექსპორტი
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="gap-2 rounded-xl font-bold border-border/50 hover:bg-muted/50"
-                  >
-                    <Upload className="h-4 w-4 text-sky-600" />
-                    Excel-დან იმპორტი
-                  </Button>
-                  <input
-                    type="file"
-                    className="hidden"
-                    ref={fileInputRef}
-                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                    onChange={handleImportExcel}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={downloadImportTemplate}
-                    className="gap-2 rounded-xl font-bold hover:bg-muted"
-                  >
-                    <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-                    შაბლონი
-                  </Button>
                 </div>
               </div>
 

@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/accordion";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
+import { useHeaderSetup } from "@/lib/header-store";
+import { printPage } from "@/lib/print";
 
 const sections = [
     {
@@ -231,30 +233,33 @@ export function GuidePage() {
     );
 
     const handlePrint = () => {
-        window.print();
+        printPage("სისტემის გზამკვლევი");
     };
+
+    useHeaderSetup(
+        "სისტემის გზამკვლევი",
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold h-9 rounded-xl shadow-sm active:scale-95 transition-all"
+        >
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">ბეჭდვა</span>
+        </Button>
+    );
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 max-w-7xl mx-auto pb-32 px-4 sm:px-6 lg:px-8 pt-8">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 print:hidden">
-                    <div className="max-w-2xl">
-                        <PageHeader
-                            title="სისტემის გზამკვლევი"
-                            description="ყველაფერი რაც გჭირდებათ DASTA-ს ეფექტურად გამოყენებისთვის. დეტალური ინსტრუქციები, რჩევები და საუკეთესო პრაქტიკა თქვენი ბიზნესის ზრდისთვის."
-                        />
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="outline"
-                            className="rounded-2xl flex items-center gap-2 h-14 px-8 font-bold border-2 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all duration-300 shadow-sm group active:scale-95"
-                            onClick={handlePrint}
-                        >
-                            <Printer className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                            დაბეჭდვა / PDF
-                        </Button>
-                    </div>
+                <div className="print:hidden">
+                    <PageHeader
+                        title="სისტემის გზამკვლევი"
+                        description="ყველაფერი რაც გჭირდებათ DASTA-ს ეფექტურად გამოყენებისთვის. დეტალური ინსტრუქციები, რჩევები და საუკეთესო პრაქტიკა თქვენი ბიზნესის ზრდისთვის."
+                        hideActions
+                        hideTitle
+                    />
                 </div>
 
                 {/* Search Bar */}

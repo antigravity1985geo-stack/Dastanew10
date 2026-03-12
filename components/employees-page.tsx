@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useHeaderSetup } from "@/lib/header-store";
 
 const POSITIONS = [
     "ადმინისტრატორი",
@@ -72,6 +73,18 @@ export function EmployeesPage() {
         phone: "",
         pinCode: "",
     });
+
+    useHeaderSetup(
+        "თანამშრომლები",
+        <Button 
+            size="sm" 
+            className="gap-2 font-bold h-9 rounded-xl shadow-lg shadow-primary/20"
+            onClick={() => setIsAddDialogOpen(true)}
+        >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">დამატება</span>
+        </Button>
+    );
 
     const filteredEmployees = store.employees.filter(
         (e) =>
@@ -141,6 +154,7 @@ export function EmployeesPage() {
             <PageHeader
                 title="თანამშრომლები"
                 description="პერსონალის მართვა და პოზიციები"
+                hideActions
             />
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-2xl border border-border/50 shadow-sm">
@@ -155,12 +169,6 @@ export function EmployeesPage() {
                 </div>
 
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="gap-2 shadow-lg shadow-primary/20">
-                            <Plus className="h-4 w-4" />
-                            დამატება
-                        </Button>
-                    </DialogTrigger>
                     <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-2xl">
                         <form onSubmit={handleAdd}>
                             <DialogHeader>
