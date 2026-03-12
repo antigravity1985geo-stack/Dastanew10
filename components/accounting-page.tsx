@@ -970,31 +970,31 @@ export function AccountingPage() {
         <TabsContent value="dashboard" className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-none shadow-sm bg-primary text-primary-foreground overflow-hidden relative">
+            <Card className="border-none shadow-sm !bg-emerald-600 !text-white overflow-hidden relative">
               <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                     <Wallet className="h-5 w-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-70">სალარო (ნაღდი)</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest !text-white opacity-90">სალარო (ნაღდი)</span>
                 </div>
-                <h3 className="text-3xl font-black mb-1">{finances.currentCashBalance.toFixed(2)} ₾</h3>
-                <p className="text-xs font-medium opacity-60">მიმდინარე ნაღდი ფული</p>
+                <h3 className="text-3xl font-black mb-1 !text-white">{finances.currentCashBalance.toFixed(2)} ₾</h3>
+                <p className="text-xs font-medium !text-white opacity-90">მიმდინარე ნაღდი ფული</p>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm bg-blue-600 text-white overflow-hidden relative">
+            <Card className="border-none shadow-sm !bg-gradient-to-br !from-blue-600 !to-cyan-500 !text-white overflow-hidden relative">
               <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                     <Landmark className="h-5 w-5" />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-70">ბანკი (ბარათი)</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest !text-white opacity-90">ბანკი (ბარათი)</span>
                 </div>
-                <h3 className="text-3xl font-black mb-1">{finances.currentBankBalance.toFixed(2)} ₾</h3>
-                <p className="text-xs font-medium opacity-60">უნაღდო ანგარიში</p>
+                <h3 className="text-3xl font-black mb-1 !text-white">{finances.currentBankBalance.toFixed(2)} ₾</h3>
+                <p className="text-xs font-medium !text-white opacity-90">უნაღდო ანგარიში</p>
               </CardContent>
             </Card>
 
