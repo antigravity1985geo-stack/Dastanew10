@@ -983,7 +983,7 @@ export function SalesPage() {
           {/* LEFT: Product Grid / Categories */}
           <div className="flex-1 flex flex-col gap-3 h-full spring-up delay-100">
             <div className="bg-card aurora-glass rounded-2xl shadow-sm p-4 flex-shrink-0">
-              <div className="relative">
+              <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   ref={productSearchRef}
@@ -1050,7 +1050,7 @@ export function SalesPage() {
           </div>
 
           {/* RIGHT: Combined Order & Keypad Sidebar */}
-          <div className="w-[450px] flex flex-col gap-3 h-full overflow-hidden spring-up delay-300">
+          <div className="w-[600px] flex flex-col gap-3 h-full overflow-hidden spring-up delay-300">
             <div className="flex-1 bg-card aurora-glass rounded-3xl shadow-2xl border border-border/40 flex flex-col overflow-hidden">
               {/* Held Receipts Bar */}
               {heldReceipts.length > 0 && (
