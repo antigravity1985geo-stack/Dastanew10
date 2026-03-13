@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Plus, Minus, ShoppingCart, Trash2, Package, Download, FileText, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Search, AlertCircle, Wallet, CreditCard, Eye, ChevronRight, Printer, CheckCircle2, Home, LayoutGrid, Settings, Wifi, Zap, Bell, History as HistoryIcon } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Trash2, Package, Download, FileText, Pencil, ArrowUpDown, ArrowUp, ArrowDown, X, Search, AlertCircle, Wallet, CreditCard, Eye, ChevronRight, Printer, CheckCircle2, Home, LayoutGrid, Settings, Wifi, Zap, Bell, History as HistoryIcon, Undo2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ import { ManagerAuthDialog } from "@/components/manager-auth-dialog";
 import { headerStore } from "@/lib/header-store";
 import { useCFDSync } from "@/hooks/use-cfd-sync";
 import { Monitor } from "lucide-react";
+import { ReturnDialog } from "@/components/return-dialog";
 
 // Held Receipt type
 interface HeldReceipt {
@@ -202,6 +203,9 @@ export function SalesPage() {
     transactions: any[],
     type: 'customer' | 'supplier'
   } | null>(null);
+
+  // Return Flow State
+  const [returnSale, setReturnSale] = useState<Sale | null>(null);
 
   // Debts Grouping Logic (Mirrored from Accounting Page)
   const groupedCustomerDebts = useMemo(() => {
@@ -1616,7 +1620,11 @@ export function SalesPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg"
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-amber-600 rounded-lg" title="დაბრუნება"
+                                onClick={() => setReturnSale(sale)}>
+                                <Undo2 className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg" title="რედაქტირება"
                                 onClick={() => handleEditOpen(sale.id)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -2129,6 +2137,12 @@ export function SalesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReturnDialog 
+        sale={returnSale}
+        isOpen={!!returnSale}
+        onClose={() => setReturnSale(null)}
+      />
     </div >
   );
 }

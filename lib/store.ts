@@ -23,7 +23,7 @@ export interface JournalEntry {
     credit: number;
   }[];
   referenceId: string; // ID of sale, purchase, or expense
-  referenceType: 'sale' | 'purchase' | 'expense' | 'transfer';
+  referenceType: 'sale' | 'purchase' | 'expense' | 'transfer' | 'inventory_session';
   createdAt: string;
 }
 
@@ -128,6 +128,42 @@ export interface Shift {
   status: 'open' | 'closed';
 }
 
+export interface Return {
+  id: string;
+  saleId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  refundAmount: number;
+  reason: string;
+  employeeId?: string;
+  employeeName?: string;
+  createdAt: string;
+}
+
+export interface InventorySession {
+  id: string;
+  name: string;
+  status: 'active' | 'completed' | 'cancelled';
+  startedAt: string;
+  completedAt?: string;
+  employeeId?: string;
+  employeeName?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface InventoryCount {
+  id: string;
+  sessionId: string;
+  productId: string;
+  productName: string;
+  expectedQty: number;
+  countedQty: number;
+  variance: number;
+  createdAt: string;
+}
+
 export type StoreListener = () => void;
 
 export interface StoreSnapshot {
@@ -183,6 +219,19 @@ export interface StoreSnapshot {
   // Accounting Reform (NEW)
   journalEntries: JournalEntry[];
   getAccountBalance: (code: string) => number;
+
+  // Returns
+  returns: Return[];
+  addReturn: (saleId: string, items: { productId: string; productName: string; quantity: number; refundAmount: number }[], reason: string) => Promise<void>;
+  getReturnsBySale: (saleId: string) => Return[];
+
+  // Inventory
+  inventorySessions: InventorySession[];
+  inventoryCounts: InventoryCount[];
+  startInventorySession: (name: string, notes?: string) => Promise<string>;
+  submitCount: (sessionId: string, productId: string, countedQty: number) => Promise<void>;
+  completeInventorySession: (sessionId: string) => Promise<void>;
+  cancelInventorySession: (sessionId: string) => Promise<void>;
 }
 
 class WarehouseStore {
@@ -195,6 +244,9 @@ class WarehouseStore {
   private shifts: Shift[] = [];
   private currentShift: Shift | null = null;
   private journalEntries: JournalEntry[] = [];
+  private returns: Return[] = [];
+  private inventorySessions: InventorySession[] = [];
+  private inventoryCounts: InventoryCount[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
   private _cachedSnapshot: StoreSnapshot | null = null;
@@ -304,6 +356,7 @@ class WarehouseStore {
     this.shifts = [];
     this.currentShift = null;
     this.journalEntries = [];
+    this.returns = [];
     this.currentEmployee = null;
     this.notify();
   }
@@ -335,14 +388,17 @@ class WarehouseStore {
       }
 
       // Parallel fetch products, sales, and purchase history — filtered by tenant_id
-      const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }, { data: auditLogsData }, { data: journalData }] = await Promise.all([
+      const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }, { data: auditLogsData }, { data: journalData }, { data: returnsData }, { data: invSessionsData }, { data: invCountsData }] = await Promise.all([
         supabase.from('products').select('*').eq('tenant_id', tenantId),
         supabase.from('sales').select('*').eq('tenant_id', tenantId),
         supabase.from('purchase_history').select('*').eq('tenant_id', tenantId),
         supabase.from('expenses').select('*').eq('tenant_id', tenantId),
         supabase.from('employees').select('*').eq('tenant_id', tenantId),
         supabase.from('audit_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100),
-        supabase.from('journal_entries').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        supabase.from('journal_entries').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('returns').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('inventory_sessions').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('inventory_counts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
       ]);
 
       if (journalData) {
@@ -375,6 +431,18 @@ class WarehouseStore {
 
       if (purchaseData) {
         this.purchaseHistory = purchaseData.map(ph => this.mapPurchase(ph));
+      }
+
+      if (returnsData) {
+        this.returns = returnsData.map((r: any) => this.mapReturn(r));
+      }
+
+      if (invSessionsData) {
+        this.inventorySessions = invSessionsData.map((s: any) => this.mapInventorySession(s));
+      }
+
+      if (invCountsData) {
+        this.inventoryCounts = invCountsData.map((c: any) => this.mapInventoryCount(c));
       }
 
       if (auditLogsData) {
@@ -454,6 +522,15 @@ class WarehouseStore {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'employees', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeEmployee(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'returns', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+          this.handleRealtimeReturn(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_sessions', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+          this.handleRealtimeInventorySession(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_counts', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+          this.handleRealtimeInventoryCount(payload);
         })
         .subscribe();
 
@@ -563,6 +640,48 @@ class WarehouseStore {
     };
   }
 
+  private mapReturn(r: any): Return {
+    return {
+      id: r.id,
+      saleId: r.sale_id,
+      productId: r.product_id,
+      productName: r.product_name || '',
+      quantity: Number(r.quantity) || 0,
+      refundAmount: Number(r.refund_amount) || 0,
+      reason: r.reason || '',
+      employeeId: r.employee_id,
+      employeeName: r.employee_name || '',
+      createdAt: r.created_at || new Date().toISOString()
+    };
+  }
+
+  private mapInventorySession(s: any): InventorySession {
+    return {
+      id: s.id,
+      name: s.name,
+      status: s.status,
+      startedAt: s.started_at,
+      completedAt: s.completed_at,
+      employeeId: s.employee_id,
+      employeeName: s.employee_name,
+      notes: s.notes,
+      createdAt: s.created_at
+    };
+  }
+
+  private mapInventoryCount(c: any): InventoryCount {
+    return {
+      id: c.id,
+      sessionId: c.session_id,
+      productId: c.product_id,
+      productName: c.product_name,
+      expectedQty: c.expected_qty,
+      countedQty: c.counted_qty,
+      variance: c.variance,
+      createdAt: c.created_at
+    };
+  }
+
   private handleRealtimeProduct(payload: any) {
     const { eventType, new: newRow, old: oldRow } = payload;
 
@@ -641,6 +760,48 @@ class WarehouseStore {
     this.notify();
   }
 
+  private handleRealtimeReturn(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    if (eventType === 'INSERT') {
+      if (!this.returns.find(r => r.id === newRow.id)) {
+        this.returns.unshift(this.mapReturn(newRow));
+      }
+    } else if (eventType === 'DELETE') {
+      this.returns = this.returns.filter(r => r.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
+  private handleRealtimeInventorySession(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    if (eventType === 'INSERT') {
+      if (!this.inventorySessions.find(s => s.id === newRow.id)) {
+        this.inventorySessions.unshift(this.mapInventorySession(newRow));
+      }
+    } else if (eventType === 'UPDATE') {
+      const idx = this.inventorySessions.findIndex(s => s.id === newRow.id);
+      if (idx !== -1) this.inventorySessions[idx] = this.mapInventorySession(newRow);
+    } else if (eventType === 'DELETE') {
+      this.inventorySessions = this.inventorySessions.filter(s => s.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
+  private handleRealtimeInventoryCount(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    if (eventType === 'INSERT') {
+      if (!this.inventoryCounts.find(c => c.id === newRow.id)) {
+        this.inventoryCounts.unshift(this.mapInventoryCount(newRow));
+      }
+    } else if (eventType === 'UPDATE') {
+      const idx = this.inventoryCounts.findIndex(c => c.id === newRow.id);
+      if (idx !== -1) this.inventoryCounts[idx] = this.mapInventoryCount(newRow);
+    } else if (eventType === 'DELETE') {
+      this.inventoryCounts = this.inventoryCounts.filter(c => c.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
   private invalidateSnapshot() {
     this._cachedSnapshot = null;
   }
@@ -698,6 +859,20 @@ class WarehouseStore {
       // Accounting Reform
       journalEntries: [...this.journalEntries],
       getAccountBalance: this.getAccountBalance.bind(this),
+
+      // Returns
+      returns: [...this.returns],
+      addReturn: this.addReturn.bind(this),
+      getReturnsBySale: this.getReturnsBySale.bind(this),
+
+      // Inventory
+      inventorySessions: [...this.inventorySessions],
+      inventoryCounts: [...this.inventoryCounts],
+      startInventorySession: this.startInventorySession.bind(this),
+      submitCount: this.submitCount.bind(this),
+      completeInventorySession: this.completeInventorySession.bind(this),
+      cancelInventorySession: this.cancelInventorySession.bind(this),
+
       initialized: this.initialized,
     };
 
@@ -721,6 +896,109 @@ class WarehouseStore {
       });
     });
     return balance;
+  }
+
+  // --- RETURNS MANAGEMENT ---
+  getReturnsBySale(saleId: string): Return[] {
+    return this.returns.filter(r => r.saleId === saleId);
+  }
+
+  async addReturn(saleId: string, items: { productId: string; productName: string; quantity: number; refundAmount: number }[], reason: string) {
+    const tenantId = getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    this.checkPeriodLocked(new Date().toISOString());
+
+    const newReturns: Return[] = [];
+    const dbReturns: any[] = [];
+    const dbProductUpdates: any[] = [];
+    let totalRefund = 0;
+
+    for (const item of items) {
+      if (item.quantity <= 0) continue;
+      
+      const newReturn: Return = {
+        id: crypto.randomUUID(),
+        saleId,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        refundAmount: item.refundAmount,
+        reason,
+        employeeId: this.currentEmployee?.id,
+        employeeName: this.currentEmployee?.name,
+        createdAt: new Date().toISOString()
+      };
+      newReturns.push(newReturn);
+      totalRefund += item.refundAmount;
+
+      dbReturns.push({
+        id: newReturn.id,
+        sale_id: newReturn.saleId,
+        product_id: newReturn.productId,
+        product_name: newReturn.productName,
+        quantity: newReturn.quantity,
+        refund_amount: newReturn.refundAmount,
+        reason: newReturn.reason,
+        employee_id: newReturn.employeeId,
+        employee_name: newReturn.employeeName,
+        tenant_id: tenantId,
+        created_at: newReturn.createdAt
+      });
+
+      // Optimistic product update
+      const product = this.products.find(p => p.id === item.productId);
+      if (product) {
+        product.quantity += item.quantity;
+      }
+    }
+
+    if (newReturns.length === 0) return;
+
+    // Optimistic Returns update
+    this.returns = [...newReturns, ...this.returns];
+    this.notify();
+
+    try {
+      // Supabase insert returns. The handle_return_stock trigger will update the product quantity in the DB.
+      const { error: returnsError } = await supabase.from('returns').insert(dbReturns);
+      if (returnsError) throw returnsError;
+
+      // Log action
+      this.logAction({
+        actionType: 'INSERT',
+        tableName: 'returns', // Cast to any internally if TS complains, though we added it conceptually. Since AuditLog.tableName requires specific strings, let's just use 'sales' as a proxy, or add 'returns' to the type. Actually, let's cast as any to be safe if 'returns' isn't in AuditLog type yet.
+        recordId: saleId,
+        newData: dbReturns,
+      } as any);
+
+      // Accounting Entry for Return
+      // Debit: Sales Returns (5200) or similar, Credit: Cash (1110) or Bank (1210)
+      this.addJournalEntry({
+        date: new Date().toISOString(),
+        description: `პროდუქტის დაბრუნება (გაყიდვა: ${saleId.slice(0, 8)}) - მიზეზი: ${reason}`,
+        referenceId: saleId,
+        referenceType: 'sale', // using 'sale' for return reference
+        transactions: [
+          { accountCode: '5200', debit: totalRefund, credit: 0 }, // Sales Returns
+          { accountCode: '1110', debit: 0, credit: totalRefund }  // Cash (assuming cash refund for now)
+        ]
+      });
+
+      toast.success("პროდუქტი წარმატებით დაბრუნდა");
+
+    } catch (error: any) {
+      console.error("Error adding return:", error);
+      // Revert optimistic updates
+      this.returns = this.returns.filter(r => !newReturns.find(nr => nr.id === r.id));
+      for (const item of items) {
+        const product = this.products.find(p => p.id === item.productId);
+        if (product) product.quantity -= item.quantity;
+      }
+      this.notify();
+      toast.error("შეცდომა პროდუქტის დაბრუნებისას");
+      throw error;
+    }
   }
 
   // --- SHIFT MANAGEMENT ---
@@ -2030,6 +2308,234 @@ class WarehouseStore {
         console.error("Error in payoff chain:", err);
         throw err;
       }
+    }
+  }
+
+  // --- INVENTORY MANAGEMENT ---
+  async startInventorySession(name: string, notes?: string): Promise<string> {
+    const tenantId = getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    this.checkPeriodLocked(new Date().toISOString());
+
+    const sessionId = crypto.randomUUID();
+    const newSession: InventorySession = {
+      id: sessionId,
+      name,
+      status: 'active',
+      startedAt: new Date().toISOString(),
+      employeeId: this.currentEmployee?.id,
+      employeeName: this.currentEmployee?.name,
+      notes,
+      createdAt: new Date().toISOString()
+    };
+
+    // Create counts for all current products
+    const newCounts: InventoryCount[] = this.products.map(p => ({
+      id: crypto.randomUUID(),
+      sessionId,
+      productId: p.id,
+      productName: p.name,
+      expectedQty: p.quantity,
+      countedQty: 0,
+      variance: -p.quantity, // initially, counted is 0, so variance is -expected
+      createdAt: new Date().toISOString()
+    }));
+
+    // Optimistic Update
+    this.inventorySessions.unshift(newSession);
+    this.inventoryCounts.push(...newCounts);
+    this.notify();
+
+    try {
+      const { error: sessionError } = await supabase.from('inventory_sessions').insert({
+        id: newSession.id,
+        name: newSession.name,
+        status: newSession.status,
+        started_at: newSession.startedAt,
+        employee_id: newSession.employeeId,
+        employee_name: newSession.employeeName,
+        notes: newSession.notes,
+        tenant_id: tenantId,
+        created_at: newSession.createdAt
+      });
+      if (sessionError) throw sessionError;
+
+      // Batch insert counts
+      const dbCounts = newCounts.map(c => ({
+        id: c.id,
+        session_id: c.sessionId,
+        product_id: c.productId,
+        product_name: c.productName,
+        expected_qty: c.expectedQty,
+        counted_qty: c.countedQty,
+        variance: c.variance,
+        tenant_id: tenantId,
+        created_at: c.createdAt
+      }));
+
+      // split into batches of 1000 to avoid postgrest limits
+      const chunkSize = 1000;
+      for (let i = 0; i < dbCounts.length; i += chunkSize) {
+        const chunk = dbCounts.slice(i, i + chunkSize);
+        const { error: countError } = await supabase.from('inventory_counts').insert(chunk);
+        if (countError) throw countError;
+      }
+
+    } catch (error) {
+      console.error("Start Inventory Session Error:", error);
+      this.inventorySessions = this.inventorySessions.filter(s => s.id !== sessionId);
+      this.inventoryCounts = this.inventoryCounts.filter(c => c.sessionId !== sessionId);
+      this.notify();
+      throw error;
+    }
+
+    return sessionId;
+  }
+
+  async submitCount(sessionId: string, productId: string, countedQty: number) {
+    const tenantId = getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const session = this.inventorySessions.find(s => s.id === sessionId);
+    if (!session || session.status !== 'active') throw new Error("აქტიური სესია ვერ მოიძებნა");
+
+    const count = this.inventoryCounts.find(c => c.sessionId === sessionId && c.productId === productId);
+    if (!count) throw new Error("პროდუქტი სესიაში ვერ მოიძებნა");
+
+    const oldQty = count.countedQty;
+    const oldVariance = count.variance;
+
+    // Optimistic Update
+    count.countedQty = countedQty;
+    count.variance = countedQty - count.expectedQty;
+    this.notify();
+
+    try {
+      const { error } = await supabase.from('inventory_counts').update({
+        counted_qty: count.countedQty,
+        variance: count.variance
+      }).eq('id', count.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Submit count error:", error);
+      count.countedQty = oldQty;
+      count.variance = oldVariance;
+      this.notify();
+      throw error;
+    }
+  }
+
+  async completeInventorySession(sessionId: string) {
+    const tenantId = getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const session = this.inventorySessions.find(s => s.id === sessionId);
+    if (!session || session.status !== 'active') throw new Error("აქტიური სესია ვერ მოიძებნა");
+
+    this.checkPeriodLocked(new Date().toISOString());
+
+    const counts = this.inventoryCounts.filter(c => c.sessionId === sessionId);
+    
+    // Calculate discrepancies
+    const updates: { id: string; quantity: number }[] = [];
+    let surplusValue = 0;
+    let deficitValue = 0;
+
+    for (const count of counts) {
+      if (count.variance !== 0) {
+        const product = this.products.find(p => p.id === count.productId);
+        if (product) {
+          updates.push({ id: product.id, quantity: count.countedQty });
+          const valueDiff = Math.abs(count.variance) * product.purchasePrice;
+          if (count.variance > 0) surplusValue += valueDiff;
+          else deficitValue += valueDiff;
+        }
+      }
+    }
+
+    // Optimistic Update
+    session.status = 'completed';
+    session.completedAt = new Date().toISOString();
+    
+    const oldProducts = JSON.parse(JSON.stringify(this.products));
+    updates.forEach(u => {
+      const p = this.products.find(prod => prod.id === u.id);
+      if (p) p.quantity = u.quantity;
+    });
+
+    this.notify();
+
+    try {
+      // 1. Update session
+      const { error: sessionError } = await supabase.from('inventory_sessions').update({
+        status: session.status,
+        completed_at: session.completedAt
+      }).eq('id', sessionId);
+      if (sessionError) throw sessionError;
+
+      // 2. Adjust product quantities (using individual updates)
+      const chunkedUpdates = [];
+      for(let i = 0; i < updates.length; i += 50) {
+        chunkedUpdates.push(updates.slice(i, i + 50));
+      }
+
+      for (const chunk of chunkedUpdates) {
+        await Promise.all(chunk.map(u => 
+          supabase.from('products').update({ quantity: u.quantity }).eq('id', u.id)
+        ));
+      }
+
+      // 3. Accounting Details - Post Inventory Adjustment
+      if (surplusValue > 0 || deficitValue > 0) {
+        const transactions = [];
+        if (deficitValue > 0) {
+          transactions.push({ accountCode: '7100', debit: deficitValue, credit: 0 }); // Shrinkage Expense
+          transactions.push({ accountCode: '1610', debit: 0, credit: deficitValue }); // Inventory Asset
+        }
+        if (surplusValue > 0) {
+          transactions.push({ accountCode: '1610', debit: surplusValue, credit: 0 }); // Inventory Asset
+          transactions.push({ accountCode: '6100', debit: 0, credit: surplusValue }); // Other Income
+        }
+
+        await this.addJournalEntry({
+          date: new Date().toISOString(),
+          description: `ინვენტარიზაციის შედეგი: ${session.name}`,
+          referenceId: sessionId,
+          referenceType: 'inventory_session',
+          transactions
+        });
+      }
+
+    } catch (error) {
+      console.error("Complete session error:", error);
+      session.status = 'active';
+      session.completedAt = undefined;
+      this.products = oldProducts;
+      this.notify();
+      throw error;
+    }
+  }
+
+  async cancelInventorySession(sessionId: string) {
+    const session = this.inventorySessions.find(s => s.id === sessionId);
+    if (!session || session.status !== 'active') throw new Error("აქტიური სესია ვერ მოიძებნა");
+
+    session.status = 'cancelled';
+    this.notify();
+
+    try {
+      const { error } = await supabase.from('inventory_sessions').update({
+        status: 'cancelled',
+        completed_at: new Date().toISOString()
+      }).eq('id', sessionId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Cancel session error:", error);
+      session.status = 'active';
+      this.notify();
+      throw error;
     }
   }
 

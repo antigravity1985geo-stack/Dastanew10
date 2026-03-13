@@ -16,6 +16,7 @@ import {
   Tag,
   Wallet,
   QrCode,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -55,6 +56,18 @@ const navItems = [
     label: "გაყიდვა",
     href: "/sales",
     icon: TrendingUp,
+  },
+  {
+    label: "ეტიკეტები",
+    href: "/price-tags",
+    icon: Tag,
+    requiresAdmin: true,
+  },
+  {
+    label: "ინვენტარიზაცია",
+    href: "/inventory",
+    icon: ClipboardCheck,
+    requiresAdmin: true,
   },
   {
     label: "აქციები",
