@@ -153,6 +153,40 @@ export interface InventorySession {
   createdAt: string;
 }
 
+export interface Recipe {
+  id: string;
+  productId: string;
+  productName: string;
+  name?: string;
+  description?: string;
+  yieldPercentage: number;
+  items: RecipeItem[];
+  createdAt: string;
+}
+
+export interface RecipeItem {
+  id: string;
+  recipeId: string;
+  ingredientId: string;
+  ingredientName: string;
+  quantity: number;
+}
+
+export interface ProductionLog {
+  id: string;
+  recipeId: string;
+  productId: string;
+  productName: string;
+  quantityProduced: number;
+  wastageQuantity: number;
+  batchNumber: string;
+  totalCost: number;
+  employeeId?: string;
+  employeeName?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface InventoryCount {
   id: string;
   sessionId: string;
@@ -184,6 +218,8 @@ export interface StoreSnapshot {
   categoryDistribution: { category: string; count: number; value: number }[];
   lowStockProducts: Product[];
   purchaseHistory: PurchaseHistory[];
+  recipes: Recipe[];
+  productionLogs: ProductionLog[];
   auditLogs: AuditLog[]; // Added Phase 5
   initialized: boolean; // Added for AccessGuard
 
@@ -232,6 +268,13 @@ export interface StoreSnapshot {
   submitCount: (sessionId: string, productId: string, countedQty: number) => Promise<void>;
   completeInventorySession: (sessionId: string) => Promise<void>;
   cancelInventorySession: (sessionId: string) => Promise<void>;
+
+  // Production
+  addRecipe: (recipe: Partial<Recipe>, items: Partial<RecipeItem>[]) => Promise<void>;
+  deleteRecipe: (id: string) => Promise<void>;
+  executeProduction: (recipeId: string, quantity: number, wastage: number, notes?: string) => Promise<void>;
+  getRecipeCost: (recipeId: string) => number;
+  checkMaterialAvailability: (recipeId: string, quantity: number) => { ingredientId: string; ingredientName: string; required: number; available: number; missing: number }[];
 }
 
 class WarehouseStore {
@@ -247,6 +290,8 @@ class WarehouseStore {
   private returns: Return[] = [];
   private inventorySessions: InventorySession[] = [];
   private inventoryCounts: InventoryCount[] = [];
+  private recipes: Recipe[] = [];
+  private productionLogs: ProductionLog[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
   private _cachedSnapshot: StoreSnapshot | null = null;
@@ -388,7 +433,20 @@ class WarehouseStore {
       }
 
       // Parallel fetch products, sales, and purchase history — filtered by tenant_id
-      const [{ data: productsData }, { data: salesData }, { data: purchaseData }, { data: expensesData }, { data: employeesData }, { data: auditLogsData }, { data: journalData }, { data: returnsData }, { data: invSessionsData }, { data: invCountsData }] = await Promise.all([
+      const [
+        { data: productsData },
+        { data: salesData },
+        { data: purchaseData },
+        { data: expensesData },
+        { data: employeesData },
+        { data: auditLogsData },
+        { data: journalData },
+        { data: returnsData },
+        { data: invSessionsData },
+        { data: invCountsData },
+        { data: recipesData },
+        { data: productionLogsData }
+      ] = await Promise.all([
         supabase.from('products').select('*').eq('tenant_id', tenantId),
         supabase.from('sales').select('*').eq('tenant_id', tenantId),
         supabase.from('purchase_history').select('*').eq('tenant_id', tenantId),
@@ -398,7 +456,9 @@ class WarehouseStore {
         supabase.from('journal_entries').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('returns').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('inventory_sessions').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-        supabase.from('inventory_counts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        supabase.from('inventory_counts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('recipes').select('*, recipe_items(*)').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('production_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
       ]);
 
       if (journalData) {
@@ -443,6 +503,14 @@ class WarehouseStore {
 
       if (invCountsData) {
         this.inventoryCounts = invCountsData.map((c: any) => this.mapInventoryCount(c));
+      }
+
+      if (recipesData) {
+        this.recipes = recipesData.map((r: any) => this.mapRecipe(r));
+      }
+
+      if (productionLogsData) {
+        this.productionLogs = productionLogsData.map((l: any) => this.mapProductionLog(l));
       }
 
       if (auditLogsData) {
@@ -531,6 +599,12 @@ class WarehouseStore {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_counts', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeInventoryCount(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+          this.handleRealtimeRecipe(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'production_logs', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+          this.handleRealtimeProductionLog(payload);
         })
         .subscribe();
 
@@ -682,6 +756,41 @@ class WarehouseStore {
     };
   }
 
+  private mapRecipe(r: any): Recipe {
+    return {
+      id: r.id,
+      productId: r.product_id,
+      productName: r.product_name || (this.products.find(p => p.id === r.product_id)?.name || ""),
+      description: r.description,
+      yieldPercentage: Number(r.yield_percentage ?? 100),
+      items: (r.recipe_items || []).map((ri: any) => ({
+        id: ri.id,
+        recipeId: ri.recipe_id,
+        ingredientId: ri.ingredient_id,
+        ingredientName: this.products.find(p => p.id === ri.ingredient_id)?.name || "",
+        quantity: Number(ri.quantity) || 0
+      })),
+      createdAt: r.created_at
+    };
+  }
+
+  private mapProductionLog(l: any): ProductionLog {
+    return {
+      id: l.id,
+      recipeId: l.recipe_id,
+      productId: l.product_id,
+      productName: l.product_name || (this.products.find(p => p.id === l.product_id)?.name || ""),
+      quantityProduced: Number(l.quantity_produced) || 0,
+      wastageQuantity: Number(l.wastage_quantity) || 0,
+      batchNumber: l.batch_number || "",
+      totalCost: Number(l.total_cost) || 0,
+      employeeId: l.employee_id,
+      employeeName: l.employee_name,
+      notes: l.notes,
+      createdAt: l.created_at
+    };
+  }
+
   private handleRealtimeProduct(payload: any) {
     const { eventType, new: newRow, old: oldRow } = payload;
 
@@ -740,6 +849,33 @@ class WarehouseStore {
       if (idx !== -1) this.expenses[idx] = this.mapExpense(newRow);
     } else if (eventType === 'DELETE') {
       this.expenses = this.expenses.filter(e => e.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
+  private handleRealtimeRecipe(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    if (eventType === 'INSERT') {
+      if (!this.recipes.find(r => r.id === newRow.id)) {
+        this.recipes.unshift(this.mapRecipe(newRow));
+      }
+    } else if (eventType === 'UPDATE') {
+      const idx = this.recipes.findIndex(r => r.id === newRow.id);
+      if (idx !== -1) this.recipes[idx] = this.mapRecipe(newRow);
+    } else if (eventType === 'DELETE') {
+      this.recipes = this.recipes.filter(r => r.id !== oldRow.id);
+    }
+    this.notify();
+  }
+
+  private handleRealtimeProductionLog(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    if (eventType === 'INSERT') {
+      if (!this.productionLogs.find(l => l.id === newRow.id)) {
+        this.productionLogs.unshift(this.mapProductionLog(newRow));
+      }
+    } else if (eventType === 'DELETE') {
+      this.productionLogs = this.productionLogs.filter(l => l.id !== oldRow.id);
     }
     this.notify();
   }
@@ -809,93 +945,6 @@ class WarehouseStore {
   private notify() {
     this.invalidateSnapshot();
     this.listeners.forEach((l) => l());
-  }
-
-  getSnapshot(): StoreSnapshot {
-    if (this._cachedSnapshot) return this._cachedSnapshot;
-
-    this._cachedSnapshot = {
-      products: this.getProducts(),
-      sales: this.getSales(),
-      totalProducts: this.getTotalProducts(),
-      getTotalSalesItemCount: () => this.getTotalSalesItemCount(),
-      totalStock: this.getTotalStock(),
-      totalPurchaseValue: this.getTotalPurchaseValue(),
-      totalSaleValue: this.getTotalSaleValue(),
-      totalRevenue: this.getTotalRevenue(),
-      totalProfit: this.getTotalProfit(),
-      totalExpenses: this.getTotalExpenses(), // Added
-      categories: this.getCategories(),
-      salesByMonth: this.getSalesByMonth(),
-      topProducts: this.getTopProducts(),
-      categoryDistribution: this.getCategoryDistribution(),
-      lowStockProducts: this.getLowStockProducts(),
-      purchaseHistory: this.getPurchaseHistory(),
-      expenses: this.getExpenses(),
-      employees: this.getEmployees(),
-      auditLogs: [...this.auditLogs],
-
-      addExpense: this.addExpense.bind(this),
-      deleteExpense: this.deleteExpense.bind(this),
-      addEmployee: this.addEmployee.bind(this),
-      updateEmployee: this.updateEmployee.bind(this),
-      deleteEmployee: this.deleteEmployee.bind(this),
-      setClosedUntil: this.setClosedUntil.bind(this),
-
-      currentEmployee: this.currentEmployee,
-      loginEmployee: this.loginEmployee.bind(this),
-      logoutEmployee: this.logoutEmployee.bind(this),
-
-      updatePurchaseHistory: this.updatePurchaseHistory.bind(this),
-      payoffDebts: this.payoffDebts.bind(this),
-      importWaybillToWarehouse: this.importWaybillToWarehouse.bind(this),
-
-      // Shift Management
-      shifts: [...this.shifts],
-      currentShift: this.shifts.find(s => s.status === 'open') || null,
-      openShift: this.openShift.bind(this),
-      closeShift: this.closeShift.bind(this),
-
-      // Accounting Reform
-      journalEntries: [...this.journalEntries],
-      getAccountBalance: this.getAccountBalance.bind(this),
-
-      // Returns
-      returns: [...this.returns],
-      addReturn: this.addReturn.bind(this),
-      getReturnsBySale: this.getReturnsBySale.bind(this),
-
-      // Inventory
-      inventorySessions: [...this.inventorySessions],
-      inventoryCounts: [...this.inventoryCounts],
-      startInventorySession: this.startInventorySession.bind(this),
-      submitCount: this.submitCount.bind(this),
-      completeInventorySession: this.completeInventorySession.bind(this),
-      cancelInventorySession: this.cancelInventorySession.bind(this),
-
-      initialized: this.initialized,
-    };
-
-    return this._cachedSnapshot;
-  }
-
-  getAccountBalance(code: string): number {
-    let balance = 0;
-    const account = CHART_OF_ACCOUNTS.find(a => a.code === code);
-    if (!account) return 0;
-
-    this.journalEntries.forEach(entry => {
-      entry.transactions.forEach(t => {
-        if (t.accountCode === code) {
-          if (account.type === 'asset' || account.type === 'expense') {
-            balance += (t.debit - t.credit);
-          } else {
-            balance += (t.credit - t.debit);
-          }
-        }
-      });
-    });
-    return balance;
   }
 
   // --- RETURNS MANAGEMENT ---
@@ -1405,6 +1454,88 @@ class WarehouseStore {
       toast.error(msg);
       throw new Error(msg);
     }
+  }
+
+  // Sales
+  getSnapshot(): StoreSnapshot {
+    if (this._cachedSnapshot) return this._cachedSnapshot;
+
+    this._cachedSnapshot = {
+      products: [...this.products],
+      sales: [...this.sales],
+      expenses: [...this.expenses],
+      totalProducts: this.getTotalProducts(),
+      getTotalSalesItemCount: () => this.getTotalSalesItemCount(),
+      totalStock: this.getTotalStock(),
+      totalPurchaseValue: this.getTotalPurchaseValue(),
+      totalSaleValue: this.getTotalSaleValue(),
+      totalRevenue: this.getTotalRevenue(),
+      totalProfit: this.getTotalProfit(),
+      totalExpenses: this.getTotalExpenses(),
+      categories: this.getCategories(),
+      salesByMonth: this.getSalesByMonth(),
+      topProducts: this.getTopProducts(),
+      categoryDistribution: this.getCategoryDistribution(),
+      lowStockProducts: this.getLowStockProducts(),
+      purchaseHistory: [...this.purchaseHistory],
+      recipes: [...this.recipes],
+      productionLogs: [...this.productionLogs],
+      auditLogs: [...this.auditLogs],
+      initialized: this.initialized,
+
+      // Actions
+      addExpense: (e) => this.addExpense(e),
+      deleteExpense: (id) => this.deleteExpense(id),
+      setClosedUntil: (d) => this.setClosedUntil(d),
+
+      // Employees
+      employees: [...this.employees],
+      addEmployee: (e) => this.addEmployee(e),
+      updateEmployee: (id, e) => this.updateEmployee(id, e),
+      deleteEmployee: (id) => this.deleteEmployee(id),
+
+      // Identification
+      currentEmployee: this.currentEmployee,
+      loginEmployee: (pin) => this.loginEmployee(pin),
+      logoutEmployee: () => this.logoutEmployee(),
+
+      // Debts
+      updatePurchaseHistory: (id, u) => this.updatePurchaseHistory(id, u),
+      payoffDebts: (t, a, m, type) => this.payoffDebts(t, a, m, type),
+      importWaybillToWarehouse: (items) => this.importWaybillToWarehouse(items),
+
+      // Shifts
+      shifts: [...this.shifts],
+      currentShift: this.currentShift,
+      openShift: (cash) => this.openShift(cash),
+      closeShift: (cash) => this.closeShift(cash),
+
+      // Accounting
+      journalEntries: [...this.journalEntries],
+      getAccountBalance: (code) => this.getAccountBalance(code),
+
+      // Returns
+      returns: [...this.returns],
+      addReturn: (saleId, items, reason) => this.addReturn(saleId, items, reason),
+      getReturnsBySale: (saleId) => this.getReturnsBySale(saleId),
+
+      // Inventory
+      inventorySessions: [...this.inventorySessions],
+      inventoryCounts: [...this.inventoryCounts],
+      startInventorySession: (name, notes) => this.startInventorySession(name, notes),
+      submitCount: (sid, pid, qty) => this.submitCount(sid, pid, qty),
+      completeInventorySession: (sid) => this.completeInventorySession(sid),
+      cancelInventorySession: (sid) => this.cancelInventorySession(sid),
+
+      // Production
+      addRecipe: (r, i) => this.addRecipe(r, i),
+      deleteRecipe: (id) => this.deleteRecipe(id),
+      executeProduction: (rid, q, w, n) => this.executeProduction(rid, q, w, n),
+      getRecipeCost: (id) => this.getRecipeCost(id),
+      checkMaterialAvailability: (id, q) => this.checkMaterialAvailability(id, q),
+    };
+
+    return this._cachedSnapshot;
   }
 
   // Sales
@@ -2537,6 +2668,256 @@ class WarehouseStore {
       this.notify();
       throw error;
     }
+  }
+
+  // --- PRODUCTION MANAGEMENT ---
+  getRecipeCost(recipeId: string): number {
+    const recipe = this.recipes.find(r => r.id === recipeId);
+    if (!recipe) return 0;
+    
+    return recipe.items.reduce((total, item) => {
+      const product = this.products.find(p => p.id === item.ingredientId);
+      return total + (product?.purchasePrice || 0) * item.quantity;
+    }, 0);
+  }
+
+  checkMaterialAvailability(recipeId: string, quantity: number): { ingredientId: string; ingredientName: string; required: number; available: number; missing: number }[] {
+    const recipe = this.recipes.find(r => r.id === recipeId);
+    if (!recipe) return [];
+
+    return recipe.items.map(item => {
+      const product = this.products.find(p => p.id === item.ingredientId);
+      const available = product?.quantity || 0;
+      const required = item.quantity * quantity;
+      return {
+        ingredientId: item.ingredientId,
+        ingredientName: product?.name || item.ingredientName,
+        required,
+        available,
+        missing: Math.max(0, required - available)
+      };
+    }).filter(report => report.missing > 0);
+  }
+
+  async addRecipe(recipe: Partial<Recipe>, items: Partial<RecipeItem>[]) {
+    const tenantId = getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const recipeId = crypto.randomUUID();
+    const newRecipe: Recipe = {
+      id: recipeId,
+      productId: recipe.productId!,
+      productName: recipe.productName!,
+      name: recipe.name,
+      description: recipe.description,
+      yieldPercentage: Number(recipe.yieldPercentage ?? 100),
+      items: items.map((item, idx) => ({
+        id: crypto.randomUUID(),
+        recipeId,
+        ingredientId: item.ingredientId!,
+        ingredientName: item.ingredientName!,
+        quantity: item.quantity!
+      })),
+      createdAt: new Date().toISOString()
+    };
+
+    this.recipes.unshift(newRecipe);
+    this.notify();
+
+    try {
+      const { error: recipeError } = await supabase.from('recipes').insert({
+        id: recipeId,
+        product_id: recipe.productId,
+        name: recipe.name,
+        description: recipe.description,
+        yield_percentage: newRecipe.yieldPercentage,
+        tenant_id: tenantId
+      });
+      if (recipeError) throw recipeError;
+
+      const dbItems = newRecipe.items.map(item => ({
+        id: item.id,
+        recipe_id: item.recipeId,
+        ingredient_id: item.ingredientId,
+        quantity: item.quantity,
+        tenant_id: tenantId
+      }));
+
+      const { error: itemsError } = await supabase.from('recipe_items').insert(dbItems);
+      if (itemsError) throw itemsError;
+
+      toast.success("რეცეპტი წარმატებით დაემატა");
+    } catch (error) {
+      console.error("Add recipe error:", error);
+      this.recipes = this.recipes.filter(r => r.id !== recipeId);
+      this.notify();
+      toast.error("შეცდომა რეცეპტის დამატებისას");
+      throw error;
+    }
+  }
+
+  async deleteRecipe(id: string) {
+    const oldRecipes = [...this.recipes];
+    this.recipes = this.recipes.filter(r => r.id !== id);
+    this.notify();
+
+    try {
+      const { error } = await supabase.from('recipes').delete().eq('id', id);
+      if (error) throw error;
+      toast.success("რეცეპტი წაიშალა");
+    } catch (error) {
+      console.error("Delete recipe error:", error);
+      this.recipes = oldRecipes;
+      this.notify();
+      toast.error("შეცდომა რეცეპტის წაშლისას");
+    }
+  }
+
+  async executeProduction(recipeId: string, quantity: number, wastage: number, notes?: string) {
+    const tenantId = getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const recipe = this.recipes.find(r => r.id === recipeId);
+    if (!recipe) throw new Error("რეცეპტი ვერ მოიძებნა");
+
+    this.checkPeriodLocked(new Date().toISOString());
+
+    // Validation: Check stock for all ingredients
+    const missingMaterials = this.checkMaterialAvailability(recipeId, quantity);
+    if (missingMaterials.length > 0) {
+      const report = missingMaterials.map(m => `${m.ingredientName}: აკლია ${m.missing}`).join(", ");
+      throw new Error(`არასაკმარისი მარაგი: ${report}`);
+    }
+
+    const logId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const batchNumber = `PROD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${logId.slice(0, 4).toUpperCase()}`;
+
+    const oldProducts = JSON.parse(JSON.stringify(this.products));
+    const finishedProduct = this.products.find(p => p.id === recipe.productId);
+    
+    // Calculate values for accounting
+    let totalCostValue = 0;
+
+    // Optimistic Update
+    recipe.items.forEach(item => {
+      const ingredient = this.products.find(p => p.id === item.ingredientId);
+      if (ingredient) {
+        const consumed = item.quantity * quantity;
+        totalCostValue += consumed * ingredient.purchasePrice;
+        ingredient.quantity -= consumed;
+      }
+    });
+
+    if (finishedProduct) {
+      const yieldMultiplier = (recipe.yieldPercentage || 100) / 100;
+      const actualYield = (quantity * yieldMultiplier) - wastage;
+      finishedProduct.quantity += actualYield;
+    }
+
+    const newLog: ProductionLog = {
+      id: logId,
+      recipeId,
+      productId: recipe.productId,
+      productName: recipe.productName,
+      quantityProduced: quantity,
+      wastageQuantity: wastage,
+      batchNumber,
+      totalCost: totalCostValue,
+      employeeId: this.currentEmployee?.id,
+      employeeName: this.currentEmployee?.name,
+      notes,
+      createdAt
+    };
+
+    this.productionLogs.unshift(newLog);
+    this.notify();
+
+    try {
+      // 1. Supabase: Deduct ingredients
+      for (const item of recipe.items) {
+        const ingredient = oldProducts.find((p: any) => p.id === item.ingredientId);
+        const { error: stockError } = await supabase.from('products').update({
+          quantity: ingredient.quantity - (item.quantity * quantity)
+        }).eq('id', item.ingredientId);
+        if (stockError) throw stockError;
+      }
+
+      // 2. Supabase: Add finished products
+      if (finishedProduct) {
+        const { error: prodError } = await supabase.from('products').update({
+          quantity: finishedProduct.quantity
+        }).eq('id', finishedProduct.id);
+        if (prodError) throw prodError;
+      }
+
+      // 3. Supabase: Insert Log
+      const { error: logError } = await supabase.from('production_logs').insert({
+        id: logId,
+        recipe_id: recipeId,
+        product_id: recipe.productId,
+        quantity_produced: quantity,
+        wastage_quantity: wastage,
+        batch_number: batchNumber,
+        total_cost: totalCostValue,
+        employee_id: this.currentEmployee?.id,
+        employee_name: this.currentEmployee?.name,
+        notes,
+        tenant_id: tenantId,
+        created_at: createdAt
+      });
+      if (logError) throw logError;
+
+      // 4. Accounting Entry
+      await this.addJournalEntry({
+        date: createdAt,
+        description: `წარმოება: ${recipe.productName} (Batch: ${batchNumber})`,
+        referenceId: logId,
+        referenceType: 'transfer' as any,
+        transactions: [
+          { accountCode: '1610', debit: totalCostValue, credit: 0 },
+          { accountCode: '1610', debit: 0, credit: totalCostValue }
+        ]
+      });
+
+      toast.success(`წარმოება დასრულდა (პარტია: ${batchNumber})`);
+    } catch (error) {
+      console.error("Execute production error:", error);
+      this.products = oldProducts;
+      this.productionLogs = this.productionLogs.filter(l => l.id !== logId);
+      this.notify();
+      toast.error("შეცდომა წარმოებისას");
+      throw error;
+    }
+  }
+
+  // Accounting
+  getAccountBalance(code: string): number {
+    let balance = 0;
+    this.journalEntries.forEach(entry => {
+      entry.transactions.forEach(tx => {
+        if (tx.accountCode === code) {
+          // Normal balance: 
+          // Assets (1000s) & Expenses (7000-8000s) = Debit - Credit
+          // Liabilities (2000s), Equity (3000s), Revenue (6000s) = Credit - Debit
+          if (code.startsWith('1') || code.startsWith('7') || code.startsWith('8')) {
+            balance += (tx.debit - tx.credit);
+          } else {
+            balance += (tx.credit - tx.debit);
+          }
+        }
+      });
+    });
+    return balance;
+  }
+
+  // Recipes & Production Logs
+  getRecipes(): Recipe[] {
+    return [...this.recipes];
+  }
+
+  getProductionLogs(): ProductionLog[] {
+    return [...this.productionLogs];
   }
 
   exportData(): { products: Product[]; sales: Sale[]; expenses: Expense[] } {

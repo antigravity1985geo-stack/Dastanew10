@@ -17,6 +17,7 @@ import {
   Wallet,
   QrCode,
   ClipboardCheck,
+  ChefHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,6 +68,12 @@ const navItems = [
     label: "ინვენტარიზაცია",
     href: "/inventory",
     icon: ClipboardCheck,
+    requiresAdmin: true,
+  },
+  {
+    label: "წარმოება",
+    href: "/production",
+    icon: ChefHat,
     requiresAdmin: true,
   },
   {
