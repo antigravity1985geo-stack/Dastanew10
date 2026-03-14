@@ -18,6 +18,8 @@ import {
   QrCode,
   ClipboardCheck,
   ChefHat,
+  Building2,
+  ArrowLeftRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -101,6 +103,18 @@ const navItems = [
     requiresAdmin: true,
   },
   {
+    label: "ფილიალები",
+    href: "/branches",
+    icon: Building2,
+    requiresAdmin: true,
+  },
+  {
+    label: "შიდა გადაზიდვა",
+    href: "/transfers",
+    icon: ArrowLeftRight,
+    requiresAdmin: true,
+  },
+  {
     label: "ადმინ პანელი",
     href: "/admin",
     icon: Shield,
@@ -125,6 +139,13 @@ const navItems = [
 ];
 
 import { ModeToggle } from "@/components/mode-toggle";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -149,6 +170,26 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
+
+      {!isCollapsed && store.branches.length > 0 && (
+        <div className="px-4 py-2 border-b border-sidebar-border">
+          <Select
+            value={store.currentBranchId || ""}
+            onValueChange={(val) => store.setCurrentBranch(val)}
+          >
+            <SelectTrigger className="w-full h-9 bg-sidebar-accent/50 border-none text-xs font-medium">
+              <SelectValue placeholder="აირჩიეთ ფილიალი" />
+            </SelectTrigger>
+            <SelectContent>
+              {store.branches.map((branch) => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  {branch.name} {branch.isMain ? "(მთავარი)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <SidebarContent className="px-2 py-4">
         <SidebarMenu>

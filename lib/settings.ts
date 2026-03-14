@@ -26,6 +26,7 @@ export interface Settings {
   fiscalAutoPrint?: boolean;
   closedUntil?: string;
   deletePin?: string;
+  lowStockThreshold: number;
 }
 
 type SettingsListener = () => void;
@@ -51,6 +52,7 @@ const DEFAULT_SETTINGS: Settings = {
   rsgeRequireRecipientTin: false,
   fiscalType: "none",
   fiscalAutoPrint: false,
+  lowStockThreshold: 10,
 };
 
 class SettingsStore {

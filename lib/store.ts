@@ -23,7 +23,43 @@ export interface JournalEntry {
     credit: number;
   }[];
   referenceId: string; // ID of sale, purchase, or expense
-  referenceType: 'sale' | 'purchase' | 'expense' | 'transfer' | 'inventory_session';
+  referenceType: 'sale' | 'purchase' | 'expense' | 'transfer' | 'inventory_session' | 'payroll';
+  createdAt: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  location?: string;
+  isMain: boolean;
+  tenantId: string;
+  createdAt: string;
+}
+
+export interface BranchInventory {
+  id: string;
+  branchId: string;
+  productId: string;
+  quantity: number;
+  updatedAt: string;
+}
+
+export interface StockTransfer {
+  id: string;
+  fromBranchId: string;
+  toBranchId: string;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  items: {
+    productId: string;
+    productName: string;
+    quantity: number;
+  }[];
+  employeeId?: string;
+  notes?: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  tenantId: string;
   createdAt: string;
 }
 
@@ -35,10 +71,10 @@ export interface Product {
   imageUrl?: string;
   purchasePrice: number;
   salePrice: number;
-  discountPrice?: number; // New: Promotional/Sale price
+  discountPrice?: number;
   wholesalePrice?: number;
-  quantity: number;
-  minStockLevel?: number; // Fix #4: Low Stock Alerts
+  quantity: number; // Represents total quantity across all branches or current selection
+  minStockLevel?: number;
   supplier?: string;
   client?: string;
   createdAt: string;
@@ -62,7 +98,8 @@ export interface Sale {
   exchangeRate: number; // Added
   idempotencyKey?: string; // Added for RS.GE sync
   receiptNumber?: string; // Added for RS.GE Fiscal Receipt
-  discountTotal?: number; // Added Phase 5: Track lost revenue from discounts
+  discountTotal?: number;
+  branchId?: string;
   createdAt: string;
 }
 
@@ -75,6 +112,7 @@ export interface Expense {
   currency: "GEL" | "USD" | "EUR"; // Added
   exchangeRate: number; // Added
   date: string;
+  branchId?: string;
   createdAt: string;
 }
 
@@ -92,6 +130,7 @@ export interface PurchaseHistory {
   client?: string;
   currency: "GEL" | "USD" | "EUR";
   exchangeRate: number;
+  branchId?: string;
   createdAt: string;
 }
 
@@ -116,6 +155,7 @@ export interface PayrollPayment {
   periodStart?: string;
   periodEnd?: string;
   notes?: string;
+  branchId?: string;
   createdAt: string;
 }
 
@@ -123,7 +163,7 @@ export interface AuditLog {
   id: string;
   userId?: string;
   actionType: "INSERT" | "UPDATE" | "DELETE";
-  tableName: "sales" | "expenses" | "products" | "transfers" | "employees";
+  tableName: "sales" | "expenses" | "products" | "transfers" | "employees" | "branches" | "returns" | "production_logs" | "payroll_payments" | "inventory_sessions" | "inventory_counts";
   recordId: string;
   oldData?: any;
   newData?: any;
@@ -141,6 +181,7 @@ export interface Shift {
   actualCash?: number;
   variance?: number;
   status: 'open' | 'closed';
+  branchId?: string;
 }
 
 export interface Return {
@@ -199,6 +240,7 @@ export interface ProductionLog {
   employeeId?: string;
   employeeName?: string;
   notes?: string;
+  branchId?: string;
   createdAt: string;
 }
 
@@ -294,6 +336,14 @@ export interface StoreSnapshot {
   // Payroll
   payrollPayments: PayrollPayment[];
   processSalaryPayment: (payment: Omit<PayrollPayment, 'id' | 'createdAt'>) => Promise<void>;
+
+  // Branches
+  branches: Branch[];
+  currentBranchId: string | null;
+  stockTransfers: StockTransfer[];
+  setCurrentBranch: (id: string) => void;
+  addBranch: (branch: Omit<Branch, 'id' | 'createdAt'>) => Promise<void>;
+  transferStock: (transfer: Omit<StockTransfer, 'id' | 'createdAt'>) => Promise<void>;
 }
 
 class WarehouseStore {
@@ -312,6 +362,10 @@ class WarehouseStore {
   private recipes: Recipe[] = [];
   private productionLogs: ProductionLog[] = [];
   private payrollPayments: PayrollPayment[] = [];
+  private branches: Branch[] = [];
+  private currentBranchId: string | null = null;
+  private branchInventory: BranchInventory[] = [];
+  private stockTransfers: StockTransfer[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
   private _cachedSnapshot: StoreSnapshot | null = null;
@@ -467,7 +521,10 @@ class WarehouseStore {
         { data: invCountsData },
         { data: recipesData },
         { data: productionLogsData },
-        { data: payrollPaymentsData }
+        { data: payrollPaymentsData },
+        { data: branchesData },
+        { data: branchInventoryData },
+        { data: stockTransfersData }
       ] = await Promise.all([
         supabase.from('products').select('*').eq('tenant_id', tenantId),
         supabase.from('sales').select('*').eq('tenant_id', tenantId),
@@ -481,11 +538,41 @@ class WarehouseStore {
         supabase.from('inventory_counts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('recipes').select('*, recipe_items(*)').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('production_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-        supabase.from('payroll_payments').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        supabase.from('payroll_payments').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('branches').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: true }),
+        supabase.from('branch_inventory').select('*').eq('tenant_id', tenantId),
+        supabase.from('stock_transfers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
       ]);
 
       if (payrollPaymentsData) {
         this.payrollPayments = payrollPaymentsData.map((p: any) => this.mapPayrollPayment(p));
+      }
+
+      if (branchesData) {
+        this.branches = branchesData.map((b: any) => this.mapBranch(b));
+        
+        // Ensure at least one branch exists
+        if (this.branches.length === 0) {
+          await this.addBranch({ name: "მთავარი ფილიალი", isMain: true, location: "" });
+        }
+
+        // Set current branch (prioritize main or first)
+        const savedBranchId = localStorage.getItem('dasta_current_branch');
+        const branchToSelect = this.branches.find(b => b.id === savedBranchId) || 
+                              this.branches.find(b => b.isMain) || 
+                              this.branches[0];
+        
+        if (branchToSelect) {
+          this.currentBranchId = branchToSelect.id;
+        }
+      }
+
+      if (branchInventoryData) {
+        this.branchInventory = branchInventoryData.map((bi: any) => this.mapBranchInventory(bi));
+      }
+
+      if (stockTransfersData) {
+        this.stockTransfers = stockTransfersData.map((t: any) => this.mapStockTransfer(t));
       }
 
       if (journalData) {
@@ -581,7 +668,6 @@ class WarehouseStore {
         const { data: dbShifts, error: shiftError } = await supabase.from('shifts').select('*').eq('tenant_id', tenantId).order('opened_at', { ascending: false }).limit(50);
         if (!shiftError && dbShifts && dbShifts.length > 0) {
           const mappedShifts = dbShifts.map(s => this.mapShift(s));
-
           // DB is the ultimate source of truth, ensure local open shift is accurate
           const dbOpenShift = mappedShifts.find(s => s.status === 'open');
           this.shifts = mappedShifts;
@@ -681,6 +767,7 @@ class WarehouseStore {
       client: s.client || "",
       currency: (s.currency || "GEL") as "GEL" | "USD" | "EUR",
       exchangeRate: Number(s.exchange_rate) || 1,
+      branchId: s.branch_id,
       createdAt: s.created_at || new Date().toISOString()
     };
   }
@@ -700,6 +787,7 @@ class WarehouseStore {
       client: ph.client || "",
       currency: (ph.currency || "GEL") as "GEL" | "USD" | "EUR",
       exchangeRate: Number(ph.exchange_rate) || 1,
+      branchId: ph.branch_id,
       createdAt: ph.created_at || new Date().toISOString()
     };
   }
@@ -714,6 +802,7 @@ class WarehouseStore {
       currency: (e.currency || "GEL") as "GEL" | "USD" | "EUR",
       exchangeRate: Number(e.exchange_rate) || 1,
       date: e.date || new Date().toISOString(),
+      branchId: e.branch_id,
       createdAt: e.created_at || new Date().toISOString()
     };
   }
@@ -742,6 +831,7 @@ class WarehouseStore {
       periodStart: p.period_start,
       periodEnd: p.period_end,
       notes: p.notes || "",
+      branchId: p.branch_id,
       createdAt: p.created_at
     };
   }
@@ -834,6 +924,7 @@ class WarehouseStore {
       employeeId: l.employee_id,
       employeeName: l.employee_name,
       notes: l.notes,
+      branchId: l.branch_id,
       createdAt: l.created_at
     };
   }
@@ -1041,6 +1132,7 @@ class WarehouseStore {
         employee_id: newReturn.employeeId,
         employee_name: newReturn.employeeName,
         tenant_id: tenantId,
+        branch_id: this.currentBranchId,
         created_at: newReturn.createdAt
       });
 
@@ -1131,7 +1223,8 @@ class WarehouseStore {
         opened_at: newShift.openedAt,
         opening_cash: newShift.openingCash,
         status: 'open',
-        tenant_id: tenantId
+        tenant_id: tenantId,
+        branch_id: this.currentBranchId
       });
       if (error) console.error("Failed to persist shift to Supabase:", error.message);
     } catch (e) {
@@ -1195,6 +1288,184 @@ class WarehouseStore {
   subscribe(listener: StoreListener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  private mapBranch(b: any): Branch {
+    return {
+      id: b.id,
+      name: b.name || "",
+      location: b.location || "",
+      isMain: b.is_main || false,
+      tenantId: b.tenant_id,
+      createdAt: b.created_at
+    };
+  }
+
+  private mapStockTransfer(t: any): StockTransfer {
+    return {
+      id: t.id,
+      fromBranchId: t.from_branch_id,
+      toBranchId: t.to_branch_id,
+      items: t.items || [],
+      employeeId: t.employee_id,
+      notes: t.notes || "",
+      status: t.status as any,
+      tenantId: t.tenant_id,
+      createdAt: t.created_at
+    };
+  }
+
+  private mapBranchInventory(bi: any): BranchInventory {
+    return {
+      id: bi.id,
+      branchId: bi.branch_id,
+      productId: bi.product_id,
+      quantity: Number(bi.quantity) || 0,
+      updatedAt: bi.updated_at
+    };
+  }
+
+  async addBranch(branch: Omit<Branch, "id" | "createdAt" | "tenantId">) {
+    const tenantId = authStore.getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+
+    const newBranch: Branch = {
+      ...branch,
+      id,
+      tenantId,
+      createdAt
+    };
+
+    // Optimistic
+    this.branches.push(newBranch);
+    if (!this.currentBranchId) this.currentBranchId = id;
+    this.notify();
+
+    const { error } = await supabase.from('branches').insert({
+      id,
+      name: branch.name,
+      location: branch.location,
+      is_main: branch.isMain,
+      tenant_id: tenantId
+    });
+
+    if (error) {
+      this.branches = this.branches.filter(b => b.id !== id);
+      this.notify();
+      throw error;
+    }
+  }
+
+  setCurrentBranch(id: string) {
+    this.currentBranchId = id;
+    localStorage.setItem('dasta_current_branch', id);
+    this.notify();
+  }
+
+  async transferStock(transfer: Omit<StockTransfer, "id" | "createdAt" | "status" | "tenantId">) {
+    const tenantId = authStore.getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+
+    const newTransfer: StockTransfer = {
+      ...transfer,
+      id,
+      status: "completed",
+      tenantId,
+      createdAt
+    };
+
+    // Optimistic
+    this.stockTransfers.unshift(newTransfer);
+    
+    // Update local branch inventory
+    for (const item of transfer.items) {
+      const fromInv = this.branchInventory.find(bi => bi.branchId === transfer.fromBranchId && bi.productId === item.productId);
+      const toInv = this.branchInventory.find(bi => bi.branchId === transfer.toBranchId && bi.productId === item.productId);
+
+      if (fromInv) fromInv.quantity -= item.quantity;
+      if (toInv) {
+        toInv.quantity += item.quantity;
+      } else {
+        this.branchInventory.push({
+          id: crypto.randomUUID(),
+          branchId: transfer.toBranchId,
+          productId: item.productId,
+          quantity: item.quantity,
+          updatedAt: createdAt
+        });
+      }
+    }
+
+    this.notify();
+
+    // Call Supabase - we need to handle multi-item transfers
+    // For now, let's use a simpler insert if execute_stock_transfer doesn't support JSONB yet
+    const { error } = await supabase.from('stock_transfers').insert({
+      id,
+      from_branch_id: transfer.fromBranchId,
+      to_branch_id: transfer.toBranchId,
+      items: transfer.items,
+      employee_id: transfer.employeeId,
+      notes: transfer.notes,
+      status: 'completed',
+      tenant_id: tenantId
+    });
+
+    if (error) {
+      await this.initialize();
+      throw error;
+    }
+  }
+
+  async updateBranch(id: string, updates: Partial<Omit<Branch, "id" | "createdAt">>) {
+    const branch = this.branches.find((b) => b.id === id);
+    if (!branch) throw new Error("ფილიალი ვერ მოიძებნა");
+
+    // Optimistic update
+    Object.assign(branch, updates);
+    this.notify();
+
+    const { error } = await supabase
+      .from('branches')
+      .update({
+        name: updates.name,
+        location: updates.location,
+        is_main: updates.isMain,
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating branch:", error);
+      await this.initialize();
+      throw error;
+    }
+  }
+
+  async deleteBranch(id: string) {
+    const branch = this.branches.find((b) => b.id === id);
+    if (!branch) throw new Error("ფილიალი ვერ მოიძებნა");
+    if (branch.isMain) throw new Error("მთავარი ფილიალის წაშლა შეუძლებელია");
+
+    // Optimistic delete
+    this.branches = this.branches.filter((b) => b.id !== id);
+    this.notify();
+
+    const { error } = await supabase
+      .from('branches')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting branch:", error);
+      await this.initialize();
+      throw error;
+    }
   }
 
   // Products
@@ -1391,7 +1662,8 @@ class WarehouseStore {
             currency: currency,
             exchange_rate: exchangeRate,
             created_at: new Date().toISOString(),
-            tenant_id: tenantId
+            tenant_id: tenantId,
+            branch_id: this.currentBranchId
           };
 
           const { error: historyError } = await supabase.from('purchase_history').insert(purchaseHistoryEntry);
@@ -1585,7 +1857,15 @@ class WarehouseStore {
 
       // Payroll
       payrollPayments: [...this.payrollPayments],
-      processSalaryPayment: (p) => this.processSalaryPayment(p),
+      processSalaryPayment: this.processSalaryPayment.bind(this),
+
+      // Branches
+      branches: [...this.branches],
+      currentBranchId: this.currentBranchId,
+      stockTransfers: [...this.stockTransfers],
+      setCurrentBranch: this.setCurrentBranch.bind(this),
+      addBranch: this.addBranch.bind(this),
+      transferStock: this.transferStock.bind(this)
     };
 
     return this._cachedSnapshot;
@@ -1730,6 +2010,7 @@ class WarehouseStore {
       created_by: currentUser?.id,
       client: sale.client || '',
       tenant_id: getTenantId(),
+      branch_id: this.currentBranchId,
       discount_total: (product.salePrice - sale.salePrice) * sale.quantity
     };
 
@@ -1801,6 +2082,7 @@ class WarehouseStore {
     this.expenses.push({
       ...expense,
       id: optimisticId,
+      branchId: this.currentBranchId || undefined,
       createdAt: optimisticCreatedAt
     });
     this.expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -1815,7 +2097,8 @@ class WarehouseStore {
       currency: expense.currency || 'GEL',
       exchange_rate: expense.exchangeRate || 1,
       date: expense.date || new Date().toISOString().split('T')[0],
-      tenant_id: getTenantId()
+      tenant_id: getTenantId(),
+      branch_id: this.currentBranchId
     };
 
     // Supabase insert
@@ -2547,6 +2830,7 @@ class WarehouseStore {
         employee_name: newSession.employeeName,
         notes: newSession.notes,
         tenant_id: tenantId,
+        branch_id: this.currentBranchId,
         created_at: newSession.createdAt
       });
       if (sessionError) throw sessionError;
@@ -2923,6 +3207,7 @@ class WarehouseStore {
         employee_name: this.currentEmployee?.name,
         notes,
         tenant_id: tenantId,
+        branch_id: this.currentBranchId,
         created_at: createdAt
       });
       if (logError) throw logError;
@@ -3018,6 +3303,7 @@ class WarehouseStore {
         period_end: payment.periodEnd,
         notes: payment.notes,
         tenant_id: tenantId,
+        branch_id: this.currentBranchId,
         created_at: createdAt
       });
       if (payError) throw payError;
