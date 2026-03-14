@@ -203,6 +203,7 @@ export interface Customer {
   name: string;
   phone?: string;
   email?: string;
+  cardNumber?: string;
   balance: number;
   loyaltyPoints: number;
   tenantId: string;
@@ -1332,6 +1333,7 @@ class WarehouseStore {
       name: c.name,
       phone: c.phone || "",
       email: c.email || "",
+      cardNumber: c.card_number || "",
       balance: Number(c.balance) || 0,
       loyaltyPoints: Number(c.loyalty_points) || 0,
       tenantId: c.tenant_id,
@@ -1527,6 +1529,7 @@ class WarehouseStore {
       name: customer.name,
       phone: customer.phone,
       email: customer.email,
+      card_number: customer.cardNumber,
       balance: customer.balance,
       loyalty_points: customer.loyaltyPoints,
       tenant_id: tenantId
@@ -1551,6 +1554,7 @@ class WarehouseStore {
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.cardNumber !== undefined) dbUpdates.card_number = updates.cardNumber;
     if (updates.balance !== undefined) dbUpdates.balance = updates.balance;
     if (updates.loyaltyPoints !== undefined) dbUpdates.loyalty_points = updates.loyaltyPoints;
 

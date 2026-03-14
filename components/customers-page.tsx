@@ -59,6 +59,7 @@ export function CustomersPage() {
     name: "",
     phone: "",
     email: "",
+    cardNumber: "",
     balance: 0,
     loyaltyPoints: 0
   });
@@ -67,7 +68,8 @@ export function CustomersPage() {
     return store.customers.filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.phone?.includes(searchQuery) ||
-      c.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.cardNumber?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [store.customers, searchQuery]);
 
@@ -102,6 +104,7 @@ export function CustomersPage() {
       name: customer.name,
       phone: customer.phone || "",
       email: customer.email || "",
+      cardNumber: customer.cardNumber || "",
       balance: customer.balance,
       loyaltyPoints: customer.loyaltyPoints
     });
@@ -120,7 +123,7 @@ export function CustomersPage() {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", phone: "", email: "", balance: 0, loyaltyPoints: 0 });
+    setFormData({ name: "", phone: "", email: "", cardNumber: "", balance: 0, loyaltyPoints: 0 });
     setSelectedCustomer(null);
     setIsEditing(false);
   };
@@ -242,6 +245,12 @@ export function CustomersPage() {
                                 {customer.email}
                               </div>
                             )}
+                            {customer.cardNumber && (
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-primary/80 uppercase tracking-tighter">
+                                <Award className="h-3 w-3" />
+                                ბარათი: {customer.cardNumber}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -346,12 +355,12 @@ export function CustomersPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">ელ-ფოსტა</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">ბარათის ნომერი / კოდი</Label>
                     <Input 
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="mail@example.com"
-                      className="h-12 border-none bg-muted/30 rounded-xl font-bold focus-visible:ring-1 focus-visible:ring-primary/20"
+                      value={formData.cardNumber}
+                      onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
+                      placeholder="მაგ: LC-001"
+                      className="h-12 border-none bg-muted/30 rounded-xl font-bold focus-visible:ring-1 focus-visible:ring-primary/20 placeholder:font-medium"
                     />
                   </div>
                 </div>

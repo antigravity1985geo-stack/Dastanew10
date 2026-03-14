@@ -97,6 +97,26 @@ export function SalesPage() {
   const [productSearch, setProductSearch] = useState("");
 
   // Sync to CFD whenever cart or totals change
+  useEffect(() => {
+    if (clientName.length >= 3) {
+      const found = store.customers.find(c => 
+        c.cardNumber === clientName || 
+        c.phone === clientName ||
+        c.name.toLowerCase() === clientName.toLowerCase()
+      );
+      if (found) {
+        setSelectedCustomerId(found.id);
+        // If it's an exact card number match, let's update the name for better UX
+        if (found.cardNumber === clientName) {
+           setClientName(found.name);
+           toast.success(`კლიენტი ნაპოვნია: ${found.name}`, { icon: '👤' });
+        }
+      }
+    } else if (clientName === "") {
+      setSelectedCustomerId(null);
+    }
+  }, [clientName, store.customers]);
+
   const total = useMemo(() => {
     return cart.reduce((acc, curr) => acc + (curr.quantity * (curr.discountPrice || (priceMode === "wholesale" && curr.wholesalePrice ? curr.wholesalePrice : curr.salePrice))), 0);
   }, [cart, priceMode]);
