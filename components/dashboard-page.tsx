@@ -123,30 +123,26 @@ export function DashboardPage() {
       <div id="print-area">
         <AIInsightsCard />
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-10">
           {stats.map((stat, idx) => (
-            <Card key={stat.label} className={cn(
-              "rounded-2xl shadow-sm hover:shadow-xl transition-all border-none overflow-hidden relative group spring-up !text-white",
-              `delay-${(idx + 1) * 100}`,
-              stat.gradient
-            )}>
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl transition-all group-hover:scale-110" />
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black !text-white uppercase tracking-widest opacity-80">
-                      {stat.label}
-                    </p>
-                    <p className="text-2xl font-black mt-2 !text-white">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className={cn("rounded-xl p-2.5 shadow-sm bg-white/20 backdrop-blur-md")}>
-                    <stat.icon className={cn("h-5 w-5 !text-white")} />
-                  </div>
+            <div 
+              key={stat.label} 
+              className={cn(
+                "premium-card spring-up shadow-2xl",
+                `delay-${(idx + 1) * 100}`
+              )}
+            >
+              <div className="premium-border" />
+              <div className="premium-content">
+                <div className="p-3 rounded-2xl bg-white/5 backdrop-blur-sm mb-2 group-hover:scale-110 transition-transform duration-500">
+                  <stat.icon className="h-6 w-6 card-icon-main" />
                 </div>
-              </CardContent>
-            </Card>
+                <p className="label-text">{stat.label}</p>
+                <p className="value-text">{stat.value}</p>
+              </div>
+              <span className="bottom-text">Dasta System ERP</span>
+              <span className="trail"></span>
+            </div>
           ))}
         </div>
 

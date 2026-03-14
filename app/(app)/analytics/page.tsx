@@ -291,41 +291,33 @@ function StatsCard({ title, value, icon: Icon, color, description, isHighlight =
   isHighlight?: boolean;
   className?: string;
 }) {
-  const colorMap: any = {
-    blue: "from-blue-600 to-cyan-500",
-    green: "from-emerald-600 to-teal-500",
-    red: "from-rose-600 to-red-500",
-    orange: "from-amber-500 to-orange-600",
-    primary: "from-indigo-600 to-violet-600"
-  };
-
   return (
-    <Card className={cn(
-      "border-none shadow-xl rounded-2xl overflow-hidden active:scale-95 transition-all cursor-default bg-gradient-to-br !text-white",
-      colorMap[color],
+    <div className={cn(
+      "premium-card spring-up shadow-xl",
       className
     )}>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="p-2.5 rounded-xl bg-white/20 backdrop-blur-md">
-            <Icon className="h-5 w-5 !text-white" />
+      <div className="premium-border" />
+      <div className="premium-content">
+        <div className="flex items-center justify-between w-full px-6 mb-2">
+          <div className="p-2 rounded-xl bg-white/5 backdrop-blur-sm">
+            <Icon className="h-5 w-5 card-icon-main" />
           </div>
           {isHighlight && (
-            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-md">
-              NET
-            </Badge>
+            <span className="text-[8px] font-black bg-[#bd9f67]/20 text-[#bd9f67] px-2 py-0.5 rounded-md border border-[#bd9f67]/30">NET PROFIT</span>
           )}
         </div>
-        <div>
-          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
+        <div className="flex flex-col items-center">
+          <p className="label-text">{title}</p>
           <div className="flex items-baseline gap-1">
-            <h3 className="text-2xl font-black text-white tracking-tight">{value.toFixed(2)}</h3>
-            <span className="text-white/60 text-sm font-bold">₾</span>
+            <h3 className="value-text">{value.toLocaleString()}</h3>
+            <span className="text-[#bd9f67] text-xs font-bold font-serif italic">₾</span>
           </div>
-          <p className="text-[10px] text-white/50 mt-2 font-medium">{description}</p>
+          <p className="text-[9px] text-white/30 font-medium mt-1">{description}</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <span className="bottom-text">ANALYSIS REPORT</span>
+      <span className="trail"></span>
+    </div>
   );
 }
 
