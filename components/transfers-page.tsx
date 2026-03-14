@@ -33,9 +33,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useHeaderSetup } from "@/lib/header-store";
+import { useLanguage } from "@/lib/language-context";
 
 export function TransfersPage() {
   const store = useWarehouseStore();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +50,7 @@ export function TransfersPage() {
   });
 
   useHeaderSetup(
-    "შიდა გადაზიდვა",
+    t("pages.transfers.title"),
     <button
       className="premium-btn flex items-center gap-1.5 h-8 px-3"
       onClick={() => {
@@ -62,19 +64,19 @@ export function TransfersPage() {
       }}
     >
       <Plus className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">ახალი გადაზიდვა</span>
+      <span className="hidden sm:inline">{t("pages.transfers.newTransfer")}</span>
     </button>
   );
 
   const handleAddTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fromBranchId || !formData.toBranchId || formData.fromBranchId === formData.toBranchId) {
-      toast.error("გთხოვთ სწორად შეარჩიოთ ფილიალები");
+      toast.error(t("pages.transfers.branchError"));
       return;
     }
     
     if (formData.items.some(i => !i.productId || i.quantity <= 0)) {
-      toast.error("გთხოვთ სწორად მიუთითოთ პროდუქტები და რაოდენობა");
+      toast.error(t("pages.transfers.productError"));
       return;
     }
 
@@ -97,7 +99,7 @@ export function TransfersPage() {
         employeeId: store.currentEmployee?.id
       });
       
-      toast.success("გადაზიდვა წარმატებით შესრულდა");
+      toast.success(t("pages.transfers.success"));
       setIsAddDialogOpen(false);
     } catch (error: any) {
       toast.error(error.message || "შეცდომა გადაზიდვისას");

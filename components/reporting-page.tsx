@@ -17,11 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/language-context";
 
 type ReportType = "sales" | "expenses" | "inventory" | "transfers";
 
 export function ReportingPage() {
   const store = useWarehouseStore();
+  const { t } = useLanguage();
   const [reportType, setReportType] = useState<ReportType>("sales");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
@@ -73,7 +75,7 @@ export function ReportingPage() {
 
   const exportToCSV = () => {
     if (filteredData.length === 0) {
-      toast.error("ექსპორტისთვის მონაცემები არ არის");
+      toast.error(t("pages.reporting.exportEmpty"));
       return;
     }
 
@@ -89,7 +91,7 @@ export function ReportingPage() {
           s.productName,
           s.quantity,
           s.totalAmount,
-          store.branches.find(b => b.id === s.branchId)?.name || "უცნობი"
+          store.branches.find(b => b.id === s.branchId)?.name || t("pages.reporting.unknown")
         ]);
       } else if (reportType === "expenses") {
         headers = ["ID", "თარიღი", "აღწერა", "კატეგორია", "თანხა", "ფილიალი"];
@@ -99,7 +101,7 @@ export function ReportingPage() {
           e.description,
           e.category,
           e.amount,
-          store.branches.find(b => b.id === e.branchId)?.name || "უცნობი"
+          store.branches.find(b => b.id === e.branchId)?.name || t("pages.reporting.unknown")
         ]);
       } else if (reportType === "inventory") {
         headers = ["ID", "პროდუქტი", "კატეგორია", "რაოდენობა", "ფასი"];
@@ -127,17 +129,17 @@ export function ReportingPage() {
       link.click();
       document.body.removeChild(link);
       
-      toast.success("ექსპორტი წარმატებით დასრულდა");
+      toast.success(t("pages.reporting.exportSuccess"));
     } catch (error) {
-      toast.error("ექსპორტისას მოხდა შეცდომა");
+      toast.error(t("pages.reporting.exportError"));
     }
   };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
       <PageHeader 
-        title="რეპორტინგი" 
-        description="დეტალური მონაცემების ანალიზი და ექსპორტი"
+        title={t("pages.reporting.title")} 
+        description={t("pages.reporting.subtitle")}
         hideActions
       />
 
@@ -145,28 +147,28 @@ export function ReportingPage() {
       <div className="premium-glass p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>რეპორტის ტიპი</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>{t("pages.reporting.reportType")}</label>
             <Select value={reportType} onValueChange={(val) => setReportType(val as ReportType)}>
               <SelectTrigger className="h-9 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
-                <SelectItem value="sales" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>გაყიდვები</SelectItem>
-                <SelectItem value="expenses" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>ხარჯები</SelectItem>
-                <SelectItem value="inventory" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>ინვენტარი</SelectItem>
-                <SelectItem value="transfers" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>გადაზიდვები</SelectItem>
+                <SelectItem value="sales" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.salesReport")}</SelectItem>
+                <SelectItem value="expenses" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.expensesReport")}</SelectItem>
+                <SelectItem value="inventory" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.inventoryReport")}</SelectItem>
+                <SelectItem value="transfers" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.transfersReport")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>ფილიალი</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>{t("common.branch")}</label>
             <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
               <SelectTrigger className="h-9 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
-                <SelectItem value="all" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>ყველა</SelectItem>
+                <SelectItem value="all" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("common.all")}</SelectItem>
                 {branches.map(b => (
                   <SelectItem key={b.id} value={b.id} className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{b.name}</SelectItem>
                 ))}
@@ -175,16 +177,16 @@ export function ReportingPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>პერიოდი</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>{t("common.period")}</label>
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="h-9 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
-                <SelectItem value="7" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>7 დღე</SelectItem>
-                <SelectItem value="30" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>30 დღე</SelectItem>
-                <SelectItem value="90" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>90 დღე</SelectItem>
-                <SelectItem value="365" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>1 წელი</SelectItem>
+                <SelectItem value="7" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.days7")}</SelectItem>
+                <SelectItem value="30" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.days30")}</SelectItem>
+                <SelectItem value="90" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.days90")}</SelectItem>
+                <SelectItem value="365" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{t("pages.reporting.year1")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -193,7 +195,7 @@ export function ReportingPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.2)' }} />
               <input 
-                placeholder="ძებნა..." 
+                placeholder={t("common.search")} 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="premium-search w-full h-9 pl-9 pr-3 text-sm"
@@ -267,7 +269,7 @@ export function ReportingPage() {
                         <td className="px-5 py-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.quantity} ცალი</td>
                         <td className="px-5 py-2.5 text-sm font-black" style={{ color: '#ffe0a6' }}>{item.totalAmount.toFixed(2)} ₾</td>
                         <td className="px-5 py-2.5 text-[10px] uppercase font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                          {store.branches.find(b => b.id === item.branchId)?.name || "უცნობი"}
+                          {store.branches.find(b => b.id === item.branchId)?.name || t("pages.reporting.unknown")}
                         </td>
                       </>
                     )}
@@ -280,7 +282,7 @@ export function ReportingPage() {
                         </td>
                         <td className="px-5 py-2.5 text-sm font-black" style={{ color: '#f87171' }}>-{item.amount.toFixed(2)} ₾</td>
                         <td className="px-5 py-2.5 text-[10px] uppercase font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                          {store.branches.find(b => b.id === item.branchId)?.name || "უცნობი"}
+                          {store.branches.find(b => b.id === item.branchId)?.name || t("pages.reporting.unknown")}
                         </td>
                       </>
                     )}
@@ -292,9 +294,9 @@ export function ReportingPage() {
                         <td className="px-5 py-2.5 text-sm font-bold" style={{ color: '#ffe0a6' }}>{item.salePrice.toFixed(2)} ₾</td>
                         <td className="px-5 py-2.5">
                           {item.quantity < (item.minStockLevel || 5) ? (
-                            <span className="badge-red">კრიტიკული</span>
+                            <span className="badge-red">{t("status.critical")}</span>
                           ) : (
-                            <span className="badge-emerald">ნორმა</span>
+                            <span className="badge-emerald">{t("status.normal")}</span>
                           )}
                         </td>
                       </>
@@ -332,7 +334,7 @@ export function ReportingPage() {
                 <tr>
                   <td colSpan={5} className="text-center py-16" style={{ color: 'rgba(255,255,255,0.2)' }}>
                     <TableIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm font-medium">მონაცემები არ არის</p>
+                    <p className="text-sm font-medium">{t("common.noData")}</p>
                   </td>
                 </tr>
               )}

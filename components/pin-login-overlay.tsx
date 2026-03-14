@@ -47,6 +47,8 @@ export function PINLoginOverlay() {
                 position: "ადმინისტრატორი",
                 phone: auth.currentUser?.email || "",
                 pinCode: currentPin, // Pass raw PIN, store handles hashing
+                baseSalary: 0,
+                salaryType: "monthly",
             });
             toast.success("PIN კოდი წარმატებით შეიქმნა!");
             await store.loginEmployee(currentPin);

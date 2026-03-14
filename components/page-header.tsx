@@ -1,8 +1,8 @@
 "use client";
 
 import { Printer } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { printPage } from "@/lib/print";
+import { useLanguage } from "@/lib/language-context";
 
 interface PageHeaderProps {
   title: string;
@@ -23,15 +23,32 @@ export function PageHeader({
   hideActions = false,
   hideTitle = false,
 }: PageHeaderProps) {
+  const { t } = useLanguage();
+
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+    <div
+      className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 mb-5"
+      style={{ borderBottom: '1px solid var(--erp-border)' }}
+    >
       {!hideTitle && (
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>
+          <h1
+            className="text-xl sm:text-2xl font-black tracking-tight truncate"
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              background: 'linear-gradient(135deg, #e8c97a, #c9a84c)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
             {title}
           </h1>
           {description && (
-            <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: 'rgba(255,224,166,0.4)' }}>
+            <p
+              className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest"
+              style={{ color: 'var(--erp-silver)', opacity: 0.5 }}
+            >
               {description}
             </p>
           )}
@@ -43,10 +60,10 @@ export function PageHeader({
           {actions}
           <button
             onClick={() => printPage(printTitle || title)}
-            className="premium-btn flex items-center gap-2 h-8 px-3 text-[10px]"
+            className="erp-btn flex items-center gap-2 h-8 px-3 text-[10px]"
           >
             <Printer className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">ბეჭდვა</span>
+            <span className="hidden sm:inline">{t("common.print")}</span>
           </button>
         </div>
       )}

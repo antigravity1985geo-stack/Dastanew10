@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { PWAInstallBanner } from '@/components/pwa-install-banner'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
+import { LanguageProvider } from '@/lib/language-context'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -21,25 +22,16 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
+      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
+      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
     ],
     apple: '/apple-icon.png',
   },
 }
 
 export const viewport = {
-  themeColor: '#8b1a1a',
+  themeColor: '#0d0f14',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -54,11 +46,13 @@ export default function RootLayout({
   return (
     <html lang="ka" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {children}
-        <PWAInstallBanner />
-        <ServiceWorkerRegister />
-        <Toaster position="top-right" richColors />
-        <Analytics />
+        <LanguageProvider>
+          {children}
+          <PWAInstallBanner />
+          <ServiceWorkerRegister />
+          <Toaster position="top-right" richColors />
+          <Analytics />
+        </LanguageProvider>
       </body>
     </html>
   )

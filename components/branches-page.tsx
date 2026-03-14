@@ -34,9 +34,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useHeaderSetup } from "@/lib/header-store";
+import { useLanguage } from "@/lib/language-context";
 
 export function BranchesPage() {
   const store = useWarehouseStore();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -50,7 +52,7 @@ export function BranchesPage() {
   });
 
   useHeaderSetup(
-    "ფილიალები",
+    t("pages.branches.title"),
     <button
       className="premium-btn flex items-center gap-1.5 h-8 px-3"
       onClick={() => {
@@ -59,7 +61,7 @@ export function BranchesPage() {
       }}
     >
       <Plus className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">დამატება</span>
+      <span className="hidden sm:inline">{t("common.add")}</span>
     </button>
   );
 
@@ -72,14 +74,14 @@ export function BranchesPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) {
-      toast.error("შეიყვანეთ ფილიალის სახელი");
+      toast.error(t("auth.technicalError"));
       return;
     }
 
     setIsSubmitting(true);
     try {
       await store.addBranch(formData);
-      toast.success("ფილიალი დაემატა");
+      toast.success(t("pages.branches.savedSuccess"));
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Add branch failed:", error);

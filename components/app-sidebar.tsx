@@ -1,4 +1,5 @@
 "use client";
+import { useLanguage } from "@/lib/language-context";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -45,44 +46,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const navGroups = [
+// Nav items with i18n key + href
+const NAV_GROUPS: { groupKey: string; items: { key: string; href: string; icon: any; requiresAdmin?: boolean }[] }[] = [
   {
-    label: "General",
+    groupKey: "nav.general",
     items: [
-      { label: "დეშბორდი", href: "/dashboard", icon: LayoutDashboard },
-      { label: "ანალიტიკა", href: "/analytics", icon: TrendingUp, requiresAdmin: true },
-      { label: "რეპორტინგი", href: "/reporting", icon: FileText, requiresAdmin: true },
+      { key: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { key: "nav.analytics", href: "/analytics", icon: TrendingUp, requiresAdmin: true },
+      { key: "nav.reporting", href: "/reporting", icon: FileText, requiresAdmin: true },
     ]
   },
   {
-    label: "Finance",
+    groupKey: "nav.finance",
     items: [
-      { label: "კლიენტები", href: "/customers", icon: Users, requiresAdmin: true },
-      { label: "ხელფასები", href: "/payroll", icon: Wallet, requiresAdmin: true },
-      { label: "ბუღალტერია", href: "/accounting", icon: BookOpen, requiresAdmin: true },
-      { label: "RS.GE", href: "/rsge", icon: Link2, requiresAdmin: true },
+      { key: "nav.customers", href: "/customers", icon: Users, requiresAdmin: true },
+      { key: "nav.payroll", href: "/payroll", icon: Wallet, requiresAdmin: true },
+      { key: "nav.accounting", href: "/accounting", icon: BookOpen, requiresAdmin: true },
+      { key: "nav.rsge", href: "/rsge", icon: Link2, requiresAdmin: true },
     ]
   },
   {
-    label: "Operations",
+    groupKey: "nav.operations",
     items: [
-      { label: "გაყიდვა", href: "/sales", icon: TrendingUp },
-      { label: "შესყიდვა", href: "/purchases", icon: ShoppingCart, requiresAdmin: true },
-      { label: "ინვენტარი", href: "/inventory", icon: ClipboardCheck, requiresAdmin: true },
-      { label: "წარმოება", href: "/production", icon: ChefHat, requiresAdmin: true },
-      { label: "ეტიკეტები", href: "/price-tags", icon: Tag, requiresAdmin: true },
-      { label: "საწყობი", href: "/mobile-warehouse", icon: QrCode },
+      { key: "nav.sales", href: "/sales", icon: TrendingUp },
+      { key: "nav.purchases", href: "/purchases", icon: ShoppingCart, requiresAdmin: true },
+      { key: "nav.inventory", href: "/inventory", icon: ClipboardCheck, requiresAdmin: true },
+      { key: "nav.production", href: "/production", icon: ChefHat, requiresAdmin: true },
+      { key: "nav.priceTags", href: "/price-tags", icon: Tag, requiresAdmin: true },
+      { key: "nav.warehouse", href: "/mobile-warehouse", icon: QrCode },
     ]
   },
   {
-    label: "System",
+    groupKey: "nav.system",
     items: [
-      { label: "თანამშრომლები", href: "/employees", icon: Users, requiresAdmin: true },
-      { label: "ფილიალები", href: "/branches", icon: Building2, requiresAdmin: true },
-      { label: "გადაზიდვა", href: "/transfers", icon: ArrowLeftRight, requiresAdmin: true },
-      { label: "აქციები", href: "/promotions", icon: Tag, requiresAdmin: true },
-      { label: "ადმინი", href: "/admin", icon: Shield, requiresAdmin: true },
-      { label: "გზამკვლევი", href: "/guide", icon: BookOpen },
+      { key: "nav.employees", href: "/employees", icon: Users, requiresAdmin: true },
+      { key: "nav.branches", href: "/branches", icon: Building2, requiresAdmin: true },
+      { key: "nav.transfers", href: "/transfers", icon: ArrowLeftRight, requiresAdmin: true },
+      { key: "nav.promotions", href: "/promotions", icon: Tag, requiresAdmin: true },
+      { key: "nav.admin", href: "/admin", icon: Shield, requiresAdmin: true },
+      { key: "nav.guide", href: "/guide", icon: BookOpen },
     ]
   }
 ];
@@ -93,6 +95,7 @@ export function AppSidebar() {
   const store = useWarehouseStore();
   const { companyName } = useSettings();
   const { state } = useSidebar();
+  const { t } = useLanguage();
   const isCollapsed = state === "collapsed";
 
   return (
@@ -136,8 +139,8 @@ export function AppSidebar() {
             >
               {companyName}
             </div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'var(--erp-silver)' }}>
-              ERP Suite
+            <div style={{ fontSize: 10, marginTop: 0.5, color: 'var(--erp-silver)', opacity: 0.6 }}>
+              {t("system.erpSuite")}
             </div>
           </div>
         )}
@@ -191,10 +194,10 @@ export function AppSidebar() {
 
       {/* Nav */}
       <SidebarContent style={{ padding: '4px 10px 8px' }}>
-        {navGroups.map((group) => (
-          <div key={group.label} style={{ marginBottom: '4px' }}>
+        {NAV_GROUPS.map((group) => (
+          <div key={group.groupKey} style={{ marginBottom: '4px' }}>
             {!isCollapsed && (
-              <div className="larkon-group-label">{group.label}</div>
+              <div className="larkon-group-label">{t(group.groupKey)}</div>
             )}
             <SidebarMenu>
               {group.items.map((item) => {
@@ -209,13 +212,14 @@ export function AppSidebar() {
                 ) {
                   return null;
                 }
+                const label = t(item.key);
 
                 return (
                   <SidebarMenuItem key={item.href} style={{ marginBottom: '1px' }}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      tooltip={item.label}
+                      tooltip={label}
                       className="h-auto p-0 bg-transparent hover:bg-transparent transition-none"
                     >
                       <Link
@@ -231,7 +235,7 @@ export function AppSidebar() {
                           style={{ width: 16, height: 16, opacity: 0.7, flexShrink: 0 }}
                         />
                         {!isCollapsed && (
-                          <span className="flex-1 truncate nav-label-text">{item.label}</span>
+                          <span className="flex-1 truncate nav-label-text">{label}</span>
                         )}
                       </Link>
                     </SidebarMenuButton>
@@ -281,7 +285,7 @@ export function AppSidebar() {
                 {currentUser.displayName || currentUser.email}
               </div>
               <div className="text-[9px] opacity-60" style={{ color: 'var(--erp-silver)' }}>
-                Admin
+                {t("system.superAdmin")}
               </div>
             </div>
           </div>
@@ -295,7 +299,7 @@ export function AppSidebar() {
           style={{ opacity: 0.55 }}
         >
           <LogOut style={{ width: 16, height: 16 }} />
-          {!isCollapsed && <span className="text-xs font-medium">გამოსვლა</span>}
+          {!isCollapsed && <span className="text-xs font-medium">{t("auth.logout")}</span>}
         </button>
       </SidebarFooter>
     </Sidebar>
