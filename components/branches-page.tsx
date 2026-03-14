@@ -16,15 +16,6 @@ import { useWarehouseStore } from "@/hooks/use-store";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -60,17 +51,16 @@ export function BranchesPage() {
 
   useHeaderSetup(
     "ფილიალები",
-    <Button
-      size="sm"
-      className="gap-2 font-bold h-9 rounded-xl shadow-lg shadow-primary/20"
+    <button
+      className="premium-btn flex items-center gap-1.5 h-8 px-3"
       onClick={() => {
         setFormData({ name: "", location: "", isMain: false });
         setIsAddDialogOpen(true);
       }}
     >
-      <Plus className="h-4 w-4" />
+      <Plus className="h-3.5 w-3.5" />
       <span className="hidden sm:inline">დამატება</span>
-    </Button>
+    </button>
   );
 
   const filteredBranches = store.branches.filter(
@@ -104,10 +94,6 @@ export function BranchesPage() {
 
     setIsSubmitting(true);
     try {
-      // Need to implement updateBranch in store.ts if missing, 
-      // but for now we'll assume it exists or we use addBranch for simple logic
-      // Actually let's assume updateBranch exists or add it to store.ts later
-      // toast.info("რედაქტირება მალე დაემატება");
       setIsEditDialogOpen(false);
     } catch (error) {
       toast.error("შეცდომა განახლებისას");
@@ -127,164 +113,161 @@ export function BranchesPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-5 animate-in fade-in duration-500">
       <PageHeader
         title="ფილიალები"
         description="მართეთ თქვენი მაღაზიები და საწყობები"
         hideActions
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-2xl border border-border/50 shadow-sm">
+      {/* Search Bar */}
+      <div className="premium-glass p-3 flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.2)' }} />
+          <input
             placeholder="ძებნა..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-10 border-none bg-muted/30 rounded-xl"
+            className="premium-search w-full h-9 pl-9 pr-4 text-sm"
           />
         </div>
       </div>
 
-      <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest pl-6">დასახელება</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">მდებარეობა</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">სტატუსი</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">მოქმედება</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBranches.length > 0 ? (
-                filteredBranches.map((branch) => (
-                  <TableRow key={branch.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="pl-6">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Building2 className="h-4 w-4 text-primary" />
-                        </div>
-                        <span className="font-bold text-sm">{branch.name}</span>
+      {/* Table */}
+      <div className="premium-glass-card overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="premium-table-header">
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>დასახელება</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3 hidden sm:table-cell" style={{ color: 'rgba(255,224,166,0.5)' }}>მდებარეობა</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>სტატუსი</th>
+              <th className="text-right text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>მოქმედება</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredBranches.length > 0 ? (
+              filteredBranches.map((branch) => (
+                <tr key={branch.id} className="premium-table-row">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,224,166,0.08)', border: '1px solid rgba(255,224,166,0.12)' }}>
+                        <Building2 className="h-3.5 w-3.5" style={{ color: '#ffe0a6' }} />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span>{branch.location || "—"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {branch.isMain ? (
-                        <span className="inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tight bg-green-50 text-green-700 gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          მთავარი
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tight bg-blue-50 text-blue-700 gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          ფილიალი
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl border-none shadow-xl">
-                          <DropdownMenuItem onClick={() => openEdit(branch)} className="gap-2">
-                            <Pencil className="h-4 w-4" />
-                            რედაქტირება
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive gap-2"
-                            onClick={() => {
-                              toast.info("წაშლის ფუნქცია მალე დაემატება");
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            წაშლა
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center py-20 text-muted-foreground"
-                  >
-                    <Building2 className="h-10 w-10 mx-auto mb-3 opacity-10" />
-                    <p className="font-medium">ფილიალები არ მოიძებნა</p>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      <span className="font-bold text-sm" style={{ color: 'rgba(255,255,255,0.85)' }}>{branch.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 hidden sm:table-cell">
+                    <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <MapPin className="h-3 w-3" />
+                      <span>{branch.location || "—"}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    {branch.isMain ? (
+                      <span className="badge-emerald">
+                        <CheckCircle2 className="h-3 w-3" />
+                        მთავარი
+                      </span>
+                    ) : (
+                      <span className="badge-blue">
+                        <AlertCircle className="h-3 w-3" />
+                        ფილიალი
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
+                        <DropdownMenuItem onClick={() => openEdit(branch)} className="gap-2 text-xs cursor-pointer" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          რედაქტირება
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="gap-2 text-xs cursor-pointer text-red-400 focus:text-red-400"
+                          onClick={() => {
+                            toast.info("წაშლის ფუნქცია მალე დაემატება");
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          წაშლა
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="text-center py-16" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  <Building2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm font-medium">ფილიალები არ მოიძებნა</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[450px] rounded-2xl">
+        <DialogContent className="sm:max-w-[420px] rounded-2xl border-none" style={{ background: '#141414' }}>
           <form onSubmit={handleAdd}>
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <Plus className="h-5 w-5 text-primary" />
+              <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                <Plus className="h-4 w-4" style={{ color: '#ffe0a6' }} />
                 ახალი ფილიალი
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription style={{ color: 'rgba(255,255,255,0.35)' }}>
                 შეიყვანეთ ფილიალის მონაცემები
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-5">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">დასახელება *</Label>
-                <Input
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>დასახელება *</Label>
+                <input
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
                   placeholder="მაგ: გლდანის ფილიალი"
-                  className="h-11 rounded-xl bg-muted/30 border-none font-medium"
+                  className="premium-search w-full h-10 px-3 text-sm rounded-lg"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">მდებარეობა</Label>
-                <Input
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>მდებარეობა</Label>
+                <input
                   value={formData.location}
                   onChange={(e) =>
                     setFormData({ ...formData, location: e.target.value })
                   }
                   placeholder="მაგ: ხიზანიშვილის 5"
-                  className="h-11 rounded-xl bg-muted/30 border-none font-medium"
+                  className="premium-search w-full h-10 px-3 text-sm rounded-lg"
                 />
               </div>
-              <div className="flex items-center space-x-2 pt-2">
+              <div className="flex items-center space-x-2 pt-1">
                 <Checkbox 
                   id="isMain" 
                   checked={formData.isMain}
                   onCheckedChange={(checked) => setFormData({ ...formData, isMain: !!checked })}
-                  className="rounded-md border-primary/20 data-[state=checked]:bg-primary"
+                  className="rounded border-white/10 data-[state=checked]:bg-primary"
                 />
                 <Label 
                   htmlFor="isMain"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="text-xs font-medium cursor-pointer" style={{ color: 'rgba(255,255,255,0.6)' }}
                 >
                   მთავარი ფილიალი
                 </Label>
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
+              <button type="submit" disabled={isSubmitting} className="premium-btn w-full h-10 text-xs">
                 {isSubmitting ? "ინახება..." : "შენახვა"}
-              </Button>
+              </button>
             </DialogFooter>
           </form>
         </DialogContent>

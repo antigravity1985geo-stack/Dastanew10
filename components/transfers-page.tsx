@@ -6,27 +6,15 @@ import {
   Search,
   ArrowLeftRight,
   ArrowRight,
-  MoreVertical,
-  Pencil,
   Trash2,
   Clock,
   CheckCircle2,
   XCircle,
-  Building2,
 } from "lucide-react";
 import { useWarehouseStore } from "@/hooks/use-store";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -35,12 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -67,9 +49,8 @@ export function TransfersPage() {
 
   useHeaderSetup(
     "შიდა გადაზიდვა",
-    <Button
-      size="sm"
-      className="gap-2 font-bold h-9 rounded-xl shadow-lg shadow-primary/20"
+    <button
+      className="premium-btn flex items-center gap-1.5 h-8 px-3"
       onClick={() => {
         setFormData({ 
           fromBranchId: store.currentBranchId || "", 
@@ -80,9 +61,9 @@ export function TransfersPage() {
         setIsAddDialogOpen(true);
       }}
     >
-      <Plus className="h-4 w-4" />
+      <Plus className="h-3.5 w-3.5" />
       <span className="hidden sm:inline">ახალი გადაზიდვა</span>
-    </Button>
+    </button>
   );
 
   const handleAddTransfer = async (e: React.FormEvent) => {
@@ -99,7 +80,6 @@ export function TransfersPage() {
 
     setIsSubmitting(true);
     try {
-      // Map items to include product names for the store/database
       const transferItems = formData.items.map(item => {
         const product = store.products.find(p => p.id === item.productId);
         return {
@@ -155,240 +135,225 @@ export function TransfersPage() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-5 animate-in fade-in duration-500">
       <PageHeader
         title="შიდა გადაზიდვა"
         description="საქონლის მოძრაობა ფილიალებს შორის"
         hideActions
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card p-4 rounded-2xl border border-border/50 shadow-sm">
+      {/* Search */}
+      <div className="premium-glass p-3 flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.2)' }} />
+          <input
             placeholder="ძებნა..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-10 border-none bg-muted/30 rounded-xl"
+            className="premium-search w-full h-9 pl-9 pr-4 text-sm"
           />
         </div>
       </div>
 
-      <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest pl-6">თარიღი</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">მარშრუტი</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">რაოდენობა</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">სტატუსი</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest text-right pr-6">მოქმედება</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransfers.length > 0 ? (
-                filteredTransfers.map((transfer) => {
-                  const fromBranch = store.branches.find(b => b.id === transfer.fromBranchId);
-                  const toBranch = store.branches.find(b => b.id === transfer.toBranchId);
-                  const totalItems = transfer.items.reduce((sum, i) => sum + i.quantity, 0);
+      {/* Table */}
+      <div className="premium-glass-card overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="premium-table-header">
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>თარიღი</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>მარშრუტი</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3 hidden sm:table-cell" style={{ color: 'rgba(255,224,166,0.5)' }}>რაოდენობა</th>
+              <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>სტატუსი</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTransfers.length > 0 ? (
+              filteredTransfers.map((transfer) => {
+                const fromBranch = store.branches.find(b => b.id === transfer.fromBranchId);
+                const toBranch = store.branches.find(b => b.id === transfer.toBranchId);
+                const totalItems = transfer.items.reduce((sum, i) => sum + i.quantity, 0);
 
-                  return (
-                    <TableRow key={transfer.id} className="hover:bg-muted/20 transition-colors">
-                      <TableCell className="pl-6">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm">
-                            {new Date(transfer.createdAt).toLocaleDateString("ka-GE")}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground uppercase">
-                            {new Date(transfer.createdAt).toLocaleTimeString("ka-GE", { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium text-primary">{fromBranch?.name || "უცნობი"}</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-medium text-primary">{toBranch?.name || "უცნობი"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-bold text-sm">{totalItems} ერთ.</span>
-                      </TableCell>
-                      <TableCell>
-                        {transfer.status === "completed" ? (
-                          <span className="inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tight bg-green-50 text-green-700 gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            დასრულებული
-                          </span>
-                        ) : transfer.status === "cancelled" ? (
-                          <span className="inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tight bg-red-50 text-red-700 gap-1">
-                            <XCircle className="h-3 w-3" />
-                            გაუქმებული
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-tight bg-yellow-50 text-yellow-700 gap-1">
-                            <Clock className="h-3 w-3" />
-                            პროცესში
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-20 text-muted-foreground"
-                  >
-                    <ArrowLeftRight className="h-10 w-10 mx-auto mb-3 opacity-10" />
-                    <p className="font-medium">გადაზიდვები არ მოიძებნა</p>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                return (
+                  <tr key={transfer.id} className="premium-table-row">
+                    <td className="px-5 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                          {new Date(transfer.createdAt).toLocaleDateString("ka-GE")}
+                        </span>
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {new Date(transfer.createdAt).toLocaleTimeString("ka-GE", { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <span className="font-medium" style={{ color: '#ffe0a6' }}>{fromBranch?.name || "?"}</span>
+                        <ArrowRight className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                        <span className="font-medium" style={{ color: '#ffe0a6' }}>{toBranch?.name || "?"}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 hidden sm:table-cell">
+                      <span className="font-bold text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>{totalItems} ერთ.</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      {transfer.status === "completed" ? (
+                        <span className="badge-emerald">
+                          <CheckCircle2 className="h-3 w-3" />
+                          დასრულებული
+                        </span>
+                      ) : transfer.status === "cancelled" ? (
+                        <span className="badge-red">
+                          <XCircle className="h-3 w-3" />
+                          გაუქმებული
+                        </span>
+                      ) : (
+                        <span className="badge-amber">
+                          <Clock className="h-3 w-3" />
+                          პროცესში
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={4} className="text-center py-16" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  <ArrowLeftRight className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm font-medium">გადაზიდვები არ მოიძებნა</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Add Transfer Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto rounded-3xl p-0 border-none shadow-2xl">
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto rounded-2xl p-0 border-none" style={{ background: '#141414' }}>
           <form onSubmit={handleAddTransfer}>
-            <div className="p-6 space-y-6">
+            <div className="p-5 space-y-5">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <ArrowLeftRight className="h-5 w-5 text-primary" />
+                <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,224,166,0.1)' }}>
+                    <ArrowLeftRight className="h-4 w-4" style={{ color: '#ffe0a6' }} />
                   </div>
                   ახალი გადაზიდვა
                 </DialogTitle>
-                <DialogDescription className="text-base font-medium">
+                <DialogDescription style={{ color: 'rgba(255,255,255,0.3)' }}>
                   გადაიტანეთ მარაგი ფილიალებს შორის
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid grid-cols-2 gap-6 p-4 bg-muted/20 rounded-2xl border border-border/50">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">საიდან (წყარო)</Label>
+              <div className="grid grid-cols-2 gap-4 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>საიდან</Label>
                   <Select 
                     value={formData.fromBranchId} 
                     onValueChange={(val) => setFormData({ ...formData, fromBranchId: val })}
                   >
-                    <SelectTrigger className="h-12 rounded-xl bg-background border-border/50 font-bold">
-                      <SelectValue placeholder="აირჩიეთ ფილიალი" />
+                    <SelectTrigger className="h-10 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
+                      <SelectValue placeholder="ფილიალი" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-none shadow-2xl">
+                    <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
                       {store.branches.map(b => (
-                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={b.id} className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{b.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 text-right flex flex-col items-end">
-                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-1">სად (დანიშნულება)</Label>
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>სად</Label>
                    <Select 
                     value={formData.toBranchId} 
                     onValueChange={(val) => setFormData({ ...formData, toBranchId: val })}
                   >
-                    <SelectTrigger className="h-12 rounded-xl bg-background border-border/50 font-bold">
-                      <SelectValue placeholder="აირჩიეთ ფილიალი" />
+                    <SelectTrigger className="h-10 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
+                      <SelectValue placeholder="ფილიალი" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-none shadow-2xl">
+                    <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
                       {store.branches.map(b => (
-                        <SelectItem key={b.id} value={b.id} disabled={b.id === formData.fromBranchId}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={b.id} disabled={b.id === formData.fromBranchId} className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{b.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-primary/70">პროდუქტები</h3>
-                  <Button 
+                  <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>პროდუქტები</h3>
+                  <button 
                     type="button" 
-                    variant="outline" 
-                    size="sm" 
                     onClick={addItem}
-                    className="h-8 rounded-lg font-bold text-[10px] uppercase gap-2 border-primary/20 text-primary hover:bg-primary/5"
+                    className="premium-btn h-7 px-2.5 text-[10px] flex items-center gap-1"
                   >
                     <Plus className="h-3 w-3" />
                     დამატება
-                  </Button>
+                  </button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {formData.items.map((item, index) => (
-                    <div key={index} className="flex gap-3 items-end group animate-in slide-in-from-right-2 fade-in duration-300">
-                      <div className="flex-1 space-y-2">
+                    <div key={index} className="flex gap-2 items-end group animate-in fade-in duration-200">
+                      <div className="flex-1">
                         <Select
                           value={item.productId}
                           onValueChange={(val) => updateItem(index, "productId", val)}
                         >
-                          <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none font-medium text-sm">
-                            <SelectValue placeholder="აირჩიეთ პროდუქტი" />
+                          <SelectTrigger className="h-10 rounded-lg border-none font-medium text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
+                            <SelectValue placeholder="პროდუქტი" />
                           </SelectTrigger>
-                          <SelectContent className="rounded-xl border-none shadow-2xl max-h-[300px]">
+                          <SelectContent className="rounded-lg border-none shadow-2xl max-h-[250px]" style={{ background: '#1a1a1a' }}>
                             {store.products.map(p => (
-                              <SelectItem key={p.id} value={p.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-bold">{p.name}</span>
-                                  <span className="text-[10px] text-muted-foreground uppercase italic font-medium">ნაშთი: {p.quantity} ერთ.</span>
-                                </div>
+                              <SelectItem key={p.id} value={p.id} className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                                {p.name} ({p.quantity})
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="w-24 space-y-2">
-                        <Input
+                      <div className="w-20">
+                        <input
                           type="number"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
                           placeholder="0"
-                          className="h-12 rounded-xl bg-muted/30 border-none font-black text-center"
+                          className="premium-search w-full h-10 px-2 text-sm text-center rounded-lg"
                         />
                       </div>
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="icon"
                         onClick={() => removeItem(index)}
-                        className="h-12 w-12 rounded-xl text-destructive hover:bg-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-10 w-10 rounded-lg flex items-center justify-center text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'rgba(239,68,68,0.05)' }}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">შენიშვნა</Label>
-                <Input
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>შენიშვნა</Label>
+                <input
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="მაგ: მარაგი ივსება გლდანის ფილიალისთვის"
-                  className="h-12 rounded-xl bg-muted/30 border-none font-medium"
+                  className="premium-search w-full h-10 px-3 text-sm rounded-lg"
                 />
               </div>
             </div>
 
-            <div className="p-6 bg-muted/30 border-t border-border/50">
-              <Button 
+            <div className="p-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+              <button 
                 type="submit" 
                 disabled={isSubmitting} 
-                className="w-full h-14 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 text-base"
+                className="premium-btn w-full h-11 text-xs tracking-[0.15em]"
               >
                 {isSubmitting ? "სრულდება..." : "გადაზიდვის დასრულება"}
-              </Button>
+              </button>
             </div>
           </form>
         </DialogContent>

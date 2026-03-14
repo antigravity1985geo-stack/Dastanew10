@@ -24,14 +24,14 @@ export function PageHeader({
   hideTitle = false,
 }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-border/10 mb-6">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 mb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
       {!hideTitle && (
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground truncate">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>
             {title}
           </h1>
           {description && (
-            <p className="text-[10px] sm:text-[11px] font-bold text-muted-foreground/60 mt-1 uppercase tracking-widest leading-none">
+            <p className="text-[10px] font-semibold mt-0.5 uppercase tracking-widest" style={{ color: 'rgba(255,224,166,0.4)' }}>
               {description}
             </p>
           )}
@@ -41,15 +41,13 @@ export function PageHeader({
         <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 w-full sm:w-auto">
           {children}
           {actions}
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={() => printPage(printTitle || title)}
-            className="gap-2 shrink-0 border-border/50 bg-white/50 hover:bg-white text-slate-700 font-bold h-9 sm:h-10 rounded-xl"
+            className="premium-btn flex items-center gap-2 h-8 px-3 text-[10px]"
           >
-            <Printer className="h-4 w-4" />
+            <Printer className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">ბეჭდვა</span>
-          </Button>
+          </button>
         </div>
       )}
     </div>

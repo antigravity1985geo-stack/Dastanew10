@@ -3,29 +3,12 @@
 import { useState, useMemo } from "react";
 import { 
   Search, 
-  FileText, 
   Download, 
-  Filter,
   ArrowUpRight,
-  ArrowDownRight,
-  Calculator,
-  Calendar,
-  Layers,
   Table as TableIcon
 } from "lucide-react";
 import { useWarehouseStore } from "@/hooks/use-store";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -33,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type ReportType = "sales" | "expenses" | "inventory" | "transfers";
@@ -71,7 +53,6 @@ export function ReportingPage() {
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       case "inventory":
-        // For inventory, we show current stock
         return store.products.filter(p => {
           const matchesQuery = p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
           return matchesQuery;
@@ -153,7 +134,7 @@ export function ReportingPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-5 animate-in fade-in duration-500">
       <PageHeader 
         title="რეპორტინგი" 
         description="დეტალური მონაცემების ანალიზი და ექსპორტი"
@@ -161,207 +142,204 @@ export function ReportingPage() {
       />
 
       {/* Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 p-6 bg-card rounded-2xl border border-border/50 shadow-sm">
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">რეპორტის ტიპი</label>
-          <Select value={reportType} onValueChange={(val) => setReportType(val as ReportType)}>
-            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-bold">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-2xl">
-              <SelectItem value="sales">გაყიდვების რეპორტი</SelectItem>
-              <SelectItem value="expenses">ხარჯების რეპორტი</SelectItem>
-              <SelectItem value="inventory">ინვენტარის ნაშთები</SelectItem>
-              <SelectItem value="transfers">გადაზიდვების ისტორია</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ფილიალი</label>
-          <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-bold">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-2xl">
-              <SelectItem value="all">ყველა ფილიალი</SelectItem>
-              {branches.map(b => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">პერიოდი</label>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-bold">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-2xl">
-              <SelectItem value="7">ბოლო 7 დღე</SelectItem>
-              <SelectItem value="30">ბოლო 30 დღე</SelectItem>
-              <SelectItem value="90">ბოლო 90 დღე</SelectItem>
-              <SelectItem value="365">ბოლო 1 წელი</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-end gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="ძებნა..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-11 pl-10 h-11 rounded-xl bg-muted/30 border-none font-medium"
-            />
+      <div className="premium-glass p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>რეპორტის ტიპი</label>
+            <Select value={reportType} onValueChange={(val) => setReportType(val as ReportType)}>
+              <SelectTrigger className="h-9 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
+                <SelectItem value="sales" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>გაყიდვები</SelectItem>
+                <SelectItem value="expenses" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>ხარჯები</SelectItem>
+                <SelectItem value="inventory" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>ინვენტარი</SelectItem>
+                <SelectItem value="transfers" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>გადაზიდვები</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Button 
-            onClick={exportToCSV}
-            className="h-11 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20"
-          >
-            <Download className="h-4 w-4" />
-            CSV
-          </Button>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>ფილიალი</label>
+            <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+              <SelectTrigger className="h-9 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
+                <SelectItem value="all" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>ყველა</SelectItem>
+                {branches.map(b => (
+                  <SelectItem key={b.id} value={b.id} className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,224,166,0.5)' }}>პერიოდი</label>
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="h-9 rounded-lg border-none font-bold text-xs" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg border-none shadow-2xl" style={{ background: '#1a1a1a' }}>
+                <SelectItem value="7" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>7 დღე</SelectItem>
+                <SelectItem value="30" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>30 დღე</SelectItem>
+                <SelectItem value="90" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>90 დღე</SelectItem>
+                <SelectItem value="365" className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>1 წელი</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.2)' }} />
+              <input 
+                placeholder="ძებნა..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="premium-search w-full h-9 pl-9 pr-3 text-sm"
+              />
+            </div>
+            <button 
+              onClick={exportToCSV}
+              className="premium-btn h-9 px-3 flex items-center gap-1.5 text-[10px] shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" />
+              CSV
+            </button>
+          </div>
         </div>
       </div>
 
-      <Card className="border-border/50 shadow-lg rounded-2xl overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  {reportType === "sales" && (
-                    <>
-                      <TableHead className="text-[10px] font-black uppercase pl-6">თარიღი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">პროდუქტი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">რაოდენობა</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">ჯამი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase pr-6">ფილიალი</TableHead>
-                    </>
-                  )}
-                  {reportType === "expenses" && (
-                    <>
-                      <TableHead className="text-[10px] font-black uppercase pl-6">თარიღი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">აღწერა</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">კატეგორია</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">თანხა</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase pr-6">ფილიალი</TableHead>
-                    </>
-                  )}
-                  {reportType === "inventory" && (
-                    <>
-                      <TableHead className="text-[10px] font-black uppercase pl-6">პროდუქტი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">კატეგორია</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">ნაშთი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">ფასი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase pr-6">სტატუსი</TableHead>
-                    </>
-                  )}
-                  {reportType === "transfers" && (
-                    <>
-                      <TableHead className="text-[10px] font-black uppercase pl-6">თარიღი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">მარშრუტი</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">პროდუქტები</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase">შენიშვნა</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase pr-6">სტატუსი</TableHead>
-                    </>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.length > 0 ? (
-                  filteredData.map((item: any, idx) => (
-                    <TableRow key={idx} className="hover:bg-muted/10 transition-colors">
-                      {reportType === "sales" && (
-                        <>
-                          <TableCell className="pl-6 font-medium text-sm">
-                            {new Date(item.createdAt).toLocaleDateString("ka-GE")}
-                          </TableCell>
-                          <TableCell className="font-bold text-sm">{item.productName}</TableCell>
-                          <TableCell className="text-sm">{item.quantity} ცალი</TableCell>
-                          <TableCell className="font-black text-sm">{item.totalAmount.toFixed(2)} ₾</TableCell>
-                          <TableCell className="pr-6 text-xs text-muted-foreground uppercase font-bold">
-                            {store.branches.find(b => b.id === item.branchId)?.name || "უცნობი"}
-                          </TableCell>
-                        </>
-                      )}
-                      {reportType === "expenses" && (
-                        <>
-                          <TableCell className="pl-6 font-medium text-sm">{item.date}</TableCell>
-                          <TableCell className="font-bold text-sm">{item.description}</TableCell>
-                          <TableCell>
-                            <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-bold bg-muted text-muted-foreground uppercase">
-                              {item.category}
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-black text-sm text-red-600">-{item.amount.toFixed(2)} ₾</TableCell>
-                          <TableCell className="pr-6 text-xs text-muted-foreground uppercase font-bold">
-                            {store.branches.find(b => b.id === item.branchId)?.name || "უცნობი"}
-                          </TableCell>
-                        </>
-                      )}
-                      {reportType === "inventory" && (
-                        <>
-                          <TableCell className="pl-6 font-bold text-sm">{item.name}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{item.category}</TableCell>
-                          <TableCell className="font-black text-sm">{item.quantity} ერთ.</TableCell>
-                          <TableCell className="font-bold text-sm">{item.salePrice.toFixed(2)} ₾</TableCell>
-                          <TableCell className="pr-6">
-                            {item.quantity < (item.minStockLevel || 5) ? (
-                              <span className="text-[10px] font-black text-red-600 uppercase">კრიტიკული</span>
-                            ) : (
-                              <span className="text-[10px] font-black text-green-600 uppercase">ნორმა</span>
-                            )}
-                          </TableCell>
-                        </>
-                      )}
-                      {reportType === "transfers" && (
-                        <>
-                          <TableCell className="pl-6 font-medium text-sm">
-                            {new Date(item.createdAt).toLocaleDateString("ka-GE")}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
-                              <span className="text-primary">
-                                {store.branches.find(b => b.id === item.fromBranchId)?.name || "უცნობი"}
-                              </span>
-                              <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-primary">
-                                {store.branches.find(b => b.id === item.toBranchId)?.name || "უცნობი"}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">
-                            {item.items.length} სახეობა ({item.items.reduce((sum: number, i: any) => sum + i.quantity, 0)} ერთ.)
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground italic truncate max-w-[150px]">
-                            {item.notes || "-"}
-                          </TableCell>
-                          <TableCell className="pr-6">
-                            <span className="text-[10px] font-black uppercase text-green-600 bg-green-50 px-2 py-0.5 rounded-md">
-                              {item.status}
-                            </span>
-                          </TableCell>
-                        </>
-                      )}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
-                      <TableIcon className="h-10 w-10 mx-auto mb-3 opacity-10" />
-                      <p className="font-medium">მონაცემები არ არის</p>
-                    </TableCell>
-                  </TableRow>
+      {/* Data Table */}
+      <div className="premium-glass-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="premium-table-header">
+                {reportType === "sales" && (
+                  <>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>თარიღი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>პროდუქტი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>რაოდენობა</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>ჯამი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>ფილიალი</th>
+                  </>
                 )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                {reportType === "expenses" && (
+                  <>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>თარიღი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>აღწერა</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>კატეგორია</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>თანხა</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>ფილიალი</th>
+                  </>
+                )}
+                {reportType === "inventory" && (
+                  <>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>პროდუქტი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>კატეგორია</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>ნაშთი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>ფასი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>სტატუსი</th>
+                  </>
+                )}
+                {reportType === "transfers" && (
+                  <>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>თარიღი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>მარშრუტი</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>პროდუქტები</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>შენიშვნა</th>
+                    <th className="text-left text-[10px] font-bold uppercase tracking-wider px-5 py-3" style={{ color: 'rgba(255,224,166,0.5)' }}>სტატუსი</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.length > 0 ? (
+                filteredData.map((item: any, idx) => (
+                  <tr key={idx} className="premium-table-row">
+                    {reportType === "sales" && (
+                      <>
+                        <td className="px-5 py-2.5 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                          {new Date(item.createdAt).toLocaleDateString("ka-GE")}
+                        </td>
+                        <td className="px-5 py-2.5 text-sm font-bold" style={{ color: 'rgba(255,255,255,0.85)' }}>{item.productName}</td>
+                        <td className="px-5 py-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.quantity} ცალი</td>
+                        <td className="px-5 py-2.5 text-sm font-black" style={{ color: '#ffe0a6' }}>{item.totalAmount.toFixed(2)} ₾</td>
+                        <td className="px-5 py-2.5 text-[10px] uppercase font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {store.branches.find(b => b.id === item.branchId)?.name || "უცნობი"}
+                        </td>
+                      </>
+                    )}
+                    {reportType === "expenses" && (
+                      <>
+                        <td className="px-5 py-2.5 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.date}</td>
+                        <td className="px-5 py-2.5 text-sm font-bold" style={{ color: 'rgba(255,255,255,0.85)' }}>{item.description}</td>
+                        <td className="px-5 py-2.5">
+                          <span className="badge-blue">{item.category}</span>
+                        </td>
+                        <td className="px-5 py-2.5 text-sm font-black" style={{ color: '#f87171' }}>-{item.amount.toFixed(2)} ₾</td>
+                        <td className="px-5 py-2.5 text-[10px] uppercase font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {store.branches.find(b => b.id === item.branchId)?.name || "უცნობი"}
+                        </td>
+                      </>
+                    )}
+                    {reportType === "inventory" && (
+                      <>
+                        <td className="px-5 py-2.5 text-sm font-bold" style={{ color: 'rgba(255,255,255,0.85)' }}>{item.name}</td>
+                        <td className="px-5 py-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.category}</td>
+                        <td className="px-5 py-2.5 text-sm font-black" style={{ color: 'rgba(255,255,255,0.8)' }}>{item.quantity} ერთ.</td>
+                        <td className="px-5 py-2.5 text-sm font-bold" style={{ color: '#ffe0a6' }}>{item.salePrice.toFixed(2)} ₾</td>
+                        <td className="px-5 py-2.5">
+                          {item.quantity < (item.minStockLevel || 5) ? (
+                            <span className="badge-red">კრიტიკული</span>
+                          ) : (
+                            <span className="badge-emerald">ნორმა</span>
+                          )}
+                        </td>
+                      </>
+                    )}
+                    {reportType === "transfers" && (
+                      <>
+                        <td className="px-5 py-2.5 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                          {new Date(item.createdAt).toLocaleDateString("ka-GE")}
+                        </td>
+                        <td className="px-5 py-2.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold">
+                            <span style={{ color: '#ffe0a6' }}>
+                              {store.branches.find(b => b.id === item.fromBranchId)?.name || "?"}
+                            </span>
+                            <ArrowUpRight className="h-3 w-3" style={{ color: 'rgba(255,255,255,0.2)' }} />
+                            <span style={{ color: '#ffe0a6' }}>
+                              {store.branches.find(b => b.id === item.toBranchId)?.name || "?"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-2.5 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                          {item.items.length} ({item.items.reduce((sum: number, i: any) => sum + i.quantity, 0)} ერთ.)
+                        </td>
+                        <td className="px-5 py-2.5 text-xs italic truncate max-w-[130px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {item.notes || "-"}
+                        </td>
+                        <td className="px-5 py-2.5">
+                          <span className="badge-emerald">{item.status}</span>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="text-center py-16" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                    <TableIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm font-medium">მონაცემები არ არის</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,40 +2,40 @@
 @import 'tw-animate-css';
 
 @theme inline {
-  --background: oklch(0.99 0.005 250);
-  --foreground: oklch(0.12 0.02 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.12 0.02 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.12 0.02 250);
-  --primary: oklch(0.5 0.2 25);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.97 0.01 250);
-  --secondary-foreground: oklch(0.2 0.02 250);
-  --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.45 0.02 250);
-  --accent: oklch(0.6 0.18 180);
-  --accent-foreground: oklch(0.99 0 0);
+  --background: oklch(0.08 0.01 260);
+  --foreground: oklch(0.93 0.01 260);
+  --card: oklch(0.12 0.01 260);
+  --card-foreground: oklch(0.93 0.01 260);
+  --popover: oklch(0.12 0.01 260);
+  --popover-foreground: oklch(0.93 0.01 260);
+  --primary: oklch(0.7 0.15 55);
+  --primary-foreground: oklch(0.1 0.01 260);
+  --secondary: oklch(0.15 0.01 260);
+  --secondary-foreground: oklch(0.85 0.01 260);
+  --muted: oklch(0.15 0.005 260);
+  --muted-foreground: oklch(0.55 0.01 260);
+  --accent: oklch(0.7 0.15 55);
+  --accent-foreground: oklch(0.1 0.01 260);
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.92 0.01 250);
-  --input: oklch(0.92 0.01 250);
-  --ring: oklch(0.5 0.2 25);
-  --chart-1: oklch(0.5 0.2 25);
+  --border: oklch(0.2 0.005 260);
+  --input: oklch(0.18 0.005 260);
+  --ring: oklch(0.7 0.15 55);
+  --chart-1: oklch(0.7 0.15 55);
   --chart-2: oklch(0.6 0.18 180);
-  --chart-3: oklch(0.7 0.15 45);
+  --chart-3: oklch(0.75 0.12 80);
   --chart-4: oklch(0.65 0.18 280);
-  --chart-5: oklch(0.75 0.15 85);
-  --radius: 1rem;
+  --chart-5: oklch(0.75 0.15 130);
+  --radius: 0.75rem;
   
-  --sidebar: oklch(0.12 0.02 260);
-  --sidebar-foreground: oklch(0.9 0.01 260);
-  --sidebar-primary: oklch(0.6 0.25 25);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.18 0.03 260);
-  --sidebar-accent-foreground: oklch(0.99 0.01 260);
-  --sidebar-border: rgba(255, 255, 255, 0.05);
-  --sidebar-ring: oklch(0.6 0.25 25);
+  --sidebar: oklch(0.07 0.01 260);
+  --sidebar-foreground: oklch(0.85 0.01 260);
+  --sidebar-primary: oklch(0.7 0.15 55);
+  --sidebar-primary-foreground: oklch(0.1 0.01 260);
+  --sidebar-accent: oklch(0.12 0.02 260);
+  --sidebar-accent-foreground: oklch(0.95 0.01 260);
+  --sidebar-border: rgba(255, 255, 255, 0.04);
+  --sidebar-ring: oklch(0.7 0.15 55);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -46,33 +46,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Larkon-style Nav Items Utilities */
+/* ========== COMPACT SIDEBAR NAV ========== */
 .larkon-nav-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.625rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  transition-property: all;
-  transition-duration: 200ms;
+  transition: all 180ms ease;
   position: relative;
   overflow: hidden;
   color: var(--sidebar-foreground);
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 .larkon-nav-item:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.05);
+  opacity: 0.9;
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .larkon-nav-item.is-active {
   opacity: 1;
   font-weight: 700;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--primary);
+  background: linear-gradient(135deg, rgba(255, 224, 166, 0.08) 0%, rgba(255, 224, 166, 0.02) 100%);
+  color: #ffe0a6;
 }
 
 .larkon-nav-item.is-active::before {
@@ -81,22 +80,22 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 0.25rem;
-  height: 1.5rem;
-  background-color: var(--primary);
-  border-radius: 0 9999px 9999px 0;
+  width: 3px;
+  height: 1.2rem;
+  background: linear-gradient(180deg, #ffe0a6, rgba(255, 224, 166, 0.3));
+  border-radius: 0 6px 6px 0;
 }
 
 .larkon-group-label {
-  padding: 0.5rem 1rem;
-  font-size: 10px;
-  font-weight: 900;
+  padding: 0.25rem 0.75rem;
+  font-size: 9px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
   color: var(--sidebar-foreground);
-  opacity: 0.3;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
+  opacity: 0.2;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
 }
 
 body {
@@ -105,12 +104,171 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  letter-spacing: -0.025em;
-  font-weight: 900;
-  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  font-weight: 800;
 }
 
-/* Premium Login Styles (Uiverse v2 Gold-Accented) */
+/* ========== PREMIUM GLASS CARD ========== */
+.premium-glass {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+}
+
+.premium-glass-card {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.015) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== PREMIUM TABLE ========== */
+.premium-table-header {
+  background: rgba(255, 224, 166, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.premium-table-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background 150ms ease;
+}
+
+.premium-table-row:hover {
+  background: rgba(255, 224, 166, 0.03);
+}
+
+/* ========== STATUS BADGES ========== */
+.badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 224, 166, 0.1);
+  color: #ffe0a6;
+  border: 1px solid rgba(255, 224, 166, 0.15);
+}
+
+.badge-emerald {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.15);
+}
+
+.badge-red {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.badge-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(96, 165, 250, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.15);
+}
+
+.badge-amber {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.15);
+}
+
+/* ========== PREMIUM SEARCH ========== */
+.premium-search {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 200ms ease;
+}
+
+.premium-search:focus {
+  outline: none;
+  border-color: rgba(255, 224, 166, 0.3);
+  background: rgba(255, 224, 166, 0.04);
+  box-shadow: 0 0 20px rgba(255, 224, 166, 0.05);
+}
+
+.premium-search::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* ========== PREMIUM BUTTON ========== */
+.premium-btn {
+  background: linear-gradient(135deg, rgba(255, 224, 166, 0.15) 0%, rgba(255, 224, 166, 0.05) 100%);
+  border: 1px solid rgba(255, 224, 166, 0.2);
+  color: #ffe0a6;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.premium-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 224, 166, 0.25) 0%, rgba(255, 224, 166, 0.1) 100%);
+  box-shadow: 0 0 20px rgba(255, 224, 166, 0.1);
+  transform: translateY(-1px);
+}
+
+.premium-btn:active {
+  transform: scale(0.98);
+}
+
+/* ========== PREMIUM LOGIN STYLES (v2 Gold) ========== */
 .uiverse-v2-wrapper {
   width: 100%;
   height: 100%;
