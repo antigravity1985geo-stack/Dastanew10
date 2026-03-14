@@ -218,21 +218,23 @@ export function AppSidebar() {
             }
 
             return (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.href} className="mb-2">
                 <SidebarMenuButton
                   asChild
                   isActive={isActive}
                   tooltip={item.label}
-                  className={cn(
-                    "w-full gap-3",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  )}
+                  className="h-auto p-0 bg-transparent hover:bg-transparent transition-none"
                 >
-                  <Link href={item.href} className="flex-1 flex items-center gap-3">
-                    <item.icon className="h-4 w-4" />
-                    <span className="flex-1">{item.label}</span>
+                  <Link 
+                    href={item.href} 
+                    className={cn(
+                      "uiverse-btn h-11 transition-all",
+                      isActive && "is-active",
+                      isCollapsed ? "w-11 px-0 justify-center" : "w-full px-4 justify-start"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
+                    {!isCollapsed && <span className="flex-1 text-left">{item.label}</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -263,8 +265,8 @@ export function AppSidebar() {
             size="sm"
             onClick={() => store.logoutEmployee()}
             className={cn(
-              "w-full justify-start gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 font-bold",
-              isCollapsed && "px-2"
+              "uiverse-btn-danger transition-all",
+              isCollapsed ? "w-11 h-11 px-0 justify-center" : "w-full h-11 px-4 justify-start gap-2"
             )}
           >
             <LogOut className="h-4 w-4" />
@@ -276,8 +278,8 @@ export function AppSidebar() {
           size="sm"
           onClick={logout}
           className={cn(
-            "w-full justify-start gap-2 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-            isCollapsed && "px-2"
+            "uiverse-btn transition-all opacity-80 hover:opacity-100",
+            isCollapsed ? "w-11 h-11 px-0 justify-center" : "w-full h-11 px-4 justify-start gap-2"
           )}
         >
           <LogOut className="h-4 w-4" />

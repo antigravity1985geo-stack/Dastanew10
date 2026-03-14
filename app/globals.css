@@ -729,3 +729,65 @@ input, select, textarea {
 .premium-card:hover .trail {
   animation: trail 1s ease-in-out;
 }
+
+/* --- Premium Uiverse Button (Sidebar) --- */
+.uiverse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  height: 42px;
+  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+  border-radius: 12px;
+  border: 1px solid #8F9092;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: #404040;
+  text-shadow: 0 1px #fff;
+  padding: 0 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.uiverse-btn:hover {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 3px 3px #CECFD1;
+  color: #000;
+}
+
+.uiverse-btn:active, .uiverse-btn.is-active {
+  box-shadow: 0 4px 3px 1px #FCFCFC, 0 6px 8px #D6D7D9, 0 -4px 4px #CECFD1, 0 -6px 4px #FEFEFE, inset 0 0 5px 3px #999, inset 0 0 30px #aaa;
+  background-image: linear-gradient(to bottom, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
+}
+
+.dark .uiverse-btn {
+  background-image: linear-gradient(to top, #2d3748 0%, #4a5568 80%, #2d3748 100%);
+  border-color: #1a202c;
+  color: #e2e8f0;
+  text-shadow: 0 1px #000;
+}
+
+.dark .uiverse-btn:hover {
+  box-shadow: 0 4px 3px 1px #2d3748, 0 6px 8px #1a202c, 0 -4px 4px #2d3748, 0 -6px 4px #1a202c, inset 0 0 3px 3px #1a202c;
+  color: #fff;
+}
+
+.uiverse-btn-danger {
+  background-image: linear-gradient(to top, #fee2e2 0%, #fff 80%, #fef2f2 100%);
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+.uiverse-btn-danger:hover {
+  box-shadow: 0 4px 3px 1px #fef2f2, 0 6px 8px #fee2e2, 0 -4px 4px #fee2f2, 0 -6px 4px #fff, inset 0 0 3px 3px #fecaca;
+  color: #991b1b;
+}
+
+.dark .uiverse-btn-danger {
+  background-image: linear-gradient(to top, #450a0a 0%, #7f1d1d 80%, #450a0a 100%);
+  border-color: #991b1b;
+  color: #fca5a5;
+}
