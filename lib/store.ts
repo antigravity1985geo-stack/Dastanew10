@@ -2506,11 +2506,16 @@ class WarehouseStore {
       .map(([month, data]) => ({ month, ...data }));
   }
 
-  getTopProducts(limit = 5): { name: string; sold: number; revenue: number; profit: number }[] {
+  getTopProducts(limit = 5, branchId?: string): { name: string; sold: number; revenue: number; profit: number }[] {
     const map = new Map<string, { sold: number; revenue: number; profit: number }>();
     const settings = settingsStore.getSettings();
     
-    this.sales.forEach((s) => {
+    // Filter sales by branch if branchId is provided
+    const filteredSales = branchId 
+      ? this.sales.filter(s => s.branchId === branchId)
+      : this.sales;
+
+    filteredSales.forEach((s) => {
       const existing = map.get(s.productName) || { sold: 0, revenue: 0, profit: 0 };
       const revenue = settings.accountingMethod === 'cash' ? (s.paidInCash + s.paidInCard) : s.totalAmount;
       const cog = this.calculateFIFOCOG(s.productId, s.quantity, s.createdAt);
@@ -2527,7 +2532,7 @@ class WarehouseStore {
       .slice(0, limit);
   }
 
-  getAnalyticsData(range: number = 30): { date: string; revenue: number; profit: number; expenses: number; discounts: number }[] {
+  getAnalyticsData(range: number = 30, branchId?: string): { date: string; revenue: number; profit: number; expenses: number; discounts: number }[] {
     const data: { [key: string]: { revenue: number; profit: number; expenses: number; discounts: number } } = {};
     const settings = settingsStore.getSettings();
     const now = new Date();
@@ -2540,8 +2545,17 @@ class WarehouseStore {
       data[key] = { revenue: 0, profit: 0, expenses: 0, discounts: 0 };
     }
 
+    // Filter sales and expenses by branch if branchId is provided
+    const filteredSales = branchId 
+      ? this.sales.filter(s => s.branchId === branchId)
+      : this.sales;
+      
+    const filteredExpenses = branchId
+      ? this.expenses.filter(e => e.branchId === branchId)
+      : this.expenses;
+
     // Aggregating sales
-    this.sales.forEach(s => {
+    filteredSales.forEach(s => {
       const key = s.createdAt.split('T')[0];
       if (data[key]) {
         const revenue = settings.accountingMethod === 'cash' ? (s.paidInCash + s.paidInCard) : s.totalAmount;
@@ -2553,7 +2567,7 @@ class WarehouseStore {
     });
 
     // Aggregating expenses
-    this.expenses.forEach(e => {
+    filteredExpenses.forEach(e => {
       const key = e.date;
       if (data[key]) {
         data[key].expenses += (e.amount || 0);
@@ -2566,15 +2580,34 @@ class WarehouseStore {
     })).sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  getCategoryDistribution(): { category: string; count: number; value: number }[] {
+  getCategoryDistribution(branchId?: string): { category: string; count: number; value: number }[] {
     const map = new Map<string, { count: number; value: number }>();
-    this.products.forEach((p) => {
-      const cat = p.category || "სხვა";
-      const existing = map.get(cat) || { count: 0, value: 0 };
-      existing.count += p.quantity;
-      existing.value += p.salePrice * p.quantity;
-      map.set(cat, existing);
-    });
+    
+    // If branchId is provided, we should probably look at inventory at that branch
+    // However, this.products is global. We need to look at branchInventory if branchId is provided.
+    if (branchId) {
+      this.branchInventory
+        .filter(bi => bi.branchId === branchId)
+        .forEach(bi => {
+          const product = this.products.find(p => p.id === bi.productId);
+          if (product) {
+            const cat = product.category || "სხვა";
+            const existing = map.get(cat) || { count: 0, value: 0 };
+            existing.count += bi.quantity;
+            existing.value += product.salePrice * bi.quantity;
+            map.set(cat, existing);
+          }
+        });
+    } else {
+      this.products.forEach((p) => {
+        const cat = p.category || "სხვა";
+        const existing = map.get(cat) || { count: 0, value: 0 };
+        existing.count += p.quantity;
+        existing.value += p.salePrice * p.quantity;
+        map.set(cat, existing);
+      });
+    }
+
     return Array.from(map.entries()).map(([category, data]) => ({
       category,
       ...data,

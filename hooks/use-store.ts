@@ -26,5 +26,17 @@ export function useWarehouseStore() {
     getPurchaseHistory: warehouseStore.getPurchaseHistory.bind(warehouseStore),
     addExpense: warehouseStore.addExpense.bind(warehouseStore),
     deleteExpense: warehouseStore.deleteExpense.bind(warehouseStore),
+    
+    // Branches
+    addBranch: warehouseStore.addBranch.bind(warehouseStore),
+    updateBranch: warehouseStore.updateBranch.bind(warehouseStore),
+    deleteBranch: warehouseStore.deleteBranch.bind(warehouseStore),
+    setCurrentBranch: warehouseStore.setCurrentBranch.bind(warehouseStore),
+    
+    // Transfers
+    transferStock: warehouseStore.transferStock.bind(warehouseStore),
+    
+    // Auth/Employees
+    logoutEmployee: warehouseStore.logoutEmployee.bind(warehouseStore),
   };
 }

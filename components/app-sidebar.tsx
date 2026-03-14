@@ -20,6 +20,7 @@ import {
   ChefHat,
   Building2,
   ArrowLeftRight,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -47,6 +48,12 @@ const navItems = [
     label: "ანალიტიკა",
     href: "/analytics",
     icon: TrendingUp,
+    requiresAdmin: true,
+  },
+  {
+    label: "რეპორტინგი",
+    href: "/reporting",
+    icon: FileText,
     requiresAdmin: true,
   },
   {

@@ -49,10 +49,24 @@ const COLORS = ['#8b1a1a', '#e11d48', '#f43f5e', '#fb7185', '#fda4af'];
 export default function AnalyticsPage() {
   const store = useWarehouseStore();
   const [range, setRange] = useState("30");
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
 
-  const analyticsData = useMemo(() => store.getAnalyticsData(parseInt(range)), [store, range]);
-  const topProducts = useMemo(() => store.getTopProducts(5), [store]);
-  const categoryDist = useMemo(() => store.getCategoryDistribution(), [store]);
+  const branches = store.branches;
+
+  const analyticsData = useMemo(() => {
+    const branchId = selectedBranchId === "all" ? undefined : selectedBranchId;
+    return store.getAnalyticsData(parseInt(range), branchId);
+  }, [store, range, selectedBranchId]);
+
+  const topProducts = useMemo(() => {
+    const branchId = selectedBranchId === "all" ? undefined : selectedBranchId;
+    return store.getTopProducts(5, branchId);
+  }, [store, selectedBranchId]);
+
+  const categoryDist = useMemo(() => {
+    const branchId = selectedBranchId === "all" ? undefined : selectedBranchId;
+    return store.getCategoryDistribution(branchId);
+  }, [store, selectedBranchId]);
 
   const totals = useMemo(() => {
     return analyticsData.reduce((acc, curr) => ({
@@ -75,7 +89,23 @@ export default function AnalyticsPage() {
           <p className="text-slate-500 font-medium">ბიზნესის ეფექტურობის ანალიზი (FIFO მეთოდით)</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Branch Selector */}
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+            <Layers className="h-4 w-4 text-slate-400" />
+            <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+              <SelectTrigger className="border-none shadow-none focus:ring-0 w-[160px] font-bold text-sm">
+                <SelectValue placeholder="ფილიალი" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ყველა ფილიალი</SelectItem>
+                {branches.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
             <Calendar className="h-4 w-4 text-slate-400" />
             <Select value={range} onValueChange={setRange}>
@@ -155,6 +185,16 @@ export default function AnalyticsPage() {
           <CardContent className="h-[400px] pt-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analyticsData}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="date" 
@@ -169,12 +209,36 @@ export default function AnalyticsPage() {
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dx={-10} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: 'none', 
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                    backdropFilter: 'blur(8px)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)'
+                  }}
                   labelFormatter={(str) => new Date(str).toLocaleDateString('ka-GE', { day: 'numeric', month: 'long', year: 'numeric' })}
                 />
-                <Legend iconType="circle" />
-                <Line type="monotone" dataKey="revenue" name="შემოსავალი" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="profit" name="მოგება" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  name="შემოსავალი" 
+                  stroke="#3b82f6" 
+                  strokeWidth={4} 
+                  dot={false} 
+                  activeDot={{ r: 8, strokeWidth: 0, fill: '#3b82f6' }} 
+                  animationDuration={1500}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="profit" 
+                  name="მოგება" 
+                  stroke="#10b981" 
+                  strokeWidth={4} 
+                  dot={false} 
+                  activeDot={{ r: 8, strokeWidth: 0, fill: '#10b981' }}
+                  animationDuration={1500}
+                />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

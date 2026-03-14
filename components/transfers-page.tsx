@@ -99,7 +99,24 @@ export function TransfersPage() {
 
     setIsSubmitting(true);
     try {
-      await store.transferStock(formData);
+      // Map items to include product names for the store/database
+      const transferItems = formData.items.map(item => {
+        const product = store.products.find(p => p.id === item.productId);
+        return {
+          productId: item.productId,
+          productName: product?.name || "უცნობი",
+          quantity: item.quantity
+        };
+      });
+
+      await store.transferStock({
+        fromBranchId: formData.fromBranchId,
+        toBranchId: formData.toBranchId,
+        items: transferItems,
+        notes: formData.notes,
+        employeeId: store.currentEmployee?.id
+      });
+      
       toast.success("გადაზიდვა წარმატებით შესრულდა");
       setIsAddDialogOpen(false);
     } catch (error: any) {
