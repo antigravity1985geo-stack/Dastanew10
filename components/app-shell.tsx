@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            <div className="max-w-[1600px] mx-auto w-full bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-100 min-h-full p-6 lg:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="max-w-[1600px] mx-auto w-full bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 min-h-full p-6 lg:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
               {children}
             </div>
           </main>
