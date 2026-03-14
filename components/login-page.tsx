@@ -1,18 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Warehouse, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 
 export function LoginPage() {
   const { login, register } = useAuth();
@@ -21,7 +11,6 @@ export function LoginPage() {
   // Login fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -70,162 +59,142 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
-            <Warehouse className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
-              DASTA CLOUD
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isRegisterMode
-                ? "შექმენით ახალი ანგარიში თქვენი ბიზნესისთვის"
-                : "სისტემაში შესასვლელად შეიყვანეთ მონაცემები"}
-            </p>
-          </div>
-        </div>
+    <div className="uiverse-v2-wrapper min-h-screen">
+      <form 
+        onSubmit={isRegisterMode ? handleRegister : handleLogin}
+        className="uiverse-v2-form w-[350px] sm:w-[450px]"
+      >
+        <span className="uiverse-v2-title">
+          {isRegisterMode ? "REGISTER" : "LOGIN"}
+        </span>
 
-        <Card className="border-border/60 shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">
-              {isRegisterMode ? "რეგისტრაცია" : "ავტორიზაცია"}
-            </CardTitle>
-            <CardDescription>
-              {isRegisterMode
-                ? "შეავსეთ ფორმა ახალი ანგარიშის შესაქმნელად"
-                : "შეიყვანეთ ელ-ფოსტა და პაროლი"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={isRegisterMode ? handleRegister : handleLogin}
-              className="flex flex-col gap-4"
-            >
-              {isRegisterMode && (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="displayName">თქვენი სახელი</Label>
-                    <Input
-                      id="displayName"
-                      type="text"
-                      placeholder="მაგ: გიორგი"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="companyName">კომპანიის სახელი</Label>
-                    <Input
-                      id="companyName"
-                      type="text"
-                      placeholder="მაგ: DASTA ვარკეთილი"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="companySlug">კომპანიის URL</Label>
-                    <Input
-                      id="companySlug"
-                      type="text"
-                      placeholder="მაგ: dasta-varketili (არასავალდებულო)"
-                      value={companySlug}
-                      onChange={(e) =>
-                        setCompanySlug(
-                          e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-")
-                        )
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      ლათინური ასოები და ტირე (არასავალდებულო)
-                    </p>
-                  </div>
-                </>
-              )}
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email">ელ-ფოსტა</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="example@mail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
+        <div className="flex flex-col gap-4 w-full">
+          {isRegisterMode && (
+            <>
+              <div className="uiverse-v2-input-container">
+                <input
+                  type="text"
+                  className="uiverse-v2-input font-sans"
+                  placeholder="თქვენი სახელი"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   required
                 />
               </div>
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">პაროლი</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete={isRegisterMode ? "new-password" : "current-password"}
-                    className="pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+              <div className="uiverse-v2-input-container">
+                <input
+                  type="text"
+                  className="uiverse-v2-input font-sans"
+                  placeholder="კომპანიის სახელი"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                />
               </div>
+              <div className="uiverse-v2-input-container">
+                <input
+                  type="text"
+                  className="uiverse-v2-input font-sans"
+                  placeholder="კომპანიის URL (dasta-slug)"
+                  value={companySlug}
+                  onChange={(e) =>
+                    setCompanySlug(
+                      e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-")
+                    )
+                  }
+                />
+              </div>
+            </>
+          )}
 
-              {error && (
-                <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive font-medium">
-                  {error}
-                </div>
-              )}
-
-              <Button type="submit" className="w-full mt-2" disabled={isLoading}>
-                {isRegisterMode ? (
-                  <>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {isLoading ? "რეგისტრაცია..." : "რეგისტრაცია"}
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="mr-2 h-4 w-4" />
-                    {isLoading ? "შესვლა..." : "შესვლა"}
-                  </>
-                )}
-              </Button>
-
-              <div className="text-center mt-2">
-                <button
-                  type="button"
-                  className="text-sm text-primary hover:underline"
-                  onClick={() => {
-                    setIsRegisterMode(!isRegisterMode);
-                    setError("");
-                  }}
+          <div className="uiverse-v2-input-container">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="ml-2"
+            >
+              <defs>
+                <linearGradient
+                  id="gradient-stroke"
+                  x1="0"
+                  y1="0"
+                  x2="24"
+                  y2="24"
+                  gradientUnits="userSpaceOnUse"
                 >
-                  {isRegisterMode
-                    ? "უკვე გაქვთ ანგარიში? შესვლა"
-                    : "არ გაქვთ ანგარიში? რეგისტრაცია"}
-                </button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+                  <stop offset="0%" stopColor="black"></stop>
+                  <stop offset="100%" stopColor="white"></stop>
+                </linearGradient>
+              </defs>
+              <g stroke="url(#gradient-stroke)" fill="none" strokeWidth="1">
+                <path d="M21.6365 5H3L12.2275 12.3636L21.6365 5Z"></path>
+                <path d="M16.5 11.5L22.5 6.5V17L16.5 11.5Z"></path>
+                <path d="M8 11.5L2 6.5V17L8 11.5Z"></path>
+                <path d="M9.5 12.5L2.81805 18.5002H21.6362L15 12.5L12 15L9.5 12.5Z"></path>
+              </g>
+            </svg>
+            <input
+              type="email"
+              className="uiverse-v2-input"
+              placeholder="ელ-ფოსტა"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+          </div>
+
+          <div className="uiverse-v2-input-container">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="ml-2"
+            >
+              <g stroke="url(#gradient-stroke)" fill="none" strokeWidth="1">
+                <path d="M3.5 15.5503L9.20029 9.85L12.3503 13L11.6 13.7503H10.25L9.8 15.1003L8 16.0003L7.55 18.2503L5.5 19.6003H3.5V15.5503Z"></path>
+                <path d="M16 3.5H11L8.5 6L16 13.5L21 8.5L16 3.5Z"></path>
+                <path d="M16 10.5L18 8.5L15 5.5H13L12 6.5L16 10.5Z"></path>
+              </g>
+            </svg>
+            <input
+              type="password"
+              className="uiverse-v2-input"
+              placeholder="პაროლი"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={isRegisterMode ? "new-password" : "current-password"}
+              required
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-2 text-[10px] text-red-400 font-bold uppercase tracking-wider text-center bg-red-500/10 px-4 py-1 rounded-full border border-red-500/20">
+            {error}
+          </div>
+        )}
+
+        <div className="uiverse-v2-login-button">
+          <button type="submit" disabled={isLoading}>
+            {isLoading ? "LOADING..." : (isRegisterMode ? "REGISTER" : "LOGIN")}
+          </button>
+        </div>
+
+        <div className="flex justify-between w-full mt-4 text-[10px] uppercase font-black tracking-widest text-[#444] hover:text-[#ffe0a6] transition-colors cursor-pointer group">
+          <span onClick={() => setIsRegisterMode(!isRegisterMode)}>
+            {isRegisterMode ? "ALREADY HAVE ACCOUNT? LOGIN" : "NO ACCOUNT? REGISTER"}
+          </span>
+          {!isRegisterMode && <span>FORGOT PASSWORD?</span>}
+        </div>
+
+        <div className="uiverse-v2-texture"></div>
+      </form>
     </div>
   );
 }

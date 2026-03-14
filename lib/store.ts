@@ -470,7 +470,7 @@ class WarehouseStore {
 
   constructor() {
     this.lastTenantId = authStore.getTenantId() || null;
-    this.initialize();
+    this.initialize(this.lastTenantId || '');
 
     // Listen to Auth changes to reload data when switching tenants
     authStore.subscribe(() => {
@@ -503,22 +503,19 @@ class WarehouseStore {
 
   private async resetAndReload() {
     this.clearLocalData();
-    await this.initialize();
+    const currentTenantId = authStore.getTenantId();
+    await this.initialize(currentTenantId || ''); // Pass current tenantId
   }
 
-  private async initialize() {
+  private async initialize(tenantId: string) {
     if (typeof window === "undefined") return;
-
-    // Check if we actually have a tenant, otherwise don't fetch
-    if (!authStore.getTenantId()) {
-      this.initialized = true;
-      this.notify();
-      return;
-    }
+    if (this.initialized) return;
 
     try {
-      const tenantId = getTenantId();
-      console.log("DEBUG: store.initialize with tenantId:", tenantId);
+      // Ensure session is loaded into supabase client memory to prevent 401 race conditions
+      await supabase.auth.getSession();
+
+      console.log(`DEBUG: store.initialize with tenantId: ${tenantId}`);
       
       if (!tenantId || tenantId === "null" || tenantId === "undefined") {
         console.warn("DEBUG: Initializing store with empty/invalid tenantId, skipping fetch.");
@@ -1458,7 +1455,8 @@ class WarehouseStore {
     });
 
     if (error) {
-      await this.initialize();
+      const tenantId = authStore.getTenantId();
+      await this.initialize(tenantId || '');
       throw error;
     }
   }
@@ -1482,7 +1480,8 @@ class WarehouseStore {
 
     if (error) {
       console.error("Error updating branch:", error);
-      await this.initialize();
+      const tenantId = authStore.getTenantId();
+      await this.initialize(tenantId || '');
       throw error;
     }
   }
@@ -1503,7 +1502,8 @@ class WarehouseStore {
 
     if (error) {
       console.error("Error deleting branch:", error);
-      await this.initialize();
+      const tenantId = authStore.getTenantId();
+      await this.initialize(tenantId || '');
       throw error;
     }
   }
@@ -1575,7 +1575,8 @@ class WarehouseStore {
 
     const { error } = await supabase.from('customers').delete().eq('id', id);
     if (error) {
-       await this.initialize();
+       const tenantId = authStore.getTenantId();
+       await this.initialize(tenantId || '');
        throw error;
     }
   }
