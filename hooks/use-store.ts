@@ -27,6 +27,11 @@ export function useWarehouseStore() {
     addExpense: warehouseStore.addExpense.bind(warehouseStore),
     deleteExpense: warehouseStore.deleteExpense.bind(warehouseStore),
     
+    // Customers
+    addCustomer: warehouseStore.addCustomer.bind(warehouseStore),
+    updateCustomer: warehouseStore.updateCustomer.bind(warehouseStore),
+    deleteCustomer: warehouseStore.deleteCustomer.bind(warehouseStore),
+    
     // Branches
     addBranch: warehouseStore.addBranch.bind(warehouseStore),
     updateBranch: warehouseStore.updateBranch.bind(warehouseStore),

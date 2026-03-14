@@ -94,6 +94,7 @@ export interface Sale {
   paidInCard: number; // Split payment support
   status: "paid" | "partial" | "unpaid";
   client: string;
+  customerId?: string;
   currency: "GEL" | "USD" | "EUR"; // Added
   exchangeRate: number; // Added
   idempotencyKey?: string; // Added for RS.GE sync
@@ -194,6 +195,17 @@ export interface Return {
   reason: string;
   employeeId?: string;
   employeeName?: string;
+  createdAt: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  balance: number;
+  loyaltyPoints: number;
+  tenantId: string;
   createdAt: string;
 }
 
@@ -303,6 +315,12 @@ export interface StoreSnapshot {
   payoffDebts: (transactions: any[], amount: number, method: 'cash' | 'bank', type: 'customer' | 'supplier') => Promise<void>;
   importWaybillToWarehouse: (items: any[]) => Promise<void>;
 
+  // Customers
+  customers: Customer[];
+  addCustomer: (customer: Omit<Customer, "id" | "createdAt" | "tenantId">) => Promise<void>;
+  updateCustomer: (id: string, customer: Partial<Omit<Customer, "id" | "createdAt" | "tenantId">>) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
+
   // Shift Management
   shifts: Shift[];
   currentShift: Shift | null;
@@ -366,6 +384,7 @@ class WarehouseStore {
   private currentBranchId: string | null = null;
   private branchInventory: BranchInventory[] = [];
   private stockTransfers: StockTransfer[] = [];
+  private customers: Customer[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
   private _cachedSnapshot: StoreSnapshot | null = null;
@@ -524,7 +543,8 @@ class WarehouseStore {
         { data: payrollPaymentsData },
         { data: branchesData },
         { data: branchInventoryData },
-        { data: stockTransfersData }
+        { data: stockTransfersData },
+        { data: customersData }
       ] = await Promise.all([
         supabase.from('products').select('*').eq('tenant_id', tenantId),
         supabase.from('sales').select('*').eq('tenant_id', tenantId),
@@ -541,8 +561,13 @@ class WarehouseStore {
         supabase.from('payroll_payments').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('branches').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: true }),
         supabase.from('branch_inventory').select('*').eq('tenant_id', tenantId),
-        supabase.from('stock_transfers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        supabase.from('stock_transfers').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('customers').select('*').eq('tenant_id', tenantId)
       ]);
+
+      if (customersData) {
+        this.customers = customersData.map((c: any) => this.mapCustomer(c));
+      }
 
       if (payrollPaymentsData) {
         this.payrollPayments = payrollPaymentsData.map((p: any) => this.mapPayrollPayment(p));
@@ -1301,6 +1326,19 @@ class WarehouseStore {
     };
   }
 
+  private mapCustomer(c: any): Customer {
+    return {
+      id: c.id,
+      name: c.name,
+      phone: c.phone || "",
+      email: c.email || "",
+      balance: Number(c.balance) || 0,
+      loyaltyPoints: Number(c.loyalty_points) || 0,
+      tenantId: c.tenant_id,
+      createdAt: c.created_at
+    };
+  }
+
   private mapStockTransfer(t: any): StockTransfer {
     return {
       id: t.id,
@@ -1465,6 +1503,76 @@ class WarehouseStore {
       console.error("Error deleting branch:", error);
       await this.initialize();
       throw error;
+    }
+  }
+
+  async addCustomer(customer: Omit<Customer, "id" | "createdAt" | "tenantId">) {
+    const tenantId = authStore.getTenantId();
+    if (!tenantId) throw new Error("Missing tenant_id");
+
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const newCustomer: Customer = {
+      ...customer,
+      id,
+      tenantId,
+      createdAt
+    };
+
+    this.customers.push(newCustomer);
+    this.notify();
+
+    const { error } = await supabase.from('customers').insert({
+      id,
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email,
+      balance: customer.balance,
+      loyalty_points: customer.loyaltyPoints,
+      tenant_id: tenantId
+    });
+
+    if (error) {
+      this.customers = this.customers.filter(c => c.id !== id);
+      this.notify();
+      throw error;
+    }
+  }
+
+  async updateCustomer(id: string, updates: Partial<Omit<Customer, "id" | "createdAt" | "tenantId">>) {
+    const customer = this.customers.find(c => c.id === id);
+    if (!customer) throw new Error("კლიენტი ვერ მოიძებნა");
+
+    const oldData = { ...customer };
+    Object.assign(customer, updates);
+    this.notify();
+
+    const dbUpdates: any = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.balance !== undefined) dbUpdates.balance = updates.balance;
+    if (updates.loyaltyPoints !== undefined) dbUpdates.loyalty_points = updates.loyaltyPoints;
+
+    const { error } = await supabase.from('customers').update(dbUpdates).eq('id', id);
+    if (error) {
+      Object.assign(customer, oldData);
+      this.notify();
+      throw error;
+    }
+  }
+
+  async deleteCustomer(id: string) {
+    const customer = this.customers.find(c => c.id === id);
+    if (!customer) return;
+
+    this.customers = this.customers.filter(c => c.id !== id);
+    this.notify();
+
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) {
+       await this.initialize();
+       throw error;
     }
   }
 
@@ -1824,7 +1932,13 @@ class WarehouseStore {
       updatePurchaseHistory: (id, u) => this.updatePurchaseHistory(id, u),
       payoffDebts: (t, a, m, type) => this.payoffDebts(t, a, m, type),
       importWaybillToWarehouse: (items) => this.importWaybillToWarehouse(items),
-
+      
+      // Customers
+      customers: [...this.customers],
+      addCustomer: (c) => this.addCustomer(c),
+      updateCustomer: (id, c) => this.updateCustomer(id, c),
+      deleteCustomer: (id) => this.deleteCustomer(id),
+      
       // Shifts
       shifts: [...this.shifts],
       currentShift: this.currentShift,
@@ -2009,10 +2123,36 @@ class WarehouseStore {
       created_at: new Date().toISOString(),
       created_by: currentUser?.id,
       client: sale.client || '',
+      customer_id: sale.customerId,
       tenant_id: getTenantId(),
       branch_id: this.currentBranchId,
       discount_total: (product.salePrice - sale.salePrice) * sale.quantity
     };
+
+    // Customer balance/loyalty logic
+    if (sale.customerId) {
+        const customer = this.customers.find(c => c.id === sale.customerId);
+        if (customer) {
+            const totalAmount = insertSaleData.total_amount;
+            const paidAmount = insertSaleData.paid_amount;
+            const debtAmount = totalAmount - paidAmount;
+            
+            if (debtAmount > 0) {
+                customer.balance += debtAmount;
+            }
+            
+            // Add loyalty points (1 point per 10 GEL)
+            customer.loyaltyPoints += Math.floor(totalAmount / 10);
+            
+            // Async Supabase update
+            supabase.from('customers').update({
+                balance: customer.balance,
+                loyalty_points: customer.loyaltyPoints
+            }).eq('id', customer.id).then(({error}) => {
+                if (error) console.error("Error updating customer stats:", error);
+            });
+        }
+    }
 
     // Optimistic update
     product.quantity -= sale.quantity;

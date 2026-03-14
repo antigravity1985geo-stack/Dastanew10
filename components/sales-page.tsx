@@ -92,6 +92,7 @@ export function SalesPage() {
   const [heldReceipts, setHeldReceipts] = useState<HeldReceipt[]>([]);
   const [priceMode, setPriceMode] = useState<"retail" | "wholesale">("retail");
   const [clientName, setClientName] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [paidAmount, setPaidAmount] = useState("");
   const [productSearch, setProductSearch] = useState("");
 
@@ -323,6 +324,7 @@ export function SalesPage() {
   const clearCart = useCallback(() => {
     setCart([]);
     setClientName("");
+    setSelectedCustomerId(null);
     setPaidAmount("");
     setCashPaid("");
     setCardPaid("");
@@ -433,6 +435,7 @@ export function SalesPage() {
           paidInCash: finalCash * ratio,
           paidInCard: finalCard * ratio,
           status: (finalPaid >= total ? "paid" : finalPaid > 0 ? "partial" : "unpaid") as any,
+          customerId: selectedCustomerId || undefined,
           currency: settings.currency || "GEL",
           exchangeRate: 1,
           idempotencyKey,

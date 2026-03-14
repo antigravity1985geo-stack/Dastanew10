@@ -51,6 +51,12 @@ const navItems = [
     requiresAdmin: true,
   },
   {
+    label: "კლიენტები",
+    href: "/customers",
+    icon: Users,
+    requiresAdmin: true,
+  },
+  {
     label: "რეპორტინგი",
     href: "/reporting",
     icon: FileText,
