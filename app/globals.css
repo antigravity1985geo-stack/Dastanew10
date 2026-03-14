@@ -738,19 +738,20 @@ input, select, textarea {
   outline: none;
   cursor: pointer;
   width: 100%;
-  height: 42px;
-  background-image: linear-gradient(to top, #D8D9DB 0%, #fff 80%, #FDFDFD 100%);
-  border-radius: 12px;
-  border: 1px solid #8F9092;
-  transition: all 0.2s ease;
+  height: 36px;
+  background-image: linear-gradient(to top, rgba(216, 217, 219, 0.45) 0%, rgba(255, 255, 255, 0.75) 80%, rgba(253, 253, 253, 0.85) 100%);
+  backdrop-filter: blur(4px);
+  border-radius: 9px;
+  border: 1px solid rgba(143, 144, 146, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  color: #404040;
-  text-shadow: 0 1px #fff;
-  padding: 0 16px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #4a4a4a;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.4);
+  padding: 0 12px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 
 .uiverse-btn:hover {
