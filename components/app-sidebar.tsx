@@ -259,20 +259,6 @@ export function AppSidebar() {
             </div>
           </div>
         )}
-        {store.currentEmployee && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => store.logoutEmployee()}
-            className={cn(
-              "uiverse-btn-danger transition-all",
-              isCollapsed ? "w-11 h-11 px-0 justify-center" : "w-full h-11 px-4 justify-start gap-2"
-            )}
-          >
-            <LogOut className="h-4 w-4" />
-            {!isCollapsed && <span>მოლარის გასვლა</span>}
-          </Button>
-        )}
         <Button
           variant="ghost"
           size="sm"
