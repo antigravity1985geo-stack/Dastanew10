@@ -72,6 +72,8 @@ export function EmployeesPage() {
         position: POSITIONS[0],
         phone: "",
         pinCode: "",
+        baseSalary: 0,
+        salaryType: "monthly" as "monthly" | "daily" | "hourly",
     });
 
     useHeaderSetup(
@@ -105,7 +107,7 @@ export function EmployeesPage() {
             await store.addEmployee(formData);
             toast.success("თანამშრომელი დაემატა");
             setIsAddDialogOpen(false);
-            setFormData({ name: "", position: POSITIONS[0], phone: "", pinCode: "" });
+            setFormData({ name: "", position: POSITIONS[0], phone: "", pinCode: "", baseSalary: 0, salaryType: "monthly" });
         } catch (error) {
             console.error("Add employee failed in UI:", error);
         } finally {
@@ -145,6 +147,8 @@ export function EmployeesPage() {
             position: employee.position,
             phone: employee.phone,
             pinCode: employee.pinCode || "",
+            baseSalary: employee.baseSalary || 0,
+            salaryType: employee.salaryType || "monthly",
         });
         setIsEditDialogOpen(true);
     };
@@ -234,6 +238,38 @@ export function EmployeesPage() {
                                         className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                     />
                                 </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ხელფასი</Label>
+                                        <Input
+                                            type="number"
+                                            value={formData.baseSalary}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, baseSalary: Number(e.target.value) })
+                                            }
+                                            placeholder="0.00"
+                                            className="h-11 rounded-xl bg-muted/30 border-none font-medium"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ტიპი</Label>
+                                        <Select
+                                            value={formData.salaryType}
+                                            onValueChange={(val: any) =>
+                                                setFormData({ ...formData, salaryType: val })
+                                            }
+                                        >
+                                            <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-medium">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl border-none shadow-xl">
+                                                <SelectItem value="monthly">თვიური</SelectItem>
+                                                <SelectItem value="daily">დღიური</SelectItem>
+                                                <SelectItem value="hourly">საათობრივი</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-primary/20">
@@ -253,6 +289,7 @@ export function EmployeesPage() {
                                 <TableHead className="text-[10px] font-black uppercase tracking-widest">თანამშრომელი</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase tracking-widest">პოზიცია</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase tracking-widest">ტელეფონი</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest">ხელფასი</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase tracking-widest">PIN</TableHead>
                                 <TableHead className="text-[10px] font-black uppercase tracking-widest text-right">მოქმედება</TableHead>
                             </TableRow>
@@ -279,6 +316,12 @@ export function EmployeesPage() {
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                                                 <span>{employee.phone || "—"}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-sm">{employee.baseSalary} ₾</span>
+                                                <span className="text-[10px] text-muted-foreground uppercase">{employee.salaryType === 'monthly' ? 'თვიური' : employee.salaryType === 'daily' ? 'დღიური' : 'საათობრივი'}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -390,6 +433,37 @@ export function EmployeesPage() {
                                     }
                                     className="h-11 rounded-xl bg-muted/30 border-none font-medium"
                                 />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ხელფასი</Label>
+                                    <Input
+                                        type="number"
+                                        value={formData.baseSalary}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, baseSalary: Number(e.target.value) })
+                                        }
+                                        className="h-11 rounded-xl bg-muted/30 border-none font-medium"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">ტიპი</Label>
+                                    <Select
+                                        value={formData.salaryType}
+                                        onValueChange={(val: any) =>
+                                            setFormData({ ...formData, salaryType: val })
+                                        }
+                                    >
+                                        <SelectTrigger className="h-11 rounded-xl bg-muted/30 border-none font-medium">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-none shadow-xl">
+                                            <SelectItem value="monthly">თვიური</SelectItem>
+                                            <SelectItem value="daily">დღიური</SelectItem>
+                                            <SelectItem value="hourly">საათობრივი</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                         <DialogFooter>

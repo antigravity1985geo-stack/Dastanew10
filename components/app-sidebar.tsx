@@ -95,6 +95,12 @@ const navItems = [
     requiresAdmin: true,
   },
   {
+    label: "ხელფასები",
+    href: "/payroll",
+    icon: Wallet,
+    requiresAdmin: true,
+  },
+  {
     label: "ადმინ პანელი",
     href: "/admin",
     icon: Shield,

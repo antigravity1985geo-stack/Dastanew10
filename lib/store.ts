@@ -100,7 +100,22 @@ export interface Employee {
   name: string;
   position: string;
   phone: string;
-  pinCode?: string; // New field
+  pinCode?: string;
+  baseSalary: number;
+  salaryType: 'monthly' | 'daily' | 'hourly';
+  createdAt: string;
+}
+
+export interface PayrollPayment {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  paymentMethod: 'cash' | 'bank';
+  paymentDate: string;
+  periodStart?: string;
+  periodEnd?: string;
+  notes?: string;
   createdAt: string;
 }
 
@@ -275,6 +290,10 @@ export interface StoreSnapshot {
   executeProduction: (recipeId: string, quantity: number, wastage: number, notes?: string) => Promise<void>;
   getRecipeCost: (recipeId: string) => number;
   checkMaterialAvailability: (recipeId: string, quantity: number) => { ingredientId: string; ingredientName: string; required: number; available: number; missing: number }[];
+
+  // Payroll
+  payrollPayments: PayrollPayment[];
+  processSalaryPayment: (payment: Omit<PayrollPayment, 'id' | 'createdAt'>) => Promise<void>;
 }
 
 class WarehouseStore {
@@ -292,6 +311,7 @@ class WarehouseStore {
   private inventoryCounts: InventoryCount[] = [];
   private recipes: Recipe[] = [];
   private productionLogs: ProductionLog[] = [];
+  private payrollPayments: PayrollPayment[] = [];
   private currentEmployee: Employee | null = null;
   private listeners: Set<StoreListener> = new Set();
   private _cachedSnapshot: StoreSnapshot | null = null;
@@ -402,6 +422,7 @@ class WarehouseStore {
     this.currentShift = null;
     this.journalEntries = [];
     this.returns = [];
+    this.payrollPayments = [];
     this.currentEmployee = null;
     this.notify();
   }
@@ -445,7 +466,8 @@ class WarehouseStore {
         { data: invSessionsData },
         { data: invCountsData },
         { data: recipesData },
-        { data: productionLogsData }
+        { data: productionLogsData },
+        { data: payrollPaymentsData }
       ] = await Promise.all([
         supabase.from('products').select('*').eq('tenant_id', tenantId),
         supabase.from('sales').select('*').eq('tenant_id', tenantId),
@@ -458,8 +480,13 @@ class WarehouseStore {
         supabase.from('inventory_sessions').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('inventory_counts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
         supabase.from('recipes').select('*, recipe_items(*)').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-        supabase.from('production_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        supabase.from('production_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+        supabase.from('payroll_payments').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
       ]);
+
+      if (payrollPaymentsData) {
+        this.payrollPayments = payrollPaymentsData.map((p: any) => this.mapPayrollPayment(p));
+      }
 
       if (journalData) {
         this.journalEntries = journalData.map(j => ({
@@ -606,6 +633,9 @@ class WarehouseStore {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'production_logs', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
           this.handleRealtimeProductionLog(payload);
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll_payments', filter: `tenant_id=eq.${tenantId}` }, (payload) => {
+          this.handleRealtimePayroll(payload);
+        })
         .subscribe();
 
     } catch (error: any) {
@@ -695,7 +725,24 @@ class WarehouseStore {
       position: e.position,
       phone: e.phone || "",
       pinCode: e.pin_code ? String(e.pin_code) : "",
+      baseSalary: Number(e.base_salary) || 0,
+      salaryType: (e.salary_type || 'monthly') as 'monthly' | 'daily' | 'hourly',
       createdAt: e.created_at
+    };
+  }
+
+  private mapPayrollPayment(p: any): PayrollPayment {
+    return {
+      id: p.id,
+      employeeId: p.employee_id,
+      employeeName: p.employee_name,
+      amount: Number(p.amount) || 0,
+      paymentMethod: (p.payment_method || 'cash') as 'cash' | 'bank',
+      paymentDate: p.payment_date,
+      periodStart: p.period_start,
+      periodEnd: p.period_end,
+      notes: p.notes || "",
+      createdAt: p.created_at
     };
   }
 
@@ -790,6 +837,8 @@ class WarehouseStore {
       createdAt: l.created_at
     };
   }
+
+
 
   private handleRealtimeProduct(payload: any) {
     const { eventType, new: newRow, old: oldRow } = payload;
@@ -1533,6 +1582,10 @@ class WarehouseStore {
       executeProduction: (rid, q, w, n) => this.executeProduction(rid, q, w, n),
       getRecipeCost: (id) => this.getRecipeCost(id),
       checkMaterialAvailability: (id, q) => this.checkMaterialAvailability(id, q),
+
+      // Payroll
+      payrollPayments: [...this.payrollPayments],
+      processSalaryPayment: (p) => this.processSalaryPayment(p),
     };
 
     return this._cachedSnapshot;
@@ -1886,6 +1939,8 @@ class WarehouseStore {
     this.employees.push({
       ...employee,
       pinCode: hashedPin,
+      baseSalary: Number(employee.baseSalary) || 0,
+      salaryType: employee.salaryType || 'monthly',
       id: optimisticId,
       createdAt: optimisticCreatedAt
     });
@@ -1906,6 +1961,8 @@ class WarehouseStore {
           position: employee.position,
           phone: employee.phone || "",
           pin_code: hashedPin || "",
+          base_salary: Number(employee.baseSalary) || 0,
+          salary_type: employee.salaryType || 'monthly',
           tenant_id: tenantId
         })
         .select()
@@ -1930,6 +1987,8 @@ class WarehouseStore {
             position: data.position,
             phone: data.phone || "",
             pinCode: data.pin_code || "",
+            baseSalary: Number(data.base_salary) || 0,
+            salaryType: data.salary_type || 'monthly',
             createdAt: data.created_at
           };
           this.notify();
@@ -2926,6 +2985,78 @@ class WarehouseStore {
       sales: [...this.sales],
       expenses: [...this.expenses],
     };
+  }
+
+  // Payroll
+  async processSalaryPayment(payment: Omit<PayrollPayment, 'id' | 'createdAt'>) {
+    const paymentId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const tenantId = getTenantId();
+
+    if (!tenantId) throw new Error("Tenant ID not found");
+
+    const newPayment: PayrollPayment = {
+      ...payment,
+      id: paymentId,
+      createdAt
+    };
+
+    // Optimistic Update
+    this.payrollPayments.unshift(newPayment);
+    this.notify();
+
+    try {
+      // 1. Supabase: Insert Payment
+      const { error: payError } = await supabase.from('payroll_payments').insert({
+        id: paymentId,
+        employee_id: payment.employeeId,
+        employee_name: payment.employeeName,
+        amount: payment.amount,
+        payment_method: payment.paymentMethod,
+        payment_date: payment.paymentDate,
+        period_start: payment.periodStart,
+        period_end: payment.periodEnd,
+        notes: payment.notes,
+        tenant_id: tenantId,
+        created_at: createdAt
+      });
+      if (payError) throw payError;
+
+      // 2. Accounting Entry
+      await this.addJournalEntry({
+        date: payment.paymentDate,
+        description: `ხელფასი: ${payment.employeeName} (${payment.periodStart} - ${payment.periodEnd})`,
+        referenceId: paymentId,
+        referenceType: 'expense',
+        transactions: [
+          { accountCode: '7110', debit: payment.amount, credit: 0 },
+          { accountCode: payment.paymentMethod === 'cash' ? '1210' : '1220', debit: 0, credit: payment.amount }
+        ]
+      });
+
+      toast.success(`ხელფასი გაიცა: ${payment.employeeName}`);
+    } catch (error) {
+      console.error("Process salary payment error:", error);
+      this.payrollPayments = this.payrollPayments.filter(p => p.id !== paymentId);
+      this.notify();
+      toast.error("შეცდომა ხელფასის გაცემისას");
+      throw error;
+    }
+  }
+
+  private handleRealtimePayroll(payload: any) {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    if (eventType === 'INSERT') {
+      if (!this.payrollPayments.find(p => p.id === newRow.id)) {
+        this.payrollPayments.unshift(this.mapPayrollPayment(newRow));
+      }
+    } else if (eventType === 'UPDATE') {
+      const idx = this.payrollPayments.findIndex(p => p.id === newRow.id);
+      if (idx !== -1) this.payrollPayments[idx] = this.mapPayrollPayment(newRow);
+    } else if (eventType === 'DELETE') {
+      this.payrollPayments = this.payrollPayments.filter(p => p.id !== oldRow.id);
+    }
+    this.notify();
   }
 }
 
