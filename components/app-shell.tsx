@@ -11,23 +11,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: '#0a0a0a' }}>
+      <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: 'var(--erp-bg0)' }}>
         <AppSidebar />
-        <SidebarInset className="flex flex-col h-full overflow-hidden" style={{ background: '#0d0d0d' }}>
-          <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between border-b px-4 sm:px-6" style={{ borderColor: 'rgba(255,255,255,0.04)', background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(20px)' }}>
-            <div className="flex items-center gap-2 min-w-0">
-              <SidebarTrigger className="-ml-1 text-white/30 hover:text-white/60 transition-colors" />
-              <div className="font-bold text-[10px] tracking-[0.12em] uppercase" style={{ color: 'rgba(255,224,166,0.5)' }}>
-                {title}
-              </div>
+        <SidebarInset className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--erp-bg0)' }}>
+          {/* Topbar — matches HTML .topbar */}
+          <header
+            className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 px-5"
+            style={{
+              background: 'var(--erp-bg1)',
+              borderBottom: '1px solid var(--erp-border)',
+              flexShrink: 0,
+            }}
+          >
+            <SidebarTrigger
+              className="-ml-1 transition-opacity"
+              style={{ color: 'var(--erp-silver)', opacity: 0.5 }}
+            />
+            {/* Page title — matches .page-title */}
+            <div
+              className="flex-1 text-sm font-semibold"
+              style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                background: 'linear-gradient(135deg, #e8c97a, #c9a84c)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {title}
             </div>
             <div className="flex items-center gap-2">
               {actions}
               <ModeToggle />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5">
-            <div className="max-w-[1400px] mx-auto w-full premium-glass-card min-h-full p-4 sm:p-5 lg:p-8 animate-in fade-in slide-in-from-bottom-1 duration-400">
+
+          {/* Content area — matches .content */}
+          <main
+            className="flex-1 overflow-y-auto p-4 md:p-5 flex flex-col gap-4"
+            style={{ background: 'var(--erp-bg0)' }}
+          >
+            <div className="max-w-[1400px] w-full mx-auto animate-in fade-in duration-300" style={{ minHeight: '100%' }}>
               {children}
             </div>
           </main>
